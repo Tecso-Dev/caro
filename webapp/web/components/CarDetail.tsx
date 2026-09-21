@@ -195,14 +195,20 @@ export default function CarDetail({ id }: { id: string }) {
           <F k="سال (شمسی)" v={faPlain(listing.year_jalali)} num />
           <F k="کارکرد" v={km(listing.mileage_km)} num />
           <F k="قیمت پیشنهادی" v={toman(listing.asking_price_toman)} num />
-          <F k="گیربکس" v={listing.gearbox ?? 'ثبت‌نشده'} />
-          <F k="سوخت" v={listing.fuel ?? 'ثبت‌نشده'} />
           <F k="رنگ" v={listing.color ?? 'ثبت‌نشده'} />
           <F k="وضعیت بدنه" v={conditionLabel(listing.condition)} />
-          <F k="استان" v={listing.province ?? 'ثبت‌نشده'} />
-          <F k="نوع فروشنده"
-             v={SELLER_FA[listing.seller_type ?? 'unknown']
-                ?? (listing.seller_type ?? 'نامشخص')} />
+          {/* Eight cells, not twelve. «گیربکس», «سوخت», «استان» and «نوع
+              فروشنده» were here, each falling back to «ثبت‌نشده» — a
+              sentence about the LISTING — while the truth was that no
+              published corpus carries those four at all. All four are
+              PENDING_LIVE_VALIDATION in docs/FIELD_PROVENANCE.md, which is
+              `detail=no`, so the renderer now agrees with the declaration
+              instead of contradicting it.
+
+              Do not add one back by hand: tests/test_corpus.py reads this
+              file and fails on any `listing.X` the document does not allow
+              on this surface. They return when a real collection gives them
+              a coverage number and the status moves off PENDING. */}
         </dl>
       </section>
 
@@ -323,11 +329,12 @@ export default function CarDetail({ id }: { id: string }) {
   );
 }
 
-const SELLER_FA: Record<string, string> = {
-  dealer: 'نمایشگاه',
-  private: 'شخصی',
-  unknown: 'نامشخص — نشان کسب‌وکاری روی آگهی نبود',
-};
+/* SELLER_FA lived here — dealer / private / «نامشخص — نشان کسب‌وکاری روی
+   آگهی نبود» — and had exactly one reader, the seller cell above. With the
+   cell gone it is dead, and dead code beside a field that is coming back is
+   how a stale label returns with it. Git has it; the day `seller_type`
+   clears PENDING_LIVE_VALIDATION the labels get written against whatever
+   that run actually observed, not against what we guessed in September. */
 
 const FEATURE_FA: Record<string, string> = {
   risk: 'ریسک برآوردشده',
