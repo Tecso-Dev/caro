@@ -89,6 +89,7 @@ for k in sorted({k for r in rows for k in r}):
 | `province` | `PENDING_LIVE_VALIDATION` | — | — | no | no | no | no | empty on all 76 snapshot records, so promotion dropped the key; reading it off the page landed in `8e34dba`, after this corpus |
 | `gearbox` | `PENDING_LIVE_VALIDATION` | — | — | no | no | no | no | crosses the boundary since `2ddbc72`; never promoted into a corpus |
 | `fuel` | `PENDING_LIVE_VALIDATION` | — | — | no | no | no | no | as above |
+| `model_key` | `DERIVED` | — | — | no | yes | no | no | make, model and trim joined into one key; the detail page renders it through `modelLabel`. `ListingCard` reads it too, so `card=no` is a judgement the card surface does not yet obey |
 | `derived_title` | `DERIVED` | — | — | yes | yes | no | no | composed from `make + model + trim + year_jalali` |
 | `observed_at` | `DERIVED` | — | — | yes | yes | no | no | the artifact's `collected_on`, carried onto every row — see below |
 | `listing_age` | `EVIDENCE_ONLY` | — | — | yes | yes | no | no | only where the evidence exists; absence renders no claim — see below |

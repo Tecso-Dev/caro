@@ -94,6 +94,12 @@ FIELDS: dict[str, Eligibility] = {
     "province": Eligibility("PENDING_LIVE_VALIDATION"),
     "gearbox": Eligibility("PENDING_LIVE_VALIDATION"),
     "fuel": Eligibility("PENDING_LIVE_VALIDATION"),
+    # The key the payload carries, `make|model|trim`. The detail page reads
+    # it and renders the heading from it. `card` is `no` because nothing has
+    # judged the card surface, not because the card does without it —
+    # `ListingCard` reads it, and that surface is not derived from its source
+    # yet, so nothing catches the disagreement.
+    "model_key": Eligibility("DERIVED", detail=True),
     "derived_title": Eligibility("DERIVED", card=True, detail=True),
     "observed_at": Eligibility("DERIVED", card=True, detail=True),
     "listing_age": Eligibility("EVIDENCE_ONLY", card=True, detail=True),
