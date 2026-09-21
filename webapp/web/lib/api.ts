@@ -132,6 +132,9 @@ export interface EvidenceItem {
   condition: string | null;
   province: string | null;
   seller_type: string | null;
+  /* D52's gate: only `vehicle` is a car. Sent so the client can apply it —
+     what the client should DO with a non-vehicle is not decided yet. */
+  product_class: string | null;
 }
 
 export interface ScoredItem extends EvidenceItem {

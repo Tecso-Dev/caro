@@ -143,7 +143,14 @@ def _split_key(model_key: str, i: int) -> str | None:
 
 
 def _row_evidence(r) -> EvidenceItem:
-    """An appraisal Row as evidence. No estimate: the model has no room."""
+    """An appraisal Row as evidence. No estimate: the model has no room.
+
+    `product_class` stays None here, and deliberately. A Row carries no such
+    field, and only a vehicle becomes one (D52 is applied at eligibility), so
+    stamping `vehicle` would be reading the gate's own decision back as an
+    observation about the page. Under-informative is the right direction: a
+    client that is not told cannot pretend to know (D50).
+    """
     return EvidenceItem(
         id=r.listing_id, model_key=r.model_key,
         make=_split_key(r.model_key, 0) if "|" in r.model_key else None,
@@ -165,7 +172,8 @@ def _listing_evidence(x) -> EvidenceItem:
                             if x.asking_price_toman is not None else None),
         gearbox=x.gearbox, fuel=x.fuel, color=x.color,
         condition=x.body_condition, province=x.city,
-        seller_type=getattr(x, "seller_type", None))
+        seller_type=getattr(x, "seller_type", None),
+        product_class=x.product_class)
 
 
 def _scored(s, rank: int) -> ScoredItem:

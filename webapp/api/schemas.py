@@ -165,6 +165,12 @@ class EvidenceItem(BaseModel):
     condition: str | None = None
     province: str | None = None
     seller_type: str | None = None
+    # The gate, and the only one (D52): a client renders a listing as a car
+    # only where this says `vehicle`. It is here because a gate the client is
+    # not sent is a gate the client cannot apply — run11 holds an assignment
+    # with a make, a model, a trim, a year and a price, and without this
+    # field every cell the detail page draws says "car".
+    product_class: str | None = None
 
 
 class ScoredItem(EvidenceItem):
