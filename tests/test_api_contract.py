@@ -565,6 +565,76 @@ if _m:
         corpus_mod.active.cache_clear()
 
 
+# ---------------------------------------------------------------------------
+print("\n9 — the detail renderer receives product_class")
+# ---------------------------------------------------------------------------
+#
+# `product_class` is the only gate in FIELD_PROVENANCE.md: only `vehicle`
+# renders as a car (D52). run11 carries it on all 76 records, and one of them
+# is not a vehicle — an assignment, with a make, a model, a trim, a year and a
+# price, so every cell the detail page draws is populated. The one field that
+# says it is not a car is the one field EvidenceItem was built without,
+# and a renderer cannot branch on what it is not sent.
+#
+# WHAT THIS ASSERTS: that the information reaches the renderer — present in
+# the payload model, and delivered by the detail path with the value the
+# artifact holds. WHAT IT DOES NOT: what the site or the API should DO with
+# it. `200 + product_class` and a `NOT_A_VEHICLE` fault are both open, and
+# neither is chosen here. The read below is from where today's path puts the
+# listing; the commit that makes that choice moves the read with it.
+#
+# The TypeScript side is not asserted separately. Section 7 already holds
+# lib/api.ts's EvidenceItem to schemas.py field for field, in both
+# directions, so a field added here and not there fails there. A second
+# assertion of the same fact would be a second place for it to drift.
+
+check("EvidenceItem carries product_class",
+      "product_class" in schemas.EvidenceItem.model_fields,
+      "the payload has no field that says whether a listing is a car")
+print("    lib/api.ts follows from section 7, which compares EvidenceItem "
+      "in both directions")
+
+_art_path = ROOT / "data" / "corpora" / f"{RUN}.json"
+if not _art_path.exists():
+    check("  the default corpus is present to check against", False,
+          str(_art_path))
+else:
+    _pc = {r["listing_id"]: r.get("product_class") for r in json.loads(
+        _art_path.read_text(encoding="utf-8"))["listings"]}
+    _vehicle = next((i for i, c in sorted(_pc.items()) if c == "vehicle"),
+                    None)
+    _others = sorted(i for i, c in _pc.items() if c and c != "vehicle")
+    if not _others:
+        print("    the corpus holds no non-vehicle, so the distinguishing "
+              "case has nothing to run on — said, not passed")
+
+    _was, _was_run = corpus_reader.CORPORA, os.environ.get(corpus_mod.RUN_ENV)
+    corpus_reader.CORPORA = _art_path.parent
+    os.environ.pop(corpus_mod.RUN_ENV, None)
+    corpus_mod.active.cache_clear()
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            _kind = api.which_corpus().status.kind
+            _got = {i: api.listing(listing_id=i)
+                    for i in ([_vehicle] if _vehicle else []) + _others}
+        check(f"  serving the real corpus (kind={_kind})", _kind == "REAL",
+              _kind)
+        for _id, _resp in _got.items():
+            _delivered = (getattr(_resp.listing, "product_class", None)
+                          if _resp.listing is not None else None)
+            check(f"  detail path delivers product_class for {_id} "
+                  f"(artifact: {_pc[_id]})",
+                  _delivered == _pc[_id],
+                  f"the renderer receives {_delivered!r}")
+    finally:
+        corpus_reader.CORPORA = _was
+        if _was_run is None:
+            os.environ.pop(corpus_mod.RUN_ENV, None)
+        else:
+            os.environ[corpus_mod.RUN_ENV] = _was_run
+        corpus_mod.active.cache_clear()
+
+
 print()
 if FAILS:
     print(f"FAILED ({len(FAILS)}): " + ", ".join(FAILS))

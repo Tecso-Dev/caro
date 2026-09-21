@@ -660,7 +660,7 @@ print("\nthe eligibility table and the document say the same thing")
 # and a break anywhere in it fails, naming the link.
 
 from webapp.api.eligibility import (                              # noqa: E402
-    FIELDS as _ELIG, RENDERER_CONSUMES as _CONSUMES, STATUSES as _STATUSES)
+    FIELDS as _ELIG, STATUSES as _STATUSES)
 
 _DOC = (ROOT / "docs" / "FIELD_PROVENANCE.md").read_text(encoding="utf-8")
 _TABLE = _re.compile(
@@ -716,25 +716,77 @@ if _doc_rows:
               f"detail={_e.detail} gate={_e.gate} facet={_e.facet}")
 
     # ---- the invariant that does not depend on either file ---------------
+    #
+    # DECLARED, not drawn. This reads the table's own flags and no renderer,
+    # so it says what the declaration permits and nothing about what any
+    # screen does. It was called "is drawn or chosen" while it sat two lines
+    # above the check below reporting that all four were being drawn.
     _pending = sorted(f for f, e in _ELIG.items()
                       if e.status == "PENDING_LIVE_VALIDATION")
-    check(f"nothing PENDING_LIVE_VALIDATION is drawn or chosen "
+    check(f"no PENDING_LIVE_VALIDATION is declared drawable or chosen "
           f"({', '.join(_pending)})",
           all(not (_ELIG[f].card or _ELIG[f].gate or _ELIG[f].facet)
               for f in _pending))
 
-    # ---- and the one with nothing to check yet, said out loud ------------
+    # ---- what the detail page draws, read out of the detail page ---------
     #
-    # No renderer exists, so RENDERER_CONSUMES is empty and this check has no
-    # input. Printing the zero is the difference between a guard that is green
-    # because it passed and one that is green because it looked at nothing.
-    for _surface, _fields in sorted(_CONSUMES.items()):
-        _illegal = sorted(f for f in _fields
-                          if not getattr(_ELIG.get(f, _ELIG["image"]),
-                                         _surface))
-        check(f"  renderer/{_surface}: {len(_fields)} field(s) declared, "
-              f"none ineligible",
-              not _illegal, f"ineligible: {_illegal}")
+    # This loop used to iterate a hand-kept `RENDERER_CONSUMES`, left empty
+    # on the belief that no renderer existed yet, and it printed "0 field(s)
+    # declared, none ineligible" for the detail surface. The renderer existed.
+    # `CarDetail.tsx` drew gearbox, fuel, province and seller_type — all four
+    # PENDING_LIVE_VALIDATION above — under «آنچه از آگهی استخراج شد». A list
+    # of what a renderer consumes, kept by hand beside a renderer that
+    # changes, is a list that drifts; this one was wrong on the day it was
+    # written.
+    #
+    # So the set is no longer declared. It is read from the component: every
+    # `listing.X` in CarDetail.tsx, comments removed first so that prose
+    # mentioning a field does not count as drawing it. Each is checked against
+    # FIELD_PROVENANCE.md — the document, parsed above and asserted equal to
+    # eligibility.FIELDS, so the verdict is the same from either.
+    #
+    # Two conditions keep the derivation from going vacuous the way the list
+    # did: it must find something, and everything it finds must be a field of
+    # EvidenceItem as lib/api.ts declares it. A pattern that silently matches
+    # nothing would be the empty list again, under a better name.
+    #
+    # Only the detail surface is derived here. The card surface has no
+    # check in this file, and that is printed rather than passed over.
+    _RENDERER = ROOT / "webapp" / "web" / "components" / "CarDetail.tsx"
+    _API_TS = ROOT / "webapp" / "web" / "lib" / "api.ts"
+
+    def _consumed(path: Path, name: str = "listing") -> set[str]:
+        src = path.read_text(encoding="utf-8")
+        src = _re.sub(r"/\*.*?\*/", " ", src, flags=_re.S)   # block and JSX
+        src = _re.sub(r"(?m)(^|\s)//[^\n]*", r"\1", src)     # line, not URLs
+        return set(_re.findall(rf"\b{name}\??\.([A-Za-z_]\w*)", src))
+
+    _iface = _re.search(r"export interface EvidenceItem\s*\{(.*?)\n\}",
+                        _API_TS.read_text(encoding="utf-8"), _re.S)
+    _ts_evidence = (set(_re.findall(r"(?m)^\s*(\w+)\??\s*:", _iface.group(1)))
+                    if _iface else set())
+
+    _used = _consumed(_RENDERER) if _RENDERER.exists() else set()
+    check(f"CarDetail.tsx draws {len(_used)} field(s) — read from the "
+          f"component, not declared",
+          len(_used) > 0,
+          "found nothing: the file is missing or the pattern no longer "
+          "matches, and a check over nothing proves nothing")
+    check("  every field it reads is a field of EvidenceItem in lib/api.ts",
+          bool(_ts_evidence) and _used <= _ts_evidence,
+          f"not in the interface: {sorted(_used - _ts_evidence)}")
+
+    for _f in sorted(_used):
+        if _f not in _doc:
+            check(f"  detail may draw {_f}", False,
+                  "not in FIELD_PROVENANCE.md at all — nobody has judged it")
+            continue
+        _st, _c, _d, *_ = _doc[_f]
+        check(f"  detail may draw {_f} ({_st})", _d,
+              "FIELD_PROVENANCE.md says detail=no")
+
+    print("    card surface: not derived in this file — no check, "
+          "and none implied")
 
 
 print()

@@ -119,14 +119,8 @@ def may(field: str, surface: str) -> bool:
     return bool(e and getattr(e, surface))
 
 
-# Fields a renderer actually consumes, declared by the renderer and checked
-# against the table above.
-#
-# It is EMPTY, and that is a fact rather than an oversight: no renderer exists
-# yet. The check that reads it is written now so that it has teeth on the day
-# one does, and the test prints the zero rather than passing quietly over it —
-# a guard whose input set is empty proves nothing, and should say so.
-RENDERER_CONSUMES: dict[str, frozenset[str]] = {
-    "card": frozenset(),
-    "detail": frozenset(),
-}
+# What a renderer consumes is NOT declared here. It is read out of the
+# renderer's own source by `tests/test_corpus.py` and checked against the
+# table above. A hand-kept list stood in this place once, empty because no
+# renderer was thought to exist; one did, and drew four fields this table
+# forbids while the check over the list reported nothing wrong.
