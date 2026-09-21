@@ -3,7 +3,14 @@
 Field → source → evidence → coverage → UI eligibility, for every field a card
 or a detail page might want.
 
-Written 2026-09-18, before any of those screens exist. That order is the point.
+Written 2026-09-18. **Correction, 2026-09-21:** this line first said the file
+came before any of the screens it governs, and that the order was the point.
+It did not come first. `CarDetail.tsx` already drew `gearbox`, `fuel`,
+`province` and `seller_type` — the four `PENDING_LIVE_VALIDATION` rows below —
+under «آنچه از آگهی استخراج شد», rendering the three empty ones as «ثبت‌نشده»
+and seller type's `unknown` as «نامشخص — نشان کسب‌وکاری روی آگهی نبود». The
+repair the next paragraph describes had already been made.
+
 A card designed first and sourced afterwards has spaces in it that nothing
 fills, and the usual repair is to fill them with something plausible. This file
 is what makes that repair visible instead of easy.
