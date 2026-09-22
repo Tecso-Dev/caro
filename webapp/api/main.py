@@ -220,15 +220,21 @@ def _evidence(c, spec, cands, k: int) -> list[EvidenceItem]:
 
     On a corpus whose rows all fail eligibility, `cands` is empty and serving
     it would show an empty table under a heading promising matching listings.
-    So the listings are matched directly, using ONLY the constraints the buyer
-    stated — model, budget, year, odometer. No relaxation ladder, no ordering,
-    no estimate. It is a filter, not a retrieval, and it is not pretending to
-    be the second one.
+    So the listings are matched directly: first the gate, which nobody
+    chooses, and then ONLY the constraints the buyer stated — model, budget,
+    year, odometer. No relaxation ladder, no ordering, no estimate. It is a
+    filter, not a retrieval, and it is not pretending to be the second one.
     """
     if cands:
         return [_row_evidence(r) for r in cands[:k]]
 
     def keeps(x) -> bool:
+        # The gate (D52): only `vehicle` is shown as a car. `unknown` does
+        # not pass — a record whose class was never determined is not a car,
+        # which is the rule eligibility already applies before a row can be
+        # scored. Rows above need no check for the same reason.
+        if x.product_class != "vehicle":
+            return False
         if spec.model_hints and (x.model or "").lower() not in spec.model_hints:
             return False
         p = x.asking_price_toman
