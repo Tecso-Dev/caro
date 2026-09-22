@@ -3048,3 +3048,119 @@ sits on the phrase's own value and not on the title-derived age.
 or of one page variant; whether 410 is reversible; and what happens to
 `l39y2bdi` when its own phrase reaches seven, which on the same anchor falls on
 2026-09-22 and is the next thing this series can be wrong about.
+
+## D60 — Search applies the gate, and `unknown` does not pass it
+
+FIELD_PROVENANCE.md defines a gate as "applied by the query before anyone
+sees a row", and names one: `product_class`, which only `vehicle` passes
+(D52). Eligibility has applied it since D52, so a non-vehicle does not become
+a Row and nothing that is not a car is scored. The query did not apply it. On
+a corpus no estimator has cleared — every real corpus so far — search and
+reweight answer from `_evidence`, which matched listings directly on model,
+budget, year and mileage and never read the class.
+
+**What that put on screen.** On run11 the Quik chip under the search box,
+«یه کوییک اتومات کم‌کارکرد تا ۱.۵ میلیارد میخوام», at the k=8 the results
+page asks for, showed `bama:hubymydi` as the eighth of its eight rows: an
+assignment, a 1405 Quik at 90,000,000 toman, among cars at around a billion.
+At k=24 it also reached the Snapp chip and the bare query «quik». It is the
+kind of row D52 was written about, with a make, a model, a trim, a year and a
+price like every row beside it, and the one field that says it is not a car
+was the one field the query never looked at.
+
+**The decision.** Strict: only `vehicle` passes, and `unknown` does not
+(`79f7fcf`). A record whose class was never determined is not shown as a car.
+The rule is not new. D52 already says `unknown` never decays to `vehicle`, and
+eligibility has refused it since; the query was the one path by which rows
+were offered to a reader without passing eligibility, and it now applies the
+same test first, before any constraint the buyer stated.
+
+**What it replaced, and why not those.** Two other fixes would have cleared
+the defect that was seen.
+
+Refusing only `assignment` removes that row. On run11 its results are the
+strict gate's exactly, because the corpus holds one non-vehicle class and no
+`unknown`; it is wrong on the day the classifier names a second, and it shows
+`unknown` as a car.
+
+Letting `unknown` through keeps search populated on an artifact that does not
+carry the field. It does so by showing as a car a row nobody classified, which
+is the confusion D52 exists to end.
+
+**What being wrong costs, stated before it happens.** The published schema
+does not require `product_class`, and `caro/corpus_reader.py` records a
+missing class as `unknown`. So an artifact without the field now shows nothing
+in search — an empty table under an honest heading instead of a full one under
+a false one. That is the intended direction, and it is a real cost: a source
+whose adapter does not classify produces a corpus that search will not show
+until it does. On run11 it costs nothing — all 76 records carry a class — and
+bama reserves `unknown` for a page with no product name at all.
+
+**Scope.** Search and reweight only. The detail page reached by id, and
+compare over ids someone chose, still answer for a non-vehicle:
+`/api/listing/bama:hubymydi` returns the assignment, and its payload carries
+`product_class: assignment` so that the renderer can know (section 9 of the
+contract suite). Whether those two should refuse it — `200` with the class, or
+a `NOT_A_VEHICLE` fault — is not decided here. Nor is the card surface:
+`ListingCard` reads `model_key` while the declaration says `card=no`, and no
+guard derives that surface from its source yet.
+
+**How it is held.** Two guards in `tests/test_api_contract.py`, because
+neither alone tells the strict gate from both of the wrong ones.
+
+Section 10 (`0fc4bb2`) runs on the corpus that is shipped. It reads the gates
+out of `eligibility.FIELDS` and fails on any gate but `product_class`, so a
+second gate is not covered until someone writes what passes it. It sends every
+example chip and one bare query per model through search and reweight at
+k=24, and reads the class of each row shown from the ARTIFACT, by id — not
+from the payload, because a guard that takes its verdict from what it guards
+passes the day search labels its rows `vehicle`. A reach check requires each
+non-vehicle to fall inside the first 24 rows of its own model's query, or the
+guard could not see it leak.
+
+Section 2 (`c8def22`) runs on a fixture that carries no class, as the schema
+allows. All nine rows load as `unknown`, search shows none of them, and — the
+control — the same nine rows declared `vehicle` are shown by the same query,
+so «none shown» cannot be passing on a query that matches nothing.
+
+Two commits before the fix moved the tests off the behaviour it changes.
+Section 2 reaches detail and compare by the fixture's own ids (`062ae05`), and
+sections 5 and 6 run on a fixture declared to hold vehicles (`45b03b2`): D50
+is a claim about the evidence a refusal carries, and on the class-less fixture
+there would be none, so its six key checks would pass on an empty payload.
+
+**Measured.** Eleven mutations in twelve runs, each count written down before
+its run. A run that crashed, or ended without the suite's own verdict, would
+have counted as a failure and never as zero red.
+
+                                                  §2   §10   elsewhere
+    the gate as committed                          0     0
+    refuses only `assignment`, run11 as it is      1     0
+      the same, with a second non-vehicle class    1     6
+    the gate, against that corpus                  0     0
+    a second gate in the declaration               0     1
+    the assignment moved to row 30 of «quik»       0     1
+    no gate                                        1     6
+    `unknown` passes                               1     0
+    the loader records a missing class `vehicle`   2     0
+    no gate, and search stamps `vehicle`           1     6
+      the same, section 10 reading the payload     1     0
+    nothing passes                                 1     0   §5 1 · §6 1 · §8 5
+
+The loader case is also one red in the corpus suite, so section 2's first
+check is this suite stating its own precondition, not the loader's only
+guard. After the five commits the suites hold 1592 assertions, all green, and
+the web build passes.
+
+**What the guards cannot see, said rather than passed.** On run11 as it is,
+section 10 cannot tell the strict gate from one that refuses only
+`assignment`; section 2's class-less fixture is what does. And section 10 is
+blind to a gate that refuses everything, because no row shown is no row past
+the gate; section 2's control and sections 5, 6 and 8 go red on that.
+
+**What this does not settle.** What detail and compare do with a non-vehicle.
+The card surface. That the buyer's own constraints fail open where the gate
+fails closed: `keeps()` lets a missing price, year or mileage through the
+budget, year and mileage it was asked for, so a row whose mileage is unknown
+passes «کم‌کارکرد». And that `/api/search` caps k at 24 while
+`/api/search/reweight` takes any k.
