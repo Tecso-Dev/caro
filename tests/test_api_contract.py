@@ -201,6 +201,29 @@ with corpus_dir(valid_artifact()):
     check("  and it returns evidence, not rows",
           cmp_.rows == [] and len(cmp_.evidence) == 2)
 
+    # This fixture carries no `product_class`, as the published schema
+    # allows. The loader records such a row as `unknown`, never `vehicle`,
+    # and search shows no `unknown` as a car (D52) — strict, by decision: a
+    # class nobody determined does not pass the gate. The ids above still
+    # reach the detail and compare paths; whether those should refuse a
+    # non-vehicle is not decided here.
+    _loaded = corpus_mod.active().listings
+    check("  a row with no class is loaded as `unknown`, not `vehicle`",
+          len(_loaded) == 9
+          and all(x.product_class == "unknown" for x in _loaded),
+          str(sorted({x.product_class for x in _loaded})))
+    check("  and search shows none of them as a car",
+          r.evidence == [] and r.items == [],
+          f"shown: {[e.id for e in r.evidence]}")
+
+# The control: the same nine rows and the same query, with the class the
+# only difference. Without it, «none of them» above would pass just as well
+# on a search that showed nothing to anybody.
+with corpus_dir(valid_artifact(product_class="vehicle")):
+    _r2 = api.search(q="۲۰۶", k=5)
+    check("  the same rows declared `vehicle` are shown by the same query",
+          len(_r2.evidence) == 5, f"shown: {[e.id for e in _r2.evidence]}")
+
 
 # ---------------------------------------------------------------------------
 print("\n3 — a missing DEFAULT corpus falls back, and says what it looked for")
