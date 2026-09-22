@@ -655,6 +655,102 @@ else:
         corpus_mod.active.cache_clear()
 
 
+# ---------------------------------------------------------------------------
+print("\n10 — the gate is applied before a reader sees a row")
+# ---------------------------------------------------------------------------
+#
+# FIELD_PROVENANCE.md defines a gate as the thing "the query applies before a
+# reader sees a row; nobody chooses it", and names one: product_class, which
+# only `vehicle` passes (D52). Section 9 proves the field reaches the client.
+# This proves the QUERY honours it, which it once did not: `_evidence`'s
+# filter checked model, budget, year and mileage and never the class, and
+# the Quik chip under the search box showed an assignment as the
+# eighth of its eight rows — a 1405 Quik at ninety million toman beside real
+# ones at a billion.
+#
+# The gates are read from the declaration rather than named here, so a second
+# gate added later fails the first check below until someone decides what
+# passes it.
+#
+# ONLY the search endpoints. A detail page reached by id, and a compare of ids
+# someone chose, are not a query whose rows a reader is shown; whether they
+# should refuse a non-vehicle is a separate decision and is not taken here.
+#
+# The class of each row shown is read from the ARTIFACT, by id — not from the
+# row the endpoint returned. A guard that takes its verdict from the thing it
+# guards passes the day that thing labels what it shows `vehicle`; and a
+# scored row carries no class at all (a Row has none, by design), which a
+# read of the payload would report as a leak.
+#
+# Queries are derived, not listed: every example chip, read from the
+# component as section 8 reads it, and one bare query per model the corpus
+# holds, at k=24 — the most `/api/search` accepts; reweight has no cap. The
+# reach check at the end is what makes 24 enough for both: each non-vehicle
+# must fall inside the first 24 of its own model's query, or the guard could
+# not see it leak.
+
+from webapp.api.eligibility import FIELDS as _DECL               # noqa: E402
+
+_gates = sorted(f for f, e in _DECL.items() if e.gate)
+check(f"the declaration's gates are exactly {_gates}",
+      _gates == ["product_class"],
+      "a new gate needs its own pass rule in this section before it is covered")
+
+_art10 = ROOT / "data" / "corpora" / f"{RUN}.json"
+if not _art10.exists():
+    check("  the default corpus is present to check against", False,
+          str(_art10))
+else:
+    _rows10 = json.loads(_art10.read_text(encoding="utf-8"))["listings"]
+    _cls10 = {x["listing_id"]: x.get("product_class") for x in _rows10}
+    _models = sorted({(x.get("model") or "").lower() for x in _rows10
+                      if x.get("model")})
+    _box10 = (ROOT / "webapp/web/components/SearchBox.tsx").read_text(
+        encoding="utf-8")
+    _m10 = re.search(r"const EXAMPLES = \[(.*?)\];", _box10, re.S)
+    _queries = (re.findall(r"'([^']+)'", _m10.group(1)) if _m10 else []) \
+        + _models
+
+    _was, _was_run = corpus_reader.CORPORA, os.environ.get(corpus_mod.RUN_ENV)
+    corpus_reader.CORPORA = _art10.parent
+    os.environ.pop(corpus_mod.RUN_ENV, None)
+    corpus_mod.active.cache_clear()
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            _kind10 = api.which_corpus().status.kind
+            _res10 = [(q, "search", api.search(q=q, k=24))
+                      for q in _queries] + \
+                     [(q, "reweight", api.search_reweight(
+                         q=q, weights=schemas.ReweightRequest(), k=24))
+                      for q in _queries]
+        check(f"  serving the real corpus (kind={_kind10})",
+              _kind10 == "REAL", _kind10)
+        for _q, _ep, _r in _res10:
+            _shown = list(_r.evidence) + list(_r.items)
+            _past = sorted({x.id for x in _shown
+                            if _cls10.get(x.id) != "vehicle"})
+            check(f"  {_ep:<8} «{_q[:30]}» — {len(_shown)} row(s), none "
+                  f"past the gate", not _past,
+                  f"a non-vehicle is shown as a row: {_past}")
+    finally:
+        corpus_reader.CORPORA = _was
+        if _was_run is None:
+            os.environ.pop(corpus_mod.RUN_ENV, None)
+        else:
+            os.environ[corpus_mod.RUN_ENV] = _was_run
+        corpus_mod.active.cache_clear()
+
+    for _nv in (x for x in _rows10 if x.get("product_class") != "vehicle"):
+        _mm = (_nv.get("model") or "").lower()
+        _same = [x["listing_id"] for x in _rows10
+                 if (x.get("model") or "").lower() == _mm]
+        _pos = _same.index(_nv["listing_id"]) + 1
+        check(f"  reach: {_nv['listing_id']} ({_nv.get('product_class')}) "
+              f"would be row {_pos} of «{_mm}» — inside k=24",
+              _pos <= 24,
+              "outside what one query can show, so a leak here is invisible")
+
+
 print()
 if FAILS:
     print(f"FAILED ({len(FAILS)}): " + ", ".join(FAILS))
