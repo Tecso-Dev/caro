@@ -176,12 +176,15 @@ with corpus_dir(valid_artifact()):
     check("  run_id names the run", r.corpus.identity.run_id == RUN,
           str(r.corpus.identity.run_id))
 
-    lst = api.listing(r.evidence[0].id)
+    # The ids are the fixture's own. Reading them back out of a search made
+    # these two checks depend on what search chooses to show, which is a
+    # different question from whether a caller holding an id gets a valid
+    # envelope from the detail and compare paths.
+    lst = api.listing("b0")
     ok, why = validates(schemas.ListingResponse, lst)
     check("ListingResponse validates on a real corpus", ok, why)
 
-    cmp_ = api.compare(schemas.CompareRequest(
-        ids=[e.id for e in r.evidence[:2]], q="۲۰۶"))
+    cmp_ = api.compare(schemas.CompareRequest(ids=["b0", "b1"], q="۲۰۶"))
     ok, why = validates(schemas.CompareResponse, cmp_)
     check("CompareResponse validates on a real corpus", ok, why)
     check("  and it returns evidence, not rows",
