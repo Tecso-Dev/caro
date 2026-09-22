@@ -119,17 +119,28 @@ def corpus_dir(body: str | None, *, run_env: str | None = None):
             corpus_mod.active.cache_clear()
 
 
-def valid_artifact(n: int = 9) -> str:
+def valid_artifact(n: int = 9, *, product_class: str | None = None) -> str:
+    """A small artifact in the published schema.
+
+    By default its rows carry no `product_class`, which the schema allows,
+    and the loader records such a row as `unknown` — never as `vehicle`.
+    A section whose claim needs cars in the corpus says so by passing
+    `product_class="vehicle"`. The default is never assumed to hold any.
+    """
+    rows = [
+        {"listing_id": f"b{i}",
+         "asking_price_toman": 500_000_000 + i * 40_000_000,
+         "year_jalali": 1392 + (i % 4), "mileage_km": 90_000 + i * 9000,
+         "make": "peugeot", "model": "206", "trim": "TU5",
+         "province": "tehran"}
+        for i in range(n)]
+    if product_class is not None:
+        for x in rows:
+            x["product_class"] = product_class
     obj = {
         "schema": SCHEMA, "run_id": RUN, "source": "bama.ir",
         "collected_on": "2026-09-09",
-        "listings": [
-            {"listing_id": f"b{i}",
-             "asking_price_toman": 500_000_000 + i * 40_000_000,
-             "year_jalali": 1392 + (i % 4), "mileage_km": 90_000 + i * 9000,
-             "make": "peugeot", "model": "206", "trim": "TU5",
-             "province": "tehran"}
-            for i in range(n)],
+        "listings": rows,
     }
     return json.dumps(obj, ensure_ascii=False, indent=2)
 
@@ -365,7 +376,11 @@ for label, body in _BROKEN.items():
 
 # ---------------------------------------------------------------------------
 print("\n5 — an ungated corpus fabricates no estimate (D50)")
-with corpus_dir(valid_artifact()):
+# The rows are declared vehicles. What D50 forbids is an estimate on the
+# evidence a refusal carries, and that claim needs the evidence to be cars:
+# a row whose class nobody determined is not one (D52), and a check that
+# passes because nothing was shown to check proves nothing.
+with corpus_dir(valid_artifact(product_class="vehicle")):
     r = api.search(q="۲۰۶", k=5)
     check("evidence exists", len(r.evidence) > 0, str(len(r.evidence)))
     check("  while nothing is appraisable", r.appraisable == 0, str(r.appraisable))
@@ -393,7 +408,9 @@ with corpus_dir(valid_artifact()):
 
 # ---------------------------------------------------------------------------
 print("\n6 — a refusal is a product state, not an error")
-with corpus_dir(valid_artifact()):
+# Vehicles for the same reason as section 5: `still_available` promises
+# evidence, and the promise is only tested where there are cars to show.
+with corpus_dir(valid_artifact(product_class="vehicle")):
     r = api.search(q="۲۰۶", k=5)
     ok, why = validates(schemas.SearchResponse, r)
     check("the refusal is schema-valid", ok, why)
