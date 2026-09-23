@@ -549,6 +549,21 @@ for ts_name, literal in (("CorpusKind", schemas.CorpusKind),
           f"missing in TS: {sorted(want - got) or DASH} · "
           f"not in Python: {sorted(got - want) or DASH}")
 
+# And the one list that is not a type at all. `PRICE_STATUS_UNUSABLE` is the
+# first half of the card's price rule, copied into TypeScript because the
+# client has to apply it; a copy nobody checks is how the client ends up
+# drawing a number the server would have refused.
+from caro.ingest.quality import UNUSABLE_PRICE                    # noqa: E402
+
+_pu = re.search(r"export const PRICE_STATUS_UNUSABLE: string\[\] = \[(.*?)\];",
+                TS, re.S)
+_ts_unusable = set(_MEMBER.findall(_pu.group(1))) if _pu else set()
+_py_unusable = {s.value for s in UNUSABLE_PRICE}
+check("PRICE_STATUS_UNUSABLE ≡ quality.UNUSABLE_PRICE, member for member",
+      _ts_unusable == _py_unusable,
+      f"missing in TS: {sorted(_py_unusable - _ts_unusable) or DASH} · "
+      f"not in Python: {sorted(_ts_unusable - _py_unusable) or DASH}")
+
 
 # ---------------------------------------------------------------------------
 print("\n8 — every example on the search box still finds something")

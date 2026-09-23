@@ -217,6 +217,18 @@ export type CorpusResponse = Envelope;
 
 /* ------------------------------------------------------------------ */
 
+/** The price statuses `caro/ingest/quality.py` calls unusable, which is the
+ *  first half of the rule FIELD_PROVENANCE.md states for a price on a card:
+ *
+ *      price_status ∉ this list   AND   price_kind === 'cash'
+ *
+ *  It is a third hand-written copy of a Python fact, and it is checked rather
+ *  than trusted for the same reason the interfaces above are: the contract
+ *  suite asserts this list is exactly `UNUSABLE_PRICE`, member for member. */
+export const PRICE_STATUS_UNUSABLE: string[] = [
+  'ambiguous', 'negotiable', 'absent',
+];
+
 export const WEIGHT_KEYS: (keyof WeightSet)[] = [
   'value', 'risk', 'running_cost', 'liquidity', 'mileage', 'recency',
 ];
