@@ -171,6 +171,12 @@ class EvidenceItem(BaseModel):
     # with a make, a model, a trim, a year and a price, and without this
     # field every cell the detail page draws says "car".
     product_class: str | None = None
+    # The two fields FIELD_PROVENANCE.md names in its rule for a price on a
+    # card — `price_status` grades the extraction, `price_kind` says what the
+    # number means (D52) — and a card cannot apply a rule it is not sent.
+    # Null on an appraisal Row, which carries neither: see `_row_evidence`.
+    price_status: str | None = None
+    price_kind: str | None = None
 
 
 class ScoredItem(EvidenceItem):

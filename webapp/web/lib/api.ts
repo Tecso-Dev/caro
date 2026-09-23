@@ -135,6 +135,12 @@ export interface EvidenceItem {
   /* D52's gate: only `vehicle` is a car. Sent so the client can apply it —
      what the client should DO with a non-vehicle is not decided yet. */
   product_class: string | null;
+  /* The two halves of the price rule FIELD_PROVENANCE.md states for a card:
+     `price_status` grades the extraction, `price_kind` says what the number
+     means. Null together on an appraisal row, which carries neither and does
+     not need to: eligibility applied both before it could be scored. */
+  price_status: string | null;
+  price_kind: string | null;
 }
 
 export interface ScoredItem extends EvidenceItem {
