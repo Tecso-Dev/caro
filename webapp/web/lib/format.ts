@@ -179,6 +179,34 @@ export const CONDITION_FA: Record<string, string> = {
   unknown: 'ثبت‌نشده',
 };
 
+/* D52's gate, for a screen that is handed one listing by id.
+ *
+ * Search applies the gate before a row is shown (D60). Detail and compare
+ * answer for whatever id they are asked about, so a screen there has to
+ * decide what the listing IS before it decides how to draw it. Only
+ * `vehicle` is a car. `unknown` is a class nobody determined, and it never
+ * decays to `vehicle`. Null is the one other case, and it is an appraisal
+ * Row — a Row carries no class, and only a vehicle becomes one — so it is
+ * drawn as a car: the same null rule `askingPrice` uses. */
+export function isVehicleClass(pc: string | null | undefined): boolean {
+  return pc == null || pc === 'vehicle';
+}
+
+export const PRODUCT_CLASS_FA: Record<string, string> = {
+  assignment: 'حواله',
+  unknown: 'نوعش تعیین نشده',
+};
+
+export function classLabel(pc: string | null | undefined): string {
+  if (!pc) return 'ثبت‌نشده';
+  return PRODUCT_CLASS_FA[pc] ?? pc;
+}
+
+/** The one sentence every surface uses when it will not present a listing
+ *  as a car. One string, so the words are the same on every page and a
+ *  guard can look for them without keeping a copy. */
+export const NOT_A_CAR_FA = 'به‌عنوان خودرو نمایش داده نمی‌شود';
+
 export function conditionLabel(c: string | null | undefined): string {
   if (!c) return 'ثبت‌نشده';
   return CONDITION_FA[c.toLowerCase()] ?? c;

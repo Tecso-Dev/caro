@@ -7,7 +7,8 @@ import {
   type ScoredItem,
 } from '@/lib/api';
 import {
-  compact, conditionLabel, faNum, faPlain, km, modelLabel, toman, trimLabel,
+  NOT_A_CAR_FA, classLabel, compact, conditionLabel, faNum, faPlain,
+  isVehicleClass, km, modelLabel, toman, trimLabel,
 } from '@/lib/format';
 import TechDetail from '@/components/TechDetail';
 import TermBars from '@/components/TermBars';
@@ -78,6 +79,9 @@ export default function CarDetail({ id }: { id: string }) {
           return undefined;
         }
         setListing(r.listing);
+        // A listing that is not a car has no decision to ask for: an
+        // estimate of an assignment is the mistake D52 exists to prevent.
+        if (!isVehicleClass(r.listing.product_class)) return undefined;
         return api.compare([id]);
       })
       .then((c) => {
@@ -161,6 +165,32 @@ export default function CarDetail({ id }: { id: string }) {
 
   if (!listing) {
     return <div className="panel text-ink-3 text-[13.5px]">در حال بارگذاری…</div>;
+  }
+
+  return (
+    <ListingFile id={id} listing={listing} corpus={corpus} scored={scored}
+                 refused={refused} />
+  );
+}
+
+/* What a loaded listing looks like, with nothing fetched here.
+ *
+ * Pure on purpose. `tests/test_api_contract.py` renders exactly this
+ * component with what the API really returns — for a vehicle, for the
+ * assignment in run11 and for a row whose class nobody determined — and
+ * checks the markup a reader would get. A branch that can only be reached
+ * through `useEffect` is a branch no test can see. */
+export function ListingFile({
+  id, listing, corpus, scored, refused,
+}: {
+  id: string;
+  listing: EvidenceItem;
+  corpus: CorpusMeta | null;
+  scored: ScoredItem | null;
+  refused: string | null;
+}) {
+  if (!isVehicleClass(listing.product_class)) {
+    return <NotACarFile id={id} listing={listing} corpus={corpus} />;
   }
 
   const gain = scored ? scored.opportunity_toman >= 0 : false;
@@ -280,52 +310,128 @@ export default function CarDetail({ id }: { id: string }) {
         </div>
       )}
 
-      {/* --- what a published corpus does not carry ----------------------- */}
-      <section className="panel border-dashed">
-        <p className="eyebrow">عکس و متن آگهی — عمداً اینجا نیست</p>
-        <p className="m-0 text-[13.5px] text-ink-2 leading-[1.95]
-                      max-w-[68ch]">
-          پیکره‌ی منتشرشده هیچ متنی از نوشته‌ی فروشنده را حمل نمی‌کند: نه
-          عنوان، نه توضیح، نه خط کارکرد. آنچه لازم بوده پیش از انتشار از دل
-          متن استخراج و خودِ متن دور ریخته شده است. این خلأ، خرابی نیست — قرارداد
-          داده است.
-        </p>
-        {/* Provenance, on the page where a buyer decides. `source` says which
-            file; the digest says which bytes — and only the second is
-            checkable, because two deployments can serve different files from
-            one path and both report it honestly. */}
-        {corpus && (
-          <dl className="m-0 mt-4 pt-3 border-t border-line grid
-                         grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12px]">
-            <dt className="text-ink-3">منبع</dt>
-            <dd className="m-0 num text-[11.5px]">{corpus.source}</dd>
-            {corpus.identity ? (
-              <>
-                <dt className="text-ink-3">اجرا</dt>
-                <dd className="m-0 num text-[11.5px]">
-                  {corpus.identity.run_id}
-                </dd>
-                <dt className="text-ink-3">SHA-256</dt>
-                <dd className="m-0 num text-[11.5px] break-all">
-                  {corpus.identity.sha256}
-                </dd>
-              </>
-            ) : (
-              <>
-                <dt className="text-ink-3">SHA-256</dt>
-                <dd className="m-0 text-ink-3">
-                  ندارد — پیکره‌ی ساختگی فایلی برای hash گرفتن ندارد
-                </dd>
-              </>
-            )}
-          </dl>
-        )}
-      </section>
+      <Provenance corpus={corpus} />
 
       <div>
         <Link href="/search" className="btn">جست‌وجوی دیگر</Link>
       </div>
     </div>
+  );
+}
+
+/* A listing that is in the corpus and is not a car.
+ *
+ * It is not refused: the listing exists, and what it says is a fact worth
+ * showing — the assignment in run11 has a make, a model, a year and an
+ * amount. What changes is the frame. The page says what the listing IS
+ * before anything else, calls it a listing and not a car, prints the amount
+ * without calling it a car's asking price, and asks for no decision. */
+function NotACarFile({
+  id, listing, corpus,
+}: {
+  id: string;
+  listing: EvidenceItem;
+  corpus: CorpusMeta | null;
+}) {
+  const pc = listing.product_class;
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <p className="eyebrow">پرونده‌ی آگهی · <span className="num">{id}</span></p>
+        <h1 className="m-0 text-[28px] font-bold">
+          {pc === 'unknown' ? 'نوع این آگهی تعیین نشده است'
+            : `این آگهی خودرو نیست — ${classLabel(pc)}`}
+        </h1>
+      </div>
+
+      <section className="panel border-bad">
+        <div className="flex items-center gap-3 flex-wrap mb-3">
+          <span className="chip border-bad text-bad bg-bad-soft
+                           !font-fa !normal-case !tracking-normal">
+            {classLabel(pc)}
+          </span>
+          <p className="eyebrow !mb-0">{NOT_A_CAR_FA}</p>
+        </div>
+        <p className="m-0 text-[14px] leading-[1.95] max-w-[62ch]">
+          {pc === 'assignment'
+            ? 'حواله ادعایی است بر خودرویی که هنوز تحویل نشده، نه خود خودرو. '
+              + 'سال، مدل و مبلغی که پایین می‌بینی درباره‌ی همین حواله است؛ '
+              + 'پس اینجا نه قیمت یک خودرو گفته می‌شود و نه برآوردی، و در '
+              + 'جست‌وجو هم این آگهی به‌جای خودرو نشان داده نمی‌شود.'
+            : pc === 'unknown'
+              ? 'منبع نگفته این آگهی خودرو است یا چیز دیگری، و نوعی که تعیین '
+                + 'نشده به «خودرو» تبدیل نمی‌شود. آنچه پایین می‌بینی فقط چیزی '
+                + 'است که خود آگهی گفته.'
+              : 'این آگهی در پیکره هست، ولی از نوعی است که خودرو نیست. آنچه '
+                + 'پایین می‌بینی فقط چیزی است که خود آگهی گفته.'}
+        </p>
+      </section>
+
+      <section className="panel">
+        <p className="eyebrow">آنچه خود آگهی می‌گوید</p>
+        <dl className="m-0 grid gap-px bg-line border border-line
+                       sm:grid-cols-3">
+          <F k="سازنده" v={listing.make ? modelLabel(listing.make) : '—'} />
+          <F k="مدل" v={listing.model ? modelLabel(listing.model) : '—'} />
+          <F k="تیپ" v={trimLabel(listing.trim)} />
+          <F k="سال (شمسی)" v={faPlain(listing.year_jalali)} num />
+          <F k="مبلغ اعلام‌شده" v={toman(listing.asking_price_toman)} num />
+        </dl>
+      </section>
+
+      <Provenance corpus={corpus} />
+
+      <div>
+        <Link href="/search" className="btn">جست‌وجوی دیگر</Link>
+      </div>
+    </div>
+  );
+}
+
+/* What a published corpus does not carry, and which bytes this page rests
+   on. Shared by both files: it is as true of an assignment as of a car. */
+function Provenance({ corpus }: { corpus: CorpusMeta | null }) {
+  return (
+    <section className="panel border-dashed">
+      <p className="eyebrow">عکس و متن آگهی — عمداً اینجا نیست</p>
+      <p className="m-0 text-[13.5px] text-ink-2 leading-[1.95]
+                    max-w-[68ch]">
+        پیکره‌ی منتشرشده هیچ متنی از نوشته‌ی فروشنده را حمل نمی‌کند: نه
+        عنوان، نه توضیح، نه خط کارکرد. آنچه لازم بوده پیش از انتشار از دل
+        متن استخراج و خودِ متن دور ریخته شده است. این خلأ، خرابی نیست — قرارداد
+        داده است.
+      </p>
+      {/* Provenance, on the page where a buyer decides. `source` says which
+          file; the digest says which bytes — and only the second is
+          checkable, because two deployments can serve different files from
+          one path and both report it honestly. */}
+      {corpus && (
+        <dl className="m-0 mt-4 pt-3 border-t border-line grid
+                       grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12px]">
+          <dt className="text-ink-3">منبع</dt>
+          <dd className="m-0 num text-[11.5px]">{corpus.source}</dd>
+          {corpus.identity ? (
+            <>
+              <dt className="text-ink-3">اجرا</dt>
+              <dd className="m-0 num text-[11.5px]">
+                {corpus.identity.run_id}
+              </dd>
+              <dt className="text-ink-3">SHA-256</dt>
+              <dd className="m-0 num text-[11.5px] break-all">
+                {corpus.identity.sha256}
+              </dd>
+            </>
+          ) : (
+            <>
+              <dt className="text-ink-3">SHA-256</dt>
+              <dd className="m-0 text-ink-3">
+                ندارد — پیکره‌ی ساختگی فایلی برای hash گرفتن ندارد
+              </dd>
+            </>
+          )}
+        </dl>
+      )}
+    </section>
   );
 }
 
