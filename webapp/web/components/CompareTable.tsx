@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
-  ApiError, api, type CompareResponse, type Fault, type ScoredItem,
-  termLabel,
+  ApiError, api, type CompareResponse, type EvidenceItem, type Fault,
+  type ScoredItem, termLabel,
 } from '@/lib/api';
-import { askingPrice, faNum, faPlain, fixed, km, modelLabel, toman }
-  from '@/lib/format';
+import {
+  NOT_A_CAR_FA, askingPrice, classLabel, faNum, faPlain, fixed,
+  isVehicleClass, km, modelLabel, toman,
+} from '@/lib/format';
 import TechDetail from '@/components/TechDetail';
 
 /* Side by side, with every term kept apart.
@@ -51,6 +53,55 @@ const METRICS: Metric[] = [
   { key: 'score', fa: 'امتیاز کل', get: (r) => r.score,
     fmt: fixed, better: 'high', ltr: true },
 ];
+
+/* The evidence table, drawn from what compare returned and nothing else.
+ *
+ * Pure and exported for the same reason as `ListingFile` in CarDetail: the
+ * guard renders it with the API's real answer. A row that is not a car
+ * stays in the table — compare was asked about it, and dropping it without
+ * a word is what the API used to do — and says what it is in its first
+ * cell, in the same sentence the detail page uses. */
+export function EvidenceRows({ evidence }: { evidence: EvidenceItem[] }) {
+  return (
+    <div className="border border-line bg-surface rounded-[3px]
+                    overflow-x-auto">
+      <table className="w-full border-collapse text-[13px] min-w-[520px]">
+        <thead>
+          <tr className="text-ink-3 text-[11.5px]">
+            {['خودرو', 'مدل', 'کارکرد', 'قیمت پیشنهادی'].map((h) => (
+              <th key={h} className="text-right font-normal px-4 py-2.5
+                                     border-b border-line">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {evidence.map((r) => (
+            <tr key={r.id} data-listing={r.id}>
+              <td className="px-4 py-2.5 border-b border-line">
+                {modelLabel(r.model_key)}
+                {!isVehicleClass(r.product_class) && (
+                  <span className="block mt-0.5 text-[11.5px] text-bad">
+                    {classLabel(r.product_class)} — {NOT_A_CAR_FA}
+                  </span>
+                )}
+              </td>
+              <td className="px-4 py-2.5 border-b border-line fig">
+                {faPlain(r.year_jalali)}
+              </td>
+              <td className="px-4 py-2.5 border-b border-line fig">
+                {km(r.mileage_km)}
+              </td>
+              <td className="px-4 py-2.5 border-b border-line fig">
+                {askingPrice(r.asking_price_toman,
+                             r.price_status, r.price_kind)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 export default function CompareTable() {
   const params = useSearchParams();
@@ -183,38 +234,7 @@ export default function CompareTable() {
               : 'هیچ‌کدام از این شناسه‌ها در پیکره‌ی جاری نبودند.'}
           </div>
         ) : (
-        <div className="border border-line bg-surface rounded-[3px]
-                        overflow-x-auto">
-          <table className="w-full border-collapse text-[13px] min-w-[520px]">
-            <thead>
-              <tr className="text-ink-3 text-[11.5px]">
-                {['خودرو', 'مدل', 'کارکرد', 'قیمت پیشنهادی'].map((h) => (
-                  <th key={h} className="text-right font-normal px-4 py-2.5
-                                         border-b border-line">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.evidence.map((r) => (
-                <tr key={r.id}>
-                  <td className="px-4 py-2.5 border-b border-line">
-                    {modelLabel(r.model_key)}
-                  </td>
-                  <td className="px-4 py-2.5 border-b border-line fig">
-                    {faPlain(r.year_jalali)}
-                  </td>
-                  <td className="px-4 py-2.5 border-b border-line fig">
-                    {km(r.mileage_km)}
-                  </td>
-                  <td className="px-4 py-2.5 border-b border-line fig">
-                    {askingPrice(r.asking_price_toman,
-                                 r.price_status, r.price_kind)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <EvidenceRows evidence={data.evidence} />
         )}
       </div>
     );
