@@ -3164,3 +3164,126 @@ fails closed: `keeps()` lets a missing price, year or mileage through the
 budget, year and mileage it was asked for, so a row whose mileage is unknown
 passes «کم‌کارکرد». And that `/api/search` caps k at 24 while
 `/api/search/reweight` takes any k.
+
+## D61 — A rule the screen cannot apply is a rule nobody is keeping
+
+FIELD_PROVENANCE.md governs two different things about a field. Four flags
+say which surface may draw it, and for one number — the asking price — the
+same file states a rule with its fields named. Neither was keepable. The card
+surface had never been read, so `card` was a column nothing could contradict;
+and the two fields the price rule names were not on the payload, so no screen
+could apply the rule it is judged by. D60 was the same defect about the gate,
+one surface over.
+
+**The flag nothing could contradict.** `model_key` was `card=no`, and the
+reason was written into the table beside it: nothing had judged the card
+surface. `ListingCard` drew the field anyway. It is drawn by three components,
+not one — the evidence grid in `SearchResults.tsx`, which is the table an
+ungated corpus shows; `ListingCard.tsx` on a gated one; and `CompareTable.tsx`,
+which has both — and all three render the heading from it through
+`modelLabel`.
+
+So the table moves to the renderers (`26ea4b5`). Not the reverse, because the
+alternative it had in mind cannot be drawn: `derived_title` is `card=yes` in
+the same table, is not a key in run11, and is not a field of `EvidenceItem`.
+A flag kept `no` while three surfaces draw the field is not a judgement, it
+is a note that nobody has looked.
+
+**What the card draws is now read out of the card** (`318810f`), the way the
+detail surface has been read out of `CarDetail.tsx`. Three kinds of field are
+kept apart: one this table judges, which must be `card=yes`; a ranking output,
+which only `ScoredItem` has and which D50 governs rather than this table; and
+anything else, which fails — and which is also what stops a variable named
+`r` elsewhere in a file from passing as a row.
+
+Two judgements were made in writing it, and both are choices rather than
+findings. Compare has no flag of its own: it is a grid of rows a reader is
+shown, so it is held to the card's rules. And `id` and `url` are exempt by
+name, because a card uses them to ADDRESS a row — a React key, the link to
+/car/[id] — and not to say anything about the car.
+
+Which components draw rows is derived too. A list of renderers is the
+hand-kept `RENDERER_CONSUMES` one level up, and the renderer it would miss is
+the one added tomorrow, so every .tsx importing a type that carries listings
+must be a surface one of these guards reads.
+
+**The rule nothing could apply.** The same table says a card renders an
+asking price only when both gates pass:
+
+    price_status ∉ UNUSABLE_PRICE     AND     price_kind == cash
+
+The table writes that first half as `price_status ∈ {display_confirmed, …}`,
+and the ellipsis is why the client needed a list rather than a sentence: the
+set it elides is the complement of `UNUSABLE_PRICE`, which lives in Python.
+
+Both fields are `card=yes` in that table. Neither was on the payload, so
+every grid drew `toman(asking_price_toman)` with no way to know what the
+number meant. Four commits make the rule applicable: the payload carries the
+two fields (`e5ac6a4`); `lib/api.ts` carries the status list, checked member
+for member against `quality.UNUSABLE_PRICE` rather than trusted (`c7501a5`);
+`askingPrice` in lib/format.ts applies the rule in one place (`80b7c3d`); and
+the card guard requires the fields wherever a surface draws a price
+(`8df3c96`).
+
+Both fields null means the row carries no price provenance at all, and that
+is an appraisal row: eligibility applied these same two gates before it could
+be scored, so the number stands. Two label maps, not one, because
+`negotiable` is a member of `PriceStatus` and a member of `price_kind` and
+means a different thing in each — which is why the rule above names its
+fields.
+
+**What changed on screen.** `bama:dn0taqsc` and `bama:gfgcipqb`, both in the
+«پراید زیر ۳۰۰ میلیون» chip, stop reading «ثبت‌نشده» and read «توافقی».
+Their number was never there — `price_status: absent` — so nothing is
+hidden; what the reader gains is the difference between a seller who named
+no price and a field this representation does not carry, which is the
+distinction the rest of this project is built on.
+
+**What being wrong costs.** A corpus whose rows carry a believable financing
+total now shows a label where it used to show a figure, and that is the
+intended direction: a total cost of instalments reads like a bargain beside
+real asking prices, which is what D52 caught one layer down. The status half
+costs the same way — an `ambiguous` extraction hides its figure — and on
+run11 it costs nothing at all: 74 of 76 rows are `cash`, and the two that are
+not carry no number.
+
+**Measured.** Twelve mutations across the two suites, each count written
+before its run, a crash counted as a failure and never as zero red:
+
+    model_key declared card=no again                 corpus 3               one per surface
+    a card draws a card=no field                     corpus 1
+    a card reads a field in neither interface        corpus 1
+    the row variable renamed, pattern finds nothing  corpus 1
+    a new component imports a row type               corpus 1               no guard reads it
+    a drawn field with no row in the table           corpus 1
+    lib/api.ts forgets price_kind                    corpus 6 · contract 2  predicted 3, measured 6
+    the grid stops drawing a price                   none                   the check is conditional
+    price_status declared card=no                    corpus 3
+    askingPrice drops the kind gate                  none                   the stated limitation
+    the mirrored status list drops a member          contract 1
+    the server stops filling price_kind              contract 2             zero before section 9 followed it
+
+Two of those predictions were wrong and are corrected in place rather than
+quietly adjusted. Removing a field from the interface gives six red in the
+corpus suite and not three, because a field the renderer reads that is in
+NEITHER interface fails the membership check as well, once per surface: the
+guard is stricter than the prediction was. And the server no longer filling
+`price_kind` was zero red everywhere — the guard asserted the fields are on
+the model, nothing asserted they are FILLED — which is the hole section 9
+now closes by following both fields from the artifact to the payload
+(`d15e548`), as it already followed `product_class`.
+
+**What the guards cannot see, said rather than passed.** `askingPrice`
+dropping the kind gate is zero red. That function is TypeScript, these
+suites are Python and run on numpy alone, and a text check over a function
+body would be a spelling test. What is asserted is that the fields reach the
+surface and carry the artifact's values; the behaviour is one indirection
+away.
+
+**What this does not settle.** `mileage_status` is `card=yes` and still not
+on the payload: this file states no rule for an odometer the way it does for
+a price, and a field sent for no stated rule is a field nobody has judged.
+The buyer's own constraints still fail open where the gate fails closed
+(D60). What detail and compare do with a non-vehicle is still open, as D60
+left it. And the card surface is now derived from three renderers, which is
+three more than yesterday and not a guarantee about the fourth.
