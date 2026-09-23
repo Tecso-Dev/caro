@@ -7,7 +7,8 @@ import {
   ApiError, api, type CompareResponse, type Fault, type ScoredItem,
   termLabel,
 } from '@/lib/api';
-import { faNum, faPlain, fixed, km, modelLabel, toman } from '@/lib/format';
+import { askingPrice, faNum, faPlain, fixed, km, modelLabel, toman }
+  from '@/lib/format';
 import TechDetail from '@/components/TechDetail';
 
 /* Side by side, with every term kept apart.
@@ -206,7 +207,8 @@ export default function CompareTable() {
                     {km(r.mileage_km)}
                   </td>
                   <td className="px-4 py-2.5 border-b border-line fig">
-                    {toman(r.asking_price_toman)}
+                    {askingPrice(r.asking_price_toman,
+                                 r.price_status, r.price_kind)}
                   </td>
                 </tr>
               ))}

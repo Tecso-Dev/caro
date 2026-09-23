@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { api, type SearchResponse, type WeightSet } from '@/lib/api';
-import { faNum, faPlain, km, modelLabel, toman } from '@/lib/format';
+import { askingPrice, faNum, faPlain, km, modelLabel }
+  from '@/lib/format';
 import IntentPanel from '@/components/IntentPanel';
 import ListingCard from '@/components/ListingCard';
 import SearchBox from '@/components/SearchBox';
@@ -253,7 +254,8 @@ export default function SearchResults() {
                               {km(r.mileage_km)}
                             </td>
                             <td className="px-4 py-2.5 border-b border-line fig">
-                              {toman(r.asking_price_toman)}
+                              {askingPrice(r.asking_price_toman,
+                                           r.price_status, r.price_kind)}
                             </td>
                             <td className="px-4 py-2.5 border-b border-line">
                               <Link href={`/car/${encodeURIComponent(r.id)}`}

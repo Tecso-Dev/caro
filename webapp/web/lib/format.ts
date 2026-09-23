@@ -13,6 +13,8 @@
  *    different facts, and neither of them is zero.
  */
 
+import { PRICE_STATUS_UNUSABLE } from '@/lib/api';
+
 const FA = new Intl.NumberFormat('fa-IR', { useGrouping: true });
 const FA_PLAIN = new Intl.NumberFormat('fa-IR', { useGrouping: false });
 
@@ -34,6 +36,50 @@ export function faPlain(n: number | null | undefined): string {
 export function toman(n: number | null | undefined): string {
   if (n == null) return 'ثبت‌نشده';
   return `${faNum(n)} تومان`;
+}
+
+/* What a row's number IS when it is not a cash asking price.
+ *
+ * `negotiable` and `financing_total` are `price_kind` — what the number
+ * means (D52). The other three are the statuses `caro/ingest/quality.py`
+ * calls unusable, which say the extraction cannot be believed rather than
+ * what the figure is. The two vocabularies share the word `negotiable` and
+ * are kept in separate maps for that reason. */
+export const PRICE_KIND_FA: Record<string, string> = {
+  negotiable: 'توافقی',
+  financing_total: 'قیمت کل اقساط',
+  absent: 'قیمت اعلام‌نشده',
+};
+
+export const PRICE_STATUS_FA: Record<string, string> = {
+  ambiguous: 'قیمت مبهم',
+  negotiable: 'توافقی',
+  absent: 'قیمت اعلام‌نشده',
+};
+
+/** The rule `docs/FIELD_PROVENANCE.md` states for a price on a card:
+ *
+ *      price_status ∉ PRICE_STATUS_UNUSABLE   AND   price_kind === 'cash'
+ *
+ *  Both null means the row carries no price provenance at all, and that is
+ *  an appraisal row: eligibility applied both gates before it could be
+ *  scored (D52), so the number stands. Otherwise the gates decide, and a row
+ *  that fails them says what it IS rather than showing a figure that is not
+ *  an asking price. A financing total reads like a bargain next to real
+ *  ones, which is the same mistake D52 caught one layer down. */
+export function askingPrice(
+  price: number | null | undefined,
+  status: string | null | undefined,
+  kind: string | null | undefined,
+): string {
+  if (status == null && kind == null) return toman(price ?? null);
+  if (kind != null && kind !== 'cash') {
+    return PRICE_KIND_FA[kind] ?? 'قیمت نقدی نیست';
+  }
+  if (status != null && PRICE_STATUS_UNUSABLE.includes(status)) {
+    return PRICE_STATUS_FA[status] ?? 'قیمت قابل اتکا نیست';
+  }
+  return toman(price ?? null);
 }
 
 /** «۵۹۳ میلیون» for headlines. Always shown beside the exact figure. */

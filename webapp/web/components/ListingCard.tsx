@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import type { ScoredItem } from '@/lib/api';
-import { compact, faNum, faPlain, km, modelLabel, toman } from '@/lib/format';
+import { askingPrice, compact, faNum, faPlain, km, modelLabel, toman }
+  from '@/lib/format';
 import TermBars from '@/components/TermBars';
 
 /* One car, with the whole arithmetic on the card.
@@ -70,7 +71,12 @@ export default function ListingCard({
       {/* the arithmetic ------------------------------------------------- */}
       <div className="mt-5 grid gap-px bg-line border border-line
                       sm:grid-cols-4">
-        <Cell k="قیمت پیشنهادی" v={toman(item.asking_price_toman)}
+        {/* A scored row carries no price provenance and needs none: both
+            gates were applied at eligibility before it could be ranked.
+            `askingPrice` says the same thing in one place. */}
+        <Cell k="قیمت پیشنهادی"
+              v={askingPrice(item.asking_price_toman,
+                             item.price_status, item.price_kind)}
               hint={compact(item.asking_price_toman)} />
         <Cell k="برآورد محافظه‌کارانه" v={toman(item.estimate_toman)}
               hint={compact(item.estimate_toman)} />
