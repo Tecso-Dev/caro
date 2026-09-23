@@ -534,7 +534,7 @@ print("\neach decision is checked against the snapshot it was computed over")
 # later round gets its own — `--export` requires a name and refuses to
 # overwrite one, so this table is the whole set and cannot silently become
 # one file with a moving population.
-_ANCHORS = (("summary", "D58"), ("round7", "D59"))
+_ANCHORS = (("summary", "D58"), ("round7", "D59"), ("round9", "D62"))
 
 from datetime import date as _date, datetime as _dt            # noqa: E402
 import re as _re                                                # noqa: E402

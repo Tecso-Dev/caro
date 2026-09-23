@@ -3287,3 +3287,83 @@ The buyer's own constraints still fail open where the gate fails closed
 (D60). What detail and compare do with a non-vehicle is still open, as D60
 left it. And the card surface is now derived from three renderers, which is
 three more than yesterday and not a guarantee about the fourth.
+
+## D62 — Round 9: the phrase went by its seventh day, and the one 5xx came back
+
+D59 left one prediction open and named it: `bama:l39y2bdi`, anchored by
+«۲۱ ساعت پیش» to a posting moment of 2026-09-15T11:48:55Z, should lose its
+relative phrase once the phrase would read seven — on that anchor,
+2026-09-22T11:48:55Z. This entry is computed over 180 observations and
+anchored on `data/derived/date_watch_round9.json`. D58 and D59 keep their
+own files and their own numbers, and neither is restated here.
+
+**The round.** Round 9 ran at 2026-09-23T01:35Z, 7.57 days after the anchor
+and 48.5 hours after round 8. The page answered 200, the title was `PRESENT`
+with its date unchanged at 2026-09-15, and there was no phrase. That is the
+prediction, exactly, and there was no re-dating to explain it away.
+
+Under the one anchor, every v4 reading of the listing agrees with the floor
+of the time elapsed since it:
+
+    observed at          days since anchor    phrase_days
+    2026-09-16T08:48Z    0.87                 0
+    2026-09-17T13:28Z    2.07                 2
+    2026-09-18T21:40Z    3.41                 3
+    2026-09-21T01:03Z    5.55                 5
+    2026-09-23T01:35Z    7.57                 none, title still 2026-09-15
+
+A single hour-resolution phrase, read once, has now placed four later
+observations over six and a half days.
+
+**What the round does not show.** Nothing was observed between day 5.55 and
+day 7.57. The round shows the phrase gone by the seventh day; it does not show
+it surviving the sixth. For this listing that half rests on round 8's `d=5`
+alone, and for the claim in general on the other listings, whose maximum is
+still six.
+
+**The horizon over the larger file.** Over 148 observations where an age is
+defined — a title date is present and the url answered 200:
+
+    age 0–6 days     phrase present 61    absent  0
+    age 7–29 days    phrase present  3    absent 84
+
+    d 0–6            phrase present 64    absent  0
+    d 7–29           phrase present  0    absent 84
+
+`max(phrase_days)` over all 66 phrase-bearing observations is 6. Seven has
+still never been observed, now across three anchors and a file half again the
+size of D58's. The three rows at title-age 7 that carry a phrase are the same
+three, and for the same reason: their phrase reads «۶ روز پیش».
+
+**Two facts about reachability.** They come from the observation file, which
+the anchor does not carry — `http_status` is not one of its four fields.
+
+`bama:tdlq3uyn` answered 502 at round 8 and 200 at round 9, title
+2026-09-06: the first url in this series to come back, and the only one that
+had ever failed with a 5xx. D1 says a 5xx is UNKNOWN and not ABSENT, and this
+is the first time the panel has shown why — the listing was there throughout.
+
+`bama:6mhsjxdd` and `bama:vm9bcghv` answered 410 for the first time. Seven of
+the twenty now answer 410, and none of the seven has ever come back:
+
+    msy1ffh6  XXXXXXXXX     pfmvi6sb  ......XXX
+    xlyildqb  ...XXXXXX     6mhsjxdd  ........X
+    lpsbyco6  ....XXXXX     vm9bcghv  ........X
+    4l0xpilj  .....XXXX
+
+As D59 said of five, that is an observation about nine rounds. It is not a
+demonstration that the state is absorbing, and it is not a sale, a deletion or
+a date of removal (D3).
+
+**This panel is spent on the phrase.** `phrase_bearing_at_latest_round` in the
+anchor is empty: at round 9, not one of the twenty carries a phrase.
+`l39y2bdi` was the last, and only because it re-dated. Further rounds of this
+panel can observe titles and urls; they can no longer be wrong about the
+horizon. A further test needs listings watched across the boundary from the
+other side — a fresh sample, observed from before its sixth day — and that is
+a new panel and a separate decision.
+
+**What this does not settle.** Whether the horizon belongs to the source or to
+one page variant; whether a 410 is ever reversible; whether a url that failed
+with a 5xx once will fail again; and D58's own open question, whether the
+phrase should be consumed at all now that it is known to be censored.
