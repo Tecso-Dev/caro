@@ -94,12 +94,14 @@ FIELDS: dict[str, Eligibility] = {
     "province": Eligibility("PENDING_LIVE_VALIDATION"),
     "gearbox": Eligibility("PENDING_LIVE_VALIDATION"),
     "fuel": Eligibility("PENDING_LIVE_VALIDATION"),
-    # The key the payload carries, `make|model|trim`. The detail page reads
-    # it and renders the heading from it. `card` is `no` because nothing has
-    # judged the card surface, not because the card does without it —
-    # `ListingCard` reads it, and that surface is not derived from its source
-    # yet, so nothing catches the disagreement.
-    "model_key": Eligibility("DERIVED", detail=True),
+    # The key the payload carries, `make|model|trim`, rendered through
+    # `modelLabel`. `card` was `no` while nothing had judged the card
+    # surface; the guard in `tests/test_corpus.py` now reads that surface
+    # out of its renderers, and all three of them draw this field. The
+    # alternative the table had in mind for a card heading, `derived_title`,
+    # is not a key in run11 and is not on the payload, so it could not be
+    # drawn instead.
+    "model_key": Eligibility("DERIVED", card=True, detail=True),
     "derived_title": Eligibility("DERIVED", card=True, detail=True),
     "observed_at": Eligibility("DERIVED", card=True, detail=True),
     "listing_age": Eligibility("EVIDENCE_ONLY", card=True, detail=True),
