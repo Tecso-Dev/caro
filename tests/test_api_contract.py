@@ -657,8 +657,9 @@ if not _art_path.exists():
     check("  the default corpus is present to check against", False,
           str(_art_path))
 else:
-    _pc = {r["listing_id"]: r.get("product_class") for r in json.loads(
+    _art = {r["listing_id"]: r for r in json.loads(
         _art_path.read_text(encoding="utf-8"))["listings"]}
+    _pc = {i: r.get("product_class") for i, r in _art.items()}
     _vehicle = next((i for i, c in sorted(_pc.items()) if c == "vehicle"),
                     None)
     _others = sorted(i for i, c in _pc.items() if c and c != "vehicle")
@@ -684,6 +685,16 @@ else:
                   f"(artifact: {_pc[_id]})",
                   _delivered == _pc[_id],
                   f"the renderer receives {_delivered!r}")
+            # The two fields the card's price rule names, the same way: a
+            # field that is on the model and never filled is a rule the
+            # client applies to None. Both paths build a row through
+            # `_listing_evidence`, so this follows the value from the
+            # artifact to the payload rather than testing one endpoint.
+            _want = {k: _art[_id].get(k) for k in ("price_status", "price_kind")}
+            _sent = {k: getattr(_resp.listing, k, None) for k in _want}
+            check(f"  and the price rule's fields for {_id} "
+                  f"({_want['price_status']} / {_want['price_kind']})",
+                  _sent == _want, f"the renderer receives {_sent}")
     finally:
         corpus_reader.CORPORA = _was
         if _was_run is None:
