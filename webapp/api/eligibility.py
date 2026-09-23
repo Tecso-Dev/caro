@@ -86,7 +86,11 @@ FIELDS: dict[str, Eligibility] = {
     "mileage_line_canonical": Eligibility("SOURCE_BACKED", detail=True),
     "condition": Eligibility("SOURCE_BACKED", detail=True, facet=True),
     "condition_source": Eligibility("SOURCE_BACKED", detail=True),
-    "product_class": Eligibility("SOURCE_BACKED", detail=True, gate=True),
+    # `card` because compare shows a non-vehicle row labelled with its class
+    # rather than dropping it: the class is drawn there, as a fact about
+    # the row. Search never draws it — nothing but `vehicle` reaches it.
+    "product_class": Eligibility("SOURCE_BACKED", card=True, detail=True,
+                                 gate=True),
     "product_class_source": Eligibility("SOURCE_BACKED", detail=True),
     "dealer_badge": Eligibility("SOURCE_BACKED"),
     "document_issue": Eligibility("DERIVED"),

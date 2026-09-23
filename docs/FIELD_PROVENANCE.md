@@ -81,7 +81,7 @@ for k in sorted({k for r in rows for k in r}):
 | `mileage_line_canonical` | `SOURCE_BACKED` | 73/76 | 59 | no | yes | no | no | canonicalised, not the source's prose |
 | `condition` | `SOURCE_BACKED` | 74/76 | 5 | no | yes | no | yes | the body-condition block (D45); `unknown` is a value, not an absence |
 | `condition_source` | `SOURCE_BACKED` | 74/76 | 1 | no | yes | no | no | `field` here — never `description` on this corpus |
-| `product_class` | `SOURCE_BACKED` | 76/76 | 2 | no | yes | yes | no | the grid gate: only `vehicle` renders as a car (D52) |
+| `product_class` | `SOURCE_BACKED` | 76/76 | 2 | yes | yes | yes | no | the gate: only `vehicle` renders as a car (D52), and search applies it (D60). `card` because compare shows a non-vehicle row labelled with its class instead of dropping it — the class drawn as a fact about the row |
 | `product_class_source` | `SOURCE_BACKED` | 76/76 | 1 | no | yes | no | no |  |
 | `dealer_badge` | `SOURCE_BACKED` | 76/76 | 1 | no | no | no | no | `false` on every row; carries no information here |
 | `document_issue` | `DERIVED` | 1/76 | 1 | no | no | no | no | one row in seventy-six, and derived — see below |
