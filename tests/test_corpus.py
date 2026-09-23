@@ -785,8 +785,80 @@ if _doc_rows:
         check(f"  detail may draw {_f} ({_st})", _d,
               "FIELD_PROVENANCE.md says detail=no")
 
-    print("    card surface: not derived in this file — no check, "
-          "and none implied")
+    # ---- what the card surfaces draw, read out of them -------------------
+    #
+    # Three components draw payload rows, not one: the evidence grid in
+    # `SearchResults.tsx` — the table an ungated corpus shows, and the one an
+    # assignment reached (D60) — `ListingCard.tsx` on a gated corpus, and
+    # `CompareTable.tsx`. Compare has no flag of its own in the table. It is
+    # a grid of rows a reader is shown, so it is held to the card's rules,
+    # and that is a judgement rather than an oversight.
+    #
+    # `id` and `url` are exempt, named here rather than left implicit: a card
+    # uses them to ADDRESS a row — a React key, the link to /car/[id] — and
+    # not to say anything about the car. `listing_id` is `card=no` in the
+    # table because nothing draws it as a fact about a listing.
+    #
+    # The rest is the detail check's shape. A field of `EvidenceItem` is one
+    # this table judges and must be `card=yes`; a field only `ScoredItem` has
+    # is a ranking output, which this table does not describe at all and D50
+    # governs instead; anything that is neither fails — which is also what
+    # stops a variable named `r` somewhere else in a file from passing as a
+    # row.
+    _CARDS = (("SearchResults.tsx", "r"),
+              ("ListingCard.tsx", "item"),
+              ("CompareTable.tsx", "r"))
+    _IDENTIFIERS = {"id", "url"}
+
+    _sc = _re.search(r"export interface ScoredItem[^{]*\{(.*?)\n\}",
+                     _API_TS.read_text(encoding="utf-8"), _re.S)
+    _ts_scored = _ts_evidence | (
+        set(_re.findall(r"(?m)^\s*(\w+)\??\s*:", _sc.group(1))) if _sc else set())
+
+    # Which components draw rows is DERIVED too. A guard over a list of
+    # renderers is the hand-kept list again one level up, and the renderer it
+    # would miss is the one added tomorrow. So every .tsx that imports a type
+    # carrying listings has to be a surface one of these guards reads.
+    _ROW_TYPES = ("EvidenceItem", "ScoredItem", "SearchResponse",
+                  "CompareResponse", "ListingResponse")
+    _IMPORTS = _re.compile(r"import\s+(?:type\s+)?\{([^}]*)\}\s*from '@/lib/api'",
+                           _re.S)
+    _drawing = {p.name for p in (ROOT / "webapp" / "web").rglob("*.tsx")
+                if "node_modules" not in p.parts
+                for block in _IMPORTS.findall(p.read_text(encoding="utf-8"))
+                if any(_re.search(rf"\b{t}\b", block) for t in _ROW_TYPES)}
+    _covered = {_RENDERER.name} | {n for n, _ in _CARDS}
+    check(f"the components importing a row type are exactly the "
+          f"{len(_covered)} these guards read",
+          _drawing == _covered,
+          f"draws rows and is unguarded: {sorted(_drawing - _covered)}; "
+          f"guarded and no longer drawing: {sorted(_covered - _drawing)}")
+
+    for _name, _var in _CARDS:
+        _path = ROOT / "webapp" / "web" / "components" / _name
+        _u = _consumed(_path, _var) if _path.exists() else set()
+        check(f"{_name} draws {len(_u)} field(s) — read from the component",
+              len(_u) > 0,
+              "found nothing: the file is missing or the pattern no longer "
+              "matches, and a check over nothing proves nothing")
+        check(f"  every field it reads belongs to EvidenceItem or ScoredItem",
+              bool(_ts_scored) and _u <= _ts_scored,
+              f"in neither interface: {sorted(_u - _ts_scored)}")
+        _ranking = sorted(_u - _ts_evidence)
+        if _ranking:
+            print(f"    ranking outputs, which this table does not judge: "
+                  f"{', '.join(_ranking)}")
+        for _f in sorted(_u & _ts_evidence):
+            if _f in _IDENTIFIERS:
+                print(f"    {_f}: addresses the row, says nothing about the car")
+                continue
+            if _f not in _doc:
+                check(f"  card may draw {_f}", False,
+                      "not in FIELD_PROVENANCE.md at all — nobody has judged it")
+                continue
+            _st, _c, *_ = _doc[_f]
+            check(f"  card may draw {_f} ({_st})", _c,
+                  "FIELD_PROVENANCE.md says card=no")
 
 
 print()
