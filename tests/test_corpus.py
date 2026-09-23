@@ -860,6 +860,29 @@ if _doc_rows:
             check(f"  card may draw {_f} ({_st})", _c,
                   "FIELD_PROVENANCE.md says card=no")
 
+    # The rule FIELD_PROVENANCE.md states about a price on a card:
+    #
+    #     price_status ∉ UNUSABLE_PRICE   AND   price_kind == cash
+    #
+    # A surface can only apply a rule whose fields reach it, and for a long
+    # while neither did: both are `card=yes` in that same table and neither
+    # was a field of `EvidenceItem`, so every grid drew the number with no
+    # way to know what it meant.
+    #
+    # What this asserts is that the fields arrive, not that the surface uses
+    # them — `askingPrice` in lib/format.ts is TypeScript, this suite is
+    # Python and runs on numpy alone, and a text check over a function body
+    # would be a spelling test. The behaviour is one indirection away and it
+    # is said here rather than implied.
+    _PRICE_GATES = {"price_status", "price_kind"}
+    for _name, _var in _CARDS:
+        _path = ROOT / "webapp" / "web" / "components" / _name
+        if "asking_price_toman" not in _consumed(_path, _var):
+            continue
+        check(f"  {_name} is sent both fields the price rule names",
+              _PRICE_GATES <= _ts_evidence,
+              f"not on EvidenceItem: {sorted(_PRICE_GATES - _ts_evidence)}")
+
 
 print()
 if FAILS:
