@@ -459,9 +459,15 @@ def compare(req: CompareRequest, response: Response = None) -> CompareResponse:
                                rows=[], evidence=[])
 
     wanted = [r for r in c.rows if r.listing_id in set(req.ids)]
-    if not wanted and not c.gated:
-        # Nothing appraisable, and nothing may be ranked anyway: return the
-        # listings as evidence rather than a 404 that hides the real reason.
+    if not c.gated:
+        # Nothing may be ranked, so what compare can show is the listings
+        # themselves — every requested one the corpus holds, whether or not
+        # it became a Row. This branch used to run only when NO requested id
+        # was a Row. Beside one, the answer came from the Rows alone, and an
+        # id that was not a Row — the assignment, a listing with no price —
+        # was dropped with nothing on the screen to say it had been asked
+        # for. A listing carries its own class, so the screen can say what
+        # it is instead of losing it.
         keep = [x for x in c.listings if x.listing_id in set(req.ids)]
         if keep:
             return CompareResponse(
