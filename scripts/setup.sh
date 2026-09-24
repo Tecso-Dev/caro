@@ -2,8 +2,11 @@
 # Get to a working interpreter with what the suites need, without needing root.
 #
 #     ./scripts/setup.sh                 numpy — the only hard dependency
-#     ./scripts/setup.sh --extras        …and scipy + the API packages, so all
-#                                        fourteen suites run instead of twelve
+#     ./scripts/setup.sh --extras        …and scipy + the API packages, so
+#                                        fourteen of the fifteen suites run
+#                                        instead of twelve; the fifteenth also
+#                                        needs node and `npm install` in
+#                                        webapp/web
 #
 # Four routes, tried in order of how little they disturb the machine. Most
 # people never get past the first two, and nobody should need sudo to run a
@@ -31,17 +34,19 @@ WANT_EXTRAS=0
 [ "${1:-}" = "--extras" ] && WANT_EXTRAS=1
 
 # scipy builds the oracle in tests/test_appraisal.py; fastapi and pydantic are
-# what the API contract suite imports. Neither is needed by `caro/` itself —
+# what the API contract and screens suites import, and the screens suite also
+# draws with node, which is not a Python package and not this script's to
+# install. None of it is needed by `caro/` itself —
 # that stays numpy-only, which is the claim the README makes and this script
 # must not quietly break.
 if [ "$WANT_EXTRAS" = "1" ]; then
   PKGS="numpy scipy fastapi pydantic uvicorn"
   WHAT="numpy and the test extras"
-  THEN="all fourteen suites"
+  THEN="fourteen of fifteen suites — the fifteenth also needs node: (cd webapp/web && npm install)"
 else
   PKGS="numpy"
   WHAT="numpy"
-  THEN="twelve of fourteen suites — run with --extras for the other two"
+  THEN="twelve of fifteen suites — --extras adds two, and the fifteenth needs --extras plus (cd webapp/web && npm install)"
 fi
 
 echo "python: $($PY --version 2>&1)"
@@ -123,6 +128,6 @@ Could not install $WHAT without root. Pick whichever suits you:
   source .venv/bin/activate && python tests/run_all.py
 
 numpy is the only hard dependency of caro/ itself. Without the extras the
-suite still runs — it skips two of the fourteen by name and says so.
+suite still runs — it skips three of the fifteen by name and says so.
 MSG
 exit 1

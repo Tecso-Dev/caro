@@ -76,6 +76,17 @@ SUITES = [
      "every endpoint, in every corpus state, against the client's types",
      ("fastapi", "pydantic"), "pip install -r webapp/requirements.txt",
      ("fastapi.testclient",)),
+    # Draws the site's own components with the site's own TypeScript, so it
+    # needs node and the web app's node_modules. Declared like any module and
+    # skipped by name without them — a render check that silently did not
+    # run is the one outcome this runner exists to prevent.
+    ("--  screens", "tests/test_screens.py",
+     "nothing that is not a car is drawn as one",
+     ("fastapi", "pydantic", "bin:node",
+      "path:webapp/web/node_modules/typescript",
+      "path:webapp/web/node_modules/react-dom"),
+     "pip install -r webapp/requirements.txt && (cd webapp/web && npm install)",
+     ()),
     ("--  palette", "tests/test_palette.py",
      "the site and the demo carry one palette, or the build stops",
      (), "", ()),

@@ -146,9 +146,10 @@ its own ability to assess uncertainty**, and refuses on it.
 ```
 git clone https://github.com/sahandmusanezhad/caro && cd caro
 ./scripts/setup.sh                  # finds or installs numpy; tells you what to run
-#                                   add --extras for all fourteen suites
+#                                   add --extras, and npm install in
+#                                   webapp/web, for all fifteen suites
 
-python3 tests/run_all.py            # 1653 assertions, no API key, no network
+python3 tests/run_all.py            # 1667 assertions, no API key, no network
 python3 tests/run_all.py ranking    # just the win-rate benchmark
 python3 demo/export_demo.py         # regenerate demo/demo_data.json from live output
 ```
@@ -162,13 +163,14 @@ Read their committed output in `docs/` instead — `RUN3_2026-09-07.txt`,
 `RUN5_SIGNIFICANCE_2026-09-07.txt`, `RANK_RUN5_2026-09-08.txt`,
 `GATE_DIAGNOSIS_2026-09-08.txt`.
 
-**numpy is the only hard dependency of `caro/`.** Two of the fourteen test suites
+**numpy is the only hard dependency of `caro/`.** Three of the fifteen test suites
 need more, and the runner says so rather than failing:
 
 ```
-python3 tests/run_all.py            # 1444 assertions across 12 of 14 suites
+python3 tests/run_all.py            # 1444 assertions across 12 of 15 suites
 ./scripts/setup.sh --extras         # scipy + the API packages
-python3 tests/run_all.py            # 1653 across all fourteen
+(cd webapp/web && npm install)      # node packages: the screens suite draws with them
+python3 tests/run_all.py            # 1667 across all fifteen
 ```
 
 Use `setup.sh --extras` rather than a bare `pip install`: on Debian-family
@@ -179,12 +181,13 @@ is a separate package. The script walks four routes and needs root for none
 of them. Printing the raw pip command here instead would be handing the
 reader an instruction this repository already documents as broken.
 
-A suite whose extra module is absent is skipped by name with the command
-that enables it — skipped is never printed as passed, and the count reads
-"12 of 14". Neither extra is needed by the package: scipy builds an oracle
-inside `tests/test_appraisal.py`, and fastapi is only reachable from
-`webapp/`, which is deliberately outside the core so that the sentence
-below stays true.
+A suite whose extra module or program is absent is skipped by name with the
+command that enables it — skipped is never printed as passed, and the count
+reads "12 of 15". None of the extras is needed by the package: scipy builds
+an oracle inside `tests/test_appraisal.py`, fastapi is only reachable from
+`webapp/`, and node only draws the site's own components in
+`tests/test_screens.py` — all deliberately outside the core so that the
+sentence below stays true.
 
 Ridge regression is written out in
 four lines of linear algebra rather than imported, because depending on
@@ -391,7 +394,7 @@ asking prices — and the appraiser is not serving.
 ```
 caro/            ingest · tracking (W0) · appraisal (W1) · hierarchical (D32)
                  ranking (W3) · agents (W2) · quality · coverage · stratification
-tests/           1653 assertions across fourteen suites
+tests/           1667 assertions across fifteen suites
 scripts/         live runs, replays, the benchmark, the run-3/4 experiment plans
 data/snapshots/  NOT in the repository — see D46; a clone has no corpora
 demo/            index.html is hand-maintained; export_demo.py writes demo_data.json
