@@ -29,6 +29,7 @@ from __future__ import annotations
 import importlib.util
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -82,9 +83,27 @@ SUITES = [
 
 
 def absent(mods: tuple[str, ...]) -> list[str]:
-    """Which of `mods` cannot be imported. Checked WITHOUT importing them."""
+    """Which of `mods` are missing. Checked WITHOUT importing anything.
+
+    A need is a Python module by default. Two prefixes name the other kinds
+    a suite can depend on, and nothing else: `bin:node` is a program that
+    must be on PATH, and `path:webapp/web/node_modules/typescript` is a
+    directory that must exist under the repository. They exist for the one
+    suite that draws the site's components with the site's own TypeScript —
+    and they go through the same skip as a missing module, so a reader
+    without node gets a suite skipped by name, never a red build and never
+    a silent pass.
+    """
     out = []
     for m in mods:
+        if m.startswith("bin:"):
+            if shutil.which(m[4:]) is None:
+                out.append(m[4:])
+            continue
+        if m.startswith("path:"):
+            if not (ROOT / m[5:]).exists():
+                out.append(m[5:])
+            continue
         try:
             if importlib.util.find_spec(m) is None:
                 out.append(m)
