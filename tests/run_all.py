@@ -301,12 +301,23 @@ def main(argv: list[str]) -> int:
 # Each entry is (pattern, which number it must equal). The patterns are the
 # documented commands themselves, so a line that stops looking like a command
 # stops being checked rather than silently matching something else.
+#
+# Two of the four also name the suite count in WORDS — «across all fourteen»
+# — and the word used to be part of the pattern rather than part of the
+# check. A fifteenth suite would have left both lines saying fourteen and
+# both still matching: the stale-number failure above, one word to the left.
+# So the word is captured and compared with the count this run actually has.
 _README_NUMBERS = (
     (re.compile(r"# (\d+) assertions, no API key"), "full"),
     (re.compile(r"# (\d+) assertions across (\d+) of (\d+) suites?"), "reduced"),
-    (re.compile(r"# (\d+) across all fourteen"), "full"),
-    (re.compile(r"^tests/\s+(\d+) assertions across fourteen suites", re.M), "full"),
+    (re.compile(r"# (\d+) across all ([a-z]+)\b"), "full"),
+    (re.compile(r"^tests/\s+(\d+) assertions across ([a-z]+) suites", re.M),
+     "full"),
 )
+
+_WORDS = ("zero one two three four five six seven eight nine ten eleven "
+          "twelve thirteen fourteen fifteen sixteen seventeen eighteen "
+          "nineteen twenty").split()
 
 
 def _readme_disagrees(full: int, reduced: int, n_suites: int,
@@ -326,6 +337,10 @@ def _readme_disagrees(full: int, reduced: int, n_suites: int,
         if int(m.group(1)) != want[which]:
             wrong.append(f"README.md says {m.group(1)} where the suites ran "
                          f"{want[which]}")
+        if which == "full" and m.lastindex == 2:
+            said, n = m.group(2), n_suites
+            if said != (_WORDS[n] if n < len(_WORDS) else str(n)):
+                wrong.append(f"README.md says «{said}» suites; it is {n}")
         if which == "reduced" and m.lastindex == 3:
             if (int(m.group(2)), int(m.group(3))) != (n_without_extras, n_suites):
                 wrong.append(f"README.md says {m.group(2)} of {m.group(3)} "
