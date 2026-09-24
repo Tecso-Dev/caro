@@ -273,8 +273,12 @@ def main(argv: list[str]) -> int:
     # When this fires the fix is to edit the page, not to delete the check.
     # Only meaningful when everything ran. With a suite skipped the total is
     # legitimately lower, and firing here would tell someone whose only fault
-    # is not having scipy that the website is lying to them.
-    if not skipped:
+    # is not having scipy that the website is lying to them. A run narrowed
+    # to some suites is the same case and was missed: `run_all.py ranking`,
+    # which the README and the demo script both tell a reader to type, ran
+    # its 114 assertions, called the page stale, and said to change it to
+    # «۱۱۴».
+    if not skipped and len(suites) == len(SUITES):
         drift = _about_disagrees(total) or _readme_disagrees(
             total, total - optional, len(suites),
             len(suites) - sum(1 for su in suites if su[3]))
