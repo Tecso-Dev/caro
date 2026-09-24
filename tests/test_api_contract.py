@@ -800,6 +800,78 @@ else:
               "outside what one query can show, so a leak here is invisible")
 
 
+
+
+# ---------------------------------------------------------------------------
+print("\n11 — every non-vehicle reaches the screen, with its class")
+# ---------------------------------------------------------------------------
+#
+# The contract chosen for detail and compare, after both were measured: they
+# answer 200 with the listing and its class, and the SCREEN is obliged to say
+# what the listing is. This is the API half — every non-vehicle it is asked
+# about is delivered, with the class the artifact records. By detail; by
+# compare alone; and by compare beside a vehicle, where it used to be dropped
+# without a word, because that branch answered from appraisal Rows only.
+#
+# The other half — whether the screen then draws it as a car — is
+# tests/test_screens.py. It renders the components the pages use, and it
+# needs node, which this suite does not; run_all skips a suite by name when a
+# declared dependency is absent, and a render check in here would have taken
+# every API assertion down with it.
+#
+# Two non-vehicles: the assignment in run11, and `unknown` from section 2's
+# class-less fixture. run11 carries a class on every record, so without the
+# fixture `unknown` would never be asked about here at all.
+
+_art11 = ROOT / "data" / "corpora" / f"{RUN}.json"
+_cls11 = {x["listing_id"]: x.get("product_class") for x in json.loads(
+    _art11.read_text(encoding="utf-8"))["listings"]}
+_nvs = sorted(i for i, c in _cls11.items() if c != "vehicle")
+check(f"the shipped corpus holds {len(_nvs)} non-vehicle(s) to follow",
+      len(_nvs) > 0, "nothing to run on — said, not passed")
+
+_was, _was_run = corpus_reader.CORPORA, os.environ.get(corpus_mod.RUN_ENV)
+corpus_reader.CORPORA = _art11.parent
+os.environ.pop(corpus_mod.RUN_ENV, None)
+corpus_mod.active.cache_clear()
+try:
+    with contextlib.redirect_stdout(io.StringIO()):
+        # A vehicle that is also an appraisal Row: beside one, compare used
+        # to take the branch that dropped everything else.
+        _veh = next(r.listing_id for r in corpus_mod.active().rows)
+        _detail = [(_i, _cls11[_i], api.listing(_i)) for _i in _nvs]
+        _asked = [((_i,), api.compare(schemas.CompareRequest(
+                      ids=[_i], q="خودرو"))) for _i in _nvs]
+        _asked += [((_i, _veh), api.compare(schemas.CompareRequest(
+                       ids=[_i, _veh], q="خودرو"))) for _i in _nvs]
+finally:
+    corpus_reader.CORPORA = _was
+    if _was_run is None:
+        os.environ.pop(corpus_mod.RUN_ENV, None)
+    else:
+        os.environ[corpus_mod.RUN_ENV] = _was_run
+    corpus_mod.active.cache_clear()
+
+with corpus_dir(valid_artifact()):
+    _detail.append(("b0", "unknown", api.listing("b0")))
+    _asked.append((("b0",), api.compare(schemas.CompareRequest(
+        ids=["b0"], q="۲۰۶"))))
+_want11 = {**_cls11, "b0": "unknown"}
+
+for _i, _c, _d in _detail:
+    _got = _d.listing.product_class if _d.listing is not None else None
+    check(f"  detail delivers {_i} with its class ({_c})", _got == _c,
+          f"the screen receives "
+          f"{'no listing' if _d.listing is None else repr(_got)}")
+for _ids, _r in _asked:
+    _sent = {x.id: x.product_class for x in list(_r.evidence) + list(_r.rows)}
+    check(f"  compare {' + '.join(_ids)} delivers every id it was asked "
+          f"about, the non-vehicle with its class",
+          set(_ids) <= set(_sent)
+          and all(_sent[_i] == _want11[_i] for _i in _ids
+                  if _want11[_i] != "vehicle"),
+          f"sent {_sent}")
+
 print()
 if FAILS:
     print(f"FAILED ({len(FAILS)}): " + ", ".join(FAILS))
