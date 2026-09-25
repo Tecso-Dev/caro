@@ -123,6 +123,6 @@ Could not install $WHAT without root. Pick whichever suits you:
   source .venv/bin/activate && python tests/run_all.py
 
 numpy is the only hard dependency of caro/ itself. Without the extras the
-suite still runs — it skips two of the ten by name and says so.
+suite still runs — it skips two of the fourteen by name and says so.
 MSG
 exit 1
