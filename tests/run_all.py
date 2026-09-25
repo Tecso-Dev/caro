@@ -279,7 +279,7 @@ def main(argv: list[str]) -> int:
     # its 114 assertions, called the page stale, and said to change it to
     # «۱۱۴».
     if not skipped and len(suites) == len(SUITES):
-        drift = _about_disagrees(total) or _readme_disagrees(
+        drift = _about_disagrees(total, len(suites)) or _readme_disagrees(
             total, total - optional, len(suites),
             len(suites) - sum(1 for su in suites if su[3]))
         if drift:
@@ -355,21 +355,29 @@ def _readme_disagrees(full: int, reduced: int, n_suites: int,
 _FA = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
 
 
-def _about_disagrees(total: int) -> str:
-    """'' if the about page states `total`, else what it says instead."""
+def _about_disagrees(total: int, n_suites: int) -> str:
+    """'' if the about page states this run's two totals, else what it says."""
     page = ROOT / "webapp" / "web" / "app" / "about" / "page.tsx"
     if not page.exists():
         return ""                       # no site in this checkout; not a fault
     body = page.read_text(encoding="utf-8")
-    m = re.search(r"\['([۰-۹]+)', 'گزاره‌ی آزمون'", body)
-    if not m:
-        return (f"{page.relative_to(ROOT)} no longer states an assertion "
-                f"count — restore it or drop this check deliberately")
-    want = str(total).translate(_FA)
-    if m.group(1) == want:
-        return ""
-    return (f"{page.relative_to(ROOT)} says «{m.group(1)}», the suites ran "
-            f"{total} → change it to «{want}»")
+    rel = page.relative_to(ROOT)
+    wrong = []
+    # The assertion count had a check from the start. The suite count beside
+    # it did not, so a fifteenth suite would have left the page saying «۱۴»
+    # with every check green — the gap the README's words had, on the site.
+    for label, n, fact in (("گزاره‌ی آزمون", total, "the suites ran {n}"),
+                           ("مجموعه‌ی آزمون", n_suites, "there are {n} suites")):
+        m = re.search(rf"\['([۰-۹]+)', '{label}'", body)
+        if not m:
+            wrong.append(f"{rel} no longer states «{label}» — restore it or "
+                         f"drop this check deliberately")
+            continue
+        want = str(n).translate(_FA)
+        if m.group(1) != want:
+            wrong.append(f"{rel} says «{m.group(1)}», {fact.format(n=n)} "
+                         f"→ change it to «{want}»")
+    return " · ".join(wrong)
 
 
 if __name__ == "__main__":
