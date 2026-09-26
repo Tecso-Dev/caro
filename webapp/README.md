@@ -56,6 +56,42 @@ python3 -m venv .venv                      # apt install python3.X-venv if this 
 
 `.venv/` is already in `.gitignore`.
 
+## Deploying on Vercel
+
+`vercel.json` at the repository root makes one Vercel project of two
+services on one domain: the site from `webapp/web`, and the API from the
+repository root, so that its function carries `caro/`, `data/corpora/` and
+`tests/` — the corpus fallback imports `tests/test_ranking.py`. `/api/*` goes
+to the API and everything else to the site. The API sees the original path,
+so its routes are the ones above, and the site's own `/api` rewrite is never
+reached: `CARO_API` is not needed there.
+
+Services is in beta on Vercel and may need enabling for the account. Then:
+
+1. import the repository as one project, with the root directory left at the
+   repository root, where `vercel.json` is;
+2. set `CARO_INBOX=off`, so the contact page shows GitHub Issues instead of a
+   form. Left unset, the form is drawn and every message is refused with a
+   503, because a function's disk does not keep what is written;
+3. leave `CARO_RUN` unset to serve run11, and `CARO_ADMIN_TOKEN` unset — with
+   the inbox off there is nothing for it to open;
+4. deploy a preview, and look at `/`, `/search`, `/car/bama:hubymydi`,
+   `/compare` and `/api/listing/bama:hubymydi` before promoting it.
+
+The API installs numpy and `webapp/requirements.txt` through the service's
+`installCommand`, which keeps fastapi out of the package's dependencies.
+`vercel dev` does not start the API service — it installs from
+`pyproject.toml` and ignores that command — so for local work use the two
+terminals above.
+
+Measured before this was written, with Vercel CLI 60.1.3 and `vercel build`
+on the tree: both services build; the API function is 97 MB of a 500 MB
+limit; served from those files alone it answers the listing and contact
+endpoints, switches the inbox off with `CARO_INBOX=off`, and refuses a message
+with 503 when it cannot write. Not measured: the platform itself — cold start,
+the region the function runs in (Vercel's default is `iad1`), and what the
+first real deployment shows.
+
 ## Why the requirements file is separate
 
 `webapp/requirements.txt` holds fastapi, uvicorn and pydantic. None of them
