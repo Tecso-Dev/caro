@@ -3367,3 +3367,179 @@ a new panel and a separate decision.
 one page variant; whether a 410 is ever reversible; whether a url that failed
 with a 5xx once will fail again; and D58's own open question, whether the
 phrase should be consumed at all now that it is known to be censored.
+
+## D63 — Detail and compare answer with the class; the screen says what it is
+
+D60 left one question open by name: what detail and compare do with a
+non-vehicle. Both answered for one. `/api/listing/bama:hubymydi` returned the
+assignment, 200, with `product_class: assignment` on the payload, and compare
+returned it too when it was asked about alone. Nothing in the client read the
+field: in `webapp/web`, `product_class` appeared once, in the interface in
+lib/api.ts.
+
+**What that put on screen.** The detail page drew the assignment as a car:
+«پرونده‌ی خودرو» over its id, the car file's cells, 90,000,000 toman under
+«قیمت پیشنهادی», and a refusal headed
+«برآوردی برای این خودرو سرو نمی‌شود».
+Beside a real Quik's page it had the same structure. Compare was worse beside
+a car. run11 holds 76 listings, 71 of them appraisal Rows, and the ungated
+branch answered from the listings only when NO requested id was a Row. So the
+assignment asked for beside any Row — `bama:oniy1maq`, a 1388 Pride, is the
+first — came back as 200 with the Row alone, and the corpus-level
+ESTIMATOR_NOT_GATED as the only fault. The four other listings that are not
+Rows vanished the same way: the two Prides with no price, `bama:dn0taqsc` and
+`bama:gfgcipqb`, and the two Quiks with no odometer, `bama:l39y2bdi` and
+`bama:wmxsljsn`.
+
+**Two contracts, measured before either was chosen.** Each was built as the
+smallest edit that made it true, against a contract-neutral draft of the
+guard — for each non-vehicle and each path, either refused with a fault that
+says why, or delivered with its class to a component that reads it — and the
+contract and corpus suites were run on each. The draft was five red on the
+code as it was.
+
+                        A: 200 with the class,       B: a NOT_A_VEHICLE fault,
+                           the screens branch           the listing withheld
+    the draft guard        0 red                        0 red
+    everything else        1 — the card guard:          5 — §2 1, §3d 2, §9 2
+                           compare draws a field
+                           declared `card=no`
+    the edit               3 files, +15/−1              3 files, +24/−6
+
+Two partial versions were measured too. B refusing only the classes it knows,
+and answering `unknown`, left the draft two red — `unknown` was drawn as a
+car, D60's strictness lost one surface over — besides section 9's two. A on
+detail alone left it three red, because compare needs its own fix.
+
+**The decision.** A. Detail and compare answer 200 with the listing and its
+`product_class`, and the screen is obliged to say, from the class, what the
+listing is. `unknown` is held to the rule for any non-vehicle: it is never
+drawn as a car. That is D52's rule — a class nobody determined does not decay
+to `vehicle` — applied on the screen, as D60 applied it in the query.
+
+The reasons, as they were given. The class is a fact the source states, not
+an HTTP error. `bama:hubymydi` exists, and what it says can be shown. B set
+the contract suite's HTTP doctrine against itself: section 3d has two cases,
+200 when the fault is the source's and 404 when the resource is absent, and a
+listing that is present and is not a car is neither; and section 9's claim
+that the renderer receives the class became its opposite. A's danger is
+different, and it was named with the choice: a renderer that ignores the
+class draws a car with every API check green. So the guard was to measure
+what a reader is shown — `assignment` and `unknown` are never drawn as a car
+file on any path — and not that a component reads the field. D61 had already
+recorded the limit of that second kind of check, for `askingPrice`.
+
+**What changed.** Four commits.
+
+Compare answers for every id it was asked about (`efbc210`): on an ungated
+corpus, every requested listing the corpus holds, Row or not. That ends the
+silent drop for all five listings above, not only the assignment.
+
+`product_class` becomes `card=yes` (`c95a01b`). Compare is held to the card's
+rules (D61) and now draws the class, as a fact about the row. Keeping `no`
+while a surface drew the field would have been the defect D61 was written
+against.
+
+The detail page decides first (`727452b`). `ListingFile` draws the car file
+for a vehicle, unchanged, and for anything else a listing file:
+«پرونده‌ی آگهی» over the id; a heading that names the class,
+«این آگهی خودرو نیست — حواله» or «نوع این آگهی تعیین نشده است»;
+the sentence every surface uses, «به‌عنوان خودرو نمایش داده نمی‌شود»;
+and the listing's own facts, with its amount called «مبلغ اعلام‌شده» and not an
+asking price. No decision is requested for it, because an estimate of an
+assignment is what D52 exists to prevent.
+
+Compare's evidence table labels the row (`5e9f470`), with the class and the
+same sentence in its first cell. The row stays, because compare was asked
+about it.
+
+One function decides all of it, `isVehicleClass` in lib/format.ts. A null
+class is an appraisal Row, which only a vehicle becomes, so it is drawn as a
+car — the null rule `askingPrice` already uses.
+
+**How it is held.** In two halves, and two suites.
+
+Section 11 of the contract suite (`5a0d865`) is the API half: every
+non-vehicle the API is asked about is delivered with the class the artifact
+records, by detail, by compare alone, and by compare beside a vehicle. It
+follows two: the assignment in run11, and `unknown`. run11 records a class on
+every listing, so `unknown` comes from section 2's fixture, an artifact that
+carries no class, as the schema allows. The loader records the missing class
+as `unknown`, and what `unknown` may never become is D52's rule. That fixture
+is D52's case and not D50's: D50's checks run on a fixture declared to hold
+vehicles, because they test paths that must work on valid vehicle evidence.
+
+`tests/test_screens.py` (`c9f0132`) is the half that matters. It renders the
+two components the pages draw with, `ListingFile` and `EvidenceRows`, with
+what the API returns, through `tests/render_view.cjs`: the web app's own
+TypeScript and its own react-dom, chosen over a browser or a new test
+library, so the suite needs nothing the app does not already have. Its checks
+are about the markup a reader gets. A non-vehicle carries none of the car
+file's own claims, and does carry the sentence and its class label. The
+vehicle, drawn the same way, must carry every claim; without that control the
+negative checks could pass on a page whose wording had merely changed. Every
+file is drawn WITH a decision's refusal, so a non-car cannot turn into a car
+file because an estimate was asked for. The sentence and the labels are read
+out of lib/format.ts at run time, never copied into the test.
+
+It needs node, so it is a suite of its own, and two runner commits make that
+safe. A declared need can be a program or a directory (`e3a7305`), and a
+missing one skips the suite by name — never a pass. And the README's suite
+count is checked as a word (`b90fcac`), because a fifteenth suite would
+otherwise have left «fourteen» standing. Without node the runner prints
+«skipped  needs node» against the suite and ends «across 14 of 15 suite(s)».
+
+The guard came last, and that order was chosen. It draws components the fix
+creates, so against the code before the fix it can be red only for a
+structural reason — «components/CarDetail.tsx exports no component named
+ListingFile», and the same for `EvidenceRows` — which is not the failure it
+exists for. What it guards is shown by mutation instead.
+
+**Measured.** Ten runs, each count written before its run. A suite that
+crashed, or ended without its own verdict, would have counted as a failure
+and never as zero red:
+
+                                                        contract   screens
+    as committed                                            0         0
+    ListingFile ignores the class — the old page            0         4
+    isVehicleClass lets `unknown` through                   0         3
+    EvidenceRows loses the label                            0         3
+    the car file's own claim renamed — the control          0         1
+    the not-a-car file stops saying so                      0         2
+    compare drops a non-Row beside a Row again              1         1
+    the server stops sending the class                      7         7
+    detail withholds a non-vehicle                          6         1
+    no node_modules, the suite run by hand                  0         3
+
+The corpus suite ran in every case and was never red. Against the code before
+the chain, section 11 is one red: compare beside a vehicle. In the repository
+the chain landed in, with its index identical entry for entry to the tree it
+was built to produce, the suites hold 1667 assertions across 15, all green,
+and the web build passes.
+
+**Four commits in the chain are not this decision.** They were found while
+closing the guard, and they are fixes, each explained in its own message. A
+run narrowed to some suites no longer calls /about stale (`206e629`):
+`run_all.py ranking`, which the README and the demo script tell a reader to
+type, had exited 1 since the page's total was first checked. /about's suite
+count is checked beside its assertion count (`06ba691`). setup.sh's no-root
+message stopped counting ten suites (`4714ff8`). And setup.sh is executable
+again (`512d115`): a commit of 2026-09-18 had carried its mode from 100755 to
+100644, and on a fresh clone the README's first command answered «Permission
+denied».
+
+**What the guards cannot see, said rather than passed.** The wiring: the
+pages fetch in `useEffect`, the suite draws the exported components with the
+props the API would give them, and whether a page passes those props is one
+step away. And the claims: a car file is recognised by three of its own
+phrases, «پرونده‌ی خودرو», «برای این خودرو» and «قیمت پیشنهادی». The control
+stops them from quietly leaving the car file; it does not catch a car drawn
+under new words.
+
+**What this does not settle.** Compare's gated branch. It still answers from
+Rows, and a non-vehicle never becomes one (D52), so on a gated corpus A does
+not hold. Measured on run11 with only the flag set: the assignment beside a
+vehicle answers 200 with the vehicle alone, and the assignment alone answers
+404 COMPARE_IDS_NOT_FOUND — a listing the corpus holds, reported as not in
+it. No corpus is gated (D43), so neither case is reachable, and neither is
+tested.
