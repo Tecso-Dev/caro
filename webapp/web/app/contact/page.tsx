@@ -13,31 +13,13 @@ export default function ContactPage() {
         <p className="mt-4 mb-0 text-[15px] leading-[1.95] text-ink-2
                       max-w-[60ch]">
           اگر جایی از سامانه عددی نشان داده که فکر می‌کنی از شواهدش جلو زده،
-          همان را بنویس — این نوع پیام از همه مفیدتر است. شماره‌ی پیگیری‌ای که
-          می‌گیری، همان چیزی است که در پاسخ به آن ارجاع می‌دهیم.
+          همان را بنویس — این نوع پیام از همه مفیدتر است.
         </p>
       </section>
 
+      {/* The form, and what happens to a message, come from one component:
+          both depend on whether this deployment keeps messages at all. */}
       <ContactForm />
-
-      <section className="panel border-dashed">
-        <p className="eyebrow">با پیامت چه می‌کنیم</p>
-        <ul className="m-0 ps-5 list-disc marker:text-ink-3 flex flex-col gap-2 text-[13.5px]
-                       leading-[1.9] text-ink-2">
-          <li>
-            در یک فایل فقط-افزودنی روی همین سرور ذخیره می‌شود و از مخزن کد
-            بیرون است.
-          </li>
-          <li>
-            هیچ ربطی به پیکره‌ی داده ندارد و هرگز وارد آن نمی‌شود؛ آن دو، دو
-            چرخه‌ی عمر جدا دارند.
-          </li>
-          <li>
-            صندوق پیام‌ها فقط با توکن مدیریت باز می‌شود، و اگر توکنی تنظیم
-            نشده باشد اصلاً باز نمی‌شود.
-          </li>
-        </ul>
-      </section>
     </div>
   );
 }

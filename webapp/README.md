@@ -33,6 +33,7 @@ one nginx (or equivalent) so the browser sees a single origin.
 | --- | --- |
 | `CARO_API` | where the client's `/api/*` rewrite points. Read at **build** time, so a change needs a rebuild, not a restart. |
 | `CARO_ADMIN_TOKEN` | opens `/admin`. **Unset means the inbox opens for nobody** — that is the safe state, not a misconfiguration to route around. |
+| `CARO_INBOX` | `off` switches the contact inbox off: no form is drawn, and `POST /api/contact` answers 503 and names GitHub Issues. **Set it wherever the disk does not keep what is written** — a serverless function, a container without a volume. Unset, messages are appended to `data/inbox/messages.jsonl`, and a write that fails anyway is the same 503: never a reference for a message that was not kept. |
 | `CARO_RUN` | which corpus the API serves, by run id. Unset means `webapp.api.corpus.DEFAULT_RUN`. **Set it and get it wrong and the site serves nothing** — see below; that is the point of setting it. |
 | `CARO_CORPORA` | where corpora are read from. For pointing the reader at a directory a test controls, and for nothing else. |
 

@@ -872,6 +872,80 @@ for _ids, _r in _asked:
                   if _want11[_i] != "vehicle"),
           f"sent {_sent}")
 
+
+# ---------------------------------------------------------------------------
+print("\n12 — the contact inbox keeps a message, or refuses it and says where")
+# ---------------------------------------------------------------------------
+# A deployment whose disk does not keep what is written — a serverless
+# function — would take a message, return a reference and lose the file. So
+# the inbox can be switched off (CARO_INBOX=off), and a write that fails
+# anyway is refused the same way. Measured over HTTP on a temporary inbox,
+# never on data/inbox/.
+from webapp.api import contact as contact_mod                      # noqa: E402
+
+_kept = (contact_mod.INBOX, contact_mod.MESSAGES, os.environ.get("CARO_INBOX"))
+_MSG = {"name": "آزمون", "email": "test@example.com",
+        "subject": "آزمون", "body": "یک پیام آزمایشی برای صندوق."}
+
+
+def _lines(p: Path) -> list[str]:
+    return p.read_text(encoding="utf-8").splitlines() if p.exists() else []
+
+
+with tempfile.TemporaryDirectory() as _d:
+    contact_mod.INBOX = Path(_d) / "inbox"
+    contact_mod.MESSAGES = contact_mod.INBOX / "messages.jsonl"
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            _client = TestClient(api.app, raise_server_exceptions=False)
+
+        os.environ.pop("CARO_INBOX", None)
+        _st = _client.get("/api/contact/status").json()
+        check("with CARO_INBOX unset the inbox says it is open",
+              _st.get("open") is True, f"{_st}")
+        _r = _client.post("/api/contact", json=_MSG)
+        _ref = _r.json().get("ref") if _r.status_code == 200 else None
+        check("  a message is kept, and its reference names the line written",
+              bool(_ref) and any(f'"ref": "{_ref}"' in ln
+                                 for ln in _lines(contact_mod.MESSAGES)),
+              f"HTTP {_r.status_code}, "
+              f"{len(_lines(contact_mod.MESSAGES))} line(s) written")
+
+        os.environ["CARO_INBOX"] = "off"
+        _st = _client.get("/api/contact/status").json()
+        check("with CARO_INBOX=off it says it is closed, and where to go",
+              _st.get("open") is False
+              and _st.get("elsewhere") == contact_mod.ELSEWHERE, f"{_st}")
+        _before = len(_lines(contact_mod.MESSAGES))
+        _r = _client.post("/api/contact", json=_MSG)
+        check("  a message is refused with 503, naming that place",
+              _r.status_code == 503
+              and contact_mod.ELSEWHERE in str(_r.json().get("detail", "")),
+              f"HTTP {_r.status_code}: {_r.text[:120]}")
+        check("  and nothing is written",
+              len(_lines(contact_mod.MESSAGES)) == _before,
+              f"{len(_lines(contact_mod.MESSAGES))} line(s), was {_before}")
+
+        # Open, on a disk that cannot be written: the inbox's parent is a
+        # file, so creating the directory fails as a read-only one does.
+        os.environ.pop("CARO_INBOX", None)
+        _blocker = Path(_d) / "not-a-directory"
+        _blocker.write_text("x", encoding="utf-8")
+        contact_mod.INBOX = _blocker / "inbox"
+        contact_mod.MESSAGES = contact_mod.INBOX / "messages.jsonl"
+        _r = _client.post("/api/contact", json=_MSG)
+        check("an open inbox that cannot write refuses with 503, not 500, "
+              "and hands out no reference",
+              _r.status_code == 503 and "ref" not in _r.json()
+              and contact_mod.ELSEWHERE in str(_r.json().get("detail", "")),
+              f"HTTP {_r.status_code}: {_r.text[:120]}")
+    finally:
+        contact_mod.INBOX, contact_mod.MESSAGES = _kept[0], _kept[1]
+        if _kept[2] is None:
+            os.environ.pop("CARO_INBOX", None)
+        else:
+            os.environ["CARO_INBOX"] = _kept[2]
+
 print()
 if FAILS:
     print(f"FAILED ({len(FAILS)}): " + ", ".join(FAILS))

@@ -1,6 +1,6 @@
 """The contact inbox: one append-only file, and a token that fails closed.
 
-Three properties, and each of them is a decision rather than an accident.
+Four properties, and each of them is a decision rather than an accident.
 
 **It is not the corpus.** `data/inbox/` holds messages people chose to send us,
 with the contact details they chose to give. That is categorically different
@@ -18,6 +18,14 @@ lock, and that mistake is invisible until it is not.
 **Append-only, never a database.** A JSONL file is enough for a contact inbox
 and it is honest about what it is. It also means a message cannot be silently
 edited after the fact — the file grows, and what was written stays written.
+
+**Off where the disk does not keep what is written.** A serverless function,
+or a container without a volume, would accept a message, answer with a
+reference, and lose the file — a receipt for nothing. Only the operator knows
+which kind of disk a deployment has, so it is a setting: `CARO_INBOX=off`.
+Then the inbox refuses with 503 and names a place where a message does stay.
+With the setting absent the inbox is on, as it always was; and a write that
+fails anyway is the same 503, never a 500 and never a reference.
 """
 
 from __future__ import annotations
@@ -41,6 +49,20 @@ router = APIRouter()
 
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s.]+(?:\.[^@\s.]+)+$")
 
+# Where a person is sent when this deployment keeps no inbox. The repository is
+# public, and an issue stays where it was written — publicly, which the page
+# says before anyone writes one.
+ELSEWHERE = "https://github.com/sahandmusanezhad/caro/issues"
+CLOSED_FA = ("صندوق پیام در این استقرار خاموش است، چون اینجا پیامی ماندگار "
+             f"ذخیره نمی‌شود. پیامت را در GitHub Issues بنویس: {ELSEWHERE}")
+UNWRITABLE_FA = ("این استقرار نتوانست پیام را ذخیره کند، پس ثبت نشد. "
+                 f"پیامت را در GitHub Issues بنویس: {ELSEWHERE}")
+
+
+def inbox_open() -> bool:
+    """False when the operator has switched the inbox off with CARO_INBOX=off."""
+    return os.environ.get("CARO_INBOX", "").strip().lower() != "off"
+
 
 class Message(BaseModel):
     name: str = Field(min_length=2, max_length=80)
@@ -49,9 +71,21 @@ class Message(BaseModel):
     body: str = Field(min_length=10, max_length=4000)
 
 
+@router.get("/api/contact/status")
+def contact_status() -> dict:
+    """Whether this deployment keeps messages, and where to go if it does not.
+
+    The contact page asks before it draws a form: a form on a deployment that
+    cannot keep what it receives is an invitation to write into nothing.
+    """
+    return {"open": inbox_open(), "elsewhere": ELSEWHERE}
+
+
 @router.post("/api/contact")
 def submit(msg: Message) -> dict:
     """Accept one message. Returns the reference the sender can quote back."""
+    if not inbox_open():
+        raise HTTPException(503, CLOSED_FA)
     if not _EMAIL.match(msg.email.strip()):
         raise HTTPException(422, "نشانی ایمیل معتبر نیست")
 
@@ -65,9 +99,14 @@ def submit(msg: Message) -> dict:
         "body": msg.body.strip(),
         "read": False,
     }
-    INBOX.mkdir(parents=True, exist_ok=True)
-    with MESSAGES.open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+    try:
+        INBOX.mkdir(parents=True, exist_ok=True)
+        with MESSAGES.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except OSError:
+        # A read-only or missing disk. The sender is told it was not kept;
+        # a reference for a message that was never written would be a lie.
+        raise HTTPException(503, UNWRITABLE_FA) from None
 
     return {"ok": True, "ref": ref,
             "fa": "پیام ثبت شد. شماره‌ی پیگیری را نگه دار."}
