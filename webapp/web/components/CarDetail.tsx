@@ -175,7 +175,7 @@ export default function CarDetail({ id }: { id: string }) {
 
 /* What a loaded listing looks like, with nothing fetched here.
  *
- * Pure on purpose. `tests/test_api_contract.py` renders exactly this
+ * Pure on purpose. `tests/test_screens.py` renders exactly this
  * component with what the API really returns — for a vehicle, for the
  * assignment in run11 and for a row whose class nobody determined — and
  * checks the markup a reader would get. A branch that can only be reached

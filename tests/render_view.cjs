@@ -9,7 +9,7 @@
 //            "consts": {"module": "lib/format.ts", "names": ["NOT_A_CAR_FA"]}}
 // response: {"markup": ["<div…>", ...], "consts": {"NOT_A_CAR_FA": "…"}}
 //
-// It exists so tests/test_api_contract.py can check what a READER gets, not
+// It exists so tests/test_screens.py can check what a READER gets, not
 // what a component happens to mention. The Python side supplies the props
 // from the real API; this side only draws them. Constants are evaluated from
 // the module rather than parsed out of it, so a test that needs the sentence
