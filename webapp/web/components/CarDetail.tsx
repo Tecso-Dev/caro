@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
-  ApiError, api, type CorpusMeta, type EvidenceItem, type Fault,
-  type ScoredItem,
+  ApiError, api, type CompareResponse, type CorpusMeta, type EvidenceItem,
+  type Fault, type ListingResponse, type ScoredItem,
 } from '@/lib/api';
 import {
   NOT_A_CAR_FA, classLabel, compact, conditionLabel, faNum, faPlain,
@@ -31,86 +31,192 @@ import TermBars from '@/components/TermBars';
  *
  * Three ways this page can have no car, and they are not the same sentence:
  *
- *   blocked   the API answered with a fault. Two kinds, and the difference is
- *             what the page is allowed to say:
- *               source    no corpus was read (RUN_NOT_FOUND, CORPUS_INVALID).
- *                         «پیدا نشد» would be false — the car may be sitting
- *                         right there; we have nowhere to look.
- *               resource  a corpus WAS read and does not hold this id
- *                         (LISTING_NOT_FOUND). That is ours to say.
- *   err       nothing came back at all, or something answered that was not
- *             this API. No fault, so no reason beyond the status.
- *   loading   none of the above has happened yet.
+ *   blocked    the API answered with a fault. Two kinds, and the difference
+ *              is what the page is allowed to say:
+ *                source    no corpus was read (RUN_NOT_FOUND, CORPUS_INVALID).
+ *                          «پیدا نشد» would be false — the car may be sitting
+ *                          right there; we have nowhere to look.
+ *                resource  a corpus WAS read and does not hold this id
+ *                          (LISTING_NOT_FOUND). That is ours to say.
+ *   no_answer  nothing came back at all, or something answered that was not
+ *              this API. No fault, so no reason beyond the status.
+ *   loading    none of the above has happened yet.
  *
  * All three were one branch printing «پیدا نشد» until the API could put a
  * whole deployment in the first state: with `CARO_RUN` naming a run that is
  * not on disk, every car on the site reported itself missing.
+ *
+ * Where that is decided. The effect in `CarDetail` only records what each
+ * request came to, as data — an `Outcome` — and `detailScreen` decides from
+ * the two what the page is. It fetches nothing, so every state this page can
+ * be in can be reached without a network. What stays out of its reach is the
+ * effect itself: that it records what it was given, and asks for a decision
+ * exactly when `asksForDecision` says to.
  */
 
 /* Codes that mean NO CORPUS WAS READ. The page may not name a car in this
    state — not even to say it is absent. */
 const SOURCE_FAULTS = new Set(['CORPUS_INVALID', 'RUN_NOT_FOUND']);
 
+/** What one request came to — as data, not as a thrown error, so the page can
+ *  be decided from it by a function that fetches nothing. `fault` is the
+ *  envelope's, and only this API sends one: a proxy, a gateway or a dead
+ *  socket leave it null, and the status is all there is.
+ *
+ *  Held as `listingOutcome`, never `listing`: tests/test_corpus.py reads
+ *  every `listing.X` in this file as a field the detail page draws, and an
+ *  outcome named `listing` put `k` and `body` on that list. */
+export type Outcome<T> =
+  | { k: 'pending' }
+  | { k: 'ok'; body: T }
+  | { k: 'failed'; status: number; message: string; fault: Fault | null };
+
+type Failed = Extract<Outcome<unknown>, { k: 'failed' }>;
+
+/** What the page is. `blocked` and `no_answer` are the two ways it has no
+ *  listing to draw; `file` has one, and a decision in some state beside it. */
+export type Screen =
+  | { k: 'loading' }
+  | { k: 'blocked'; fault: Fault }
+  | { k: 'no_answer'; message: string }
+  | { k: 'file'; listing: EvidenceItem; corpus: CorpusMeta | null;
+      decision: Decision };
+
+export type Decision =
+  | { k: 'not_asked' }
+  | { k: 'deciding' }
+  | { k: 'scored'; row: ScoredItem }
+  | { k: 'refused'; message: string };
+
+/* The API answered with no listing and no fault, which the contract does not
+   allow: `listing` is null only when UNUSABLE, and UNUSABLE carries its fault.
+   Written out rather than asserted — a page that throws because a field it
+   expected was absent is a worse answer than a page that says less. */
+const NO_CORPUS: Fault = {
+  code: 'CORPUS_INVALID',
+  message: 'the corpus could not be read',
+  fa: 'پیکره‌ای بارگذاری نشده است، پس چیزی سرو نمی‌شود.',
+  still_available: [],
+};
+
+/** Whether a listing gets a decision asked for. One that is not a car does
+ *  not: an estimate of an assignment is the mistake D52 exists to prevent. */
+export function asksForDecision(r: ListingResponse): boolean {
+  return r.listing !== null && isVehicleClass(r.listing.product_class);
+}
+
+/** The page, from what its two requests came to. `compareOutcome` is null
+ *  until a decision is asked for — and, for a listing that is not a car,
+ *  always. */
+export function detailScreen(
+  listingOutcome: Outcome<ListingResponse>,
+  compareOutcome: Outcome<CompareResponse> | null,
+): Screen {
+  if (listingOutcome.k === 'pending') return { k: 'loading' };
+  if (listingOutcome.k === 'failed') return fromFailure(listingOutcome);
+  const r = listingOutcome.body;
+  // Null only ever means UNUSABLE — see lib/api.ts.
+  if (r.listing === null) return { k: 'blocked', fault: r.fault ?? NO_CORPUS };
+  // As the page has always done it: a decision that failed is drawn as the
+  // page failing, and the listing that did arrive is not drawn at all.
+  if (compareOutcome?.k === 'failed') return fromFailure(compareOutcome);
+  return { k: 'file', listing: r.listing, corpus: r.corpus,
+           decision: decisionFor(r.listing, compareOutcome) };
+}
+
+/* A 404 from this API carries the envelope, so the reason is typed and in
+   Persian. Only something that is NOT this API — a proxy, a dead socket —
+   arrives without one, and that is `no_answer`. */
+function fromFailure(f: Failed): Screen {
+  return f.fault ? { k: 'blocked', fault: f.fault }
+    : { k: 'no_answer', message: f.message };
+}
+
+function decisionFor(
+  listing: EvidenceItem, compareOutcome: Outcome<CompareResponse> | null,
+): Decision {
+  if (!isVehicleClass(listing.product_class)) return { k: 'not_asked' };
+  if (compareOutcome?.k !== 'ok') return { k: 'deciding' };
+  return decisionOf(compareOutcome.body);
+}
+
+/* What a compare answer decides for one car. The effect reads each answer
+   through this before keeping it, so a body it cannot read is a failed
+   request — as it always was — and never a page that throws while drawing. */
+function decisionOf(c: CompareResponse): Decision {
+  if (c.status.served && c.rows.length) return { k: 'scored', row: c.rows[0] };
+  // `message`, not `fa`: this feeds the technical detail, and the Persian
+  // explanation is the prose the panel already carries. The branch is only
+  // reachable when a corpus WAS read, so ESTIMATOR_NOT_GATED is the only
+  // fault that can arrive and that prose is right for it. The `blocked`
+  // screen is where the cause varies, and there the Persian is read off the
+  // fault.
+  return {
+    k: 'refused',
+    message: c.fault?.message ?? 'no estimator is gated on this corpus',
+  };
+}
+
+/* A request that threw, as an Outcome. The message is the error's own, as the
+   page has always shown it. */
+function failure(e: unknown): Failed {
+  if (e instanceof ApiError) {
+    return {
+      k: 'failed', status: e.status, message: e.message, fault: e.fault,
+    };
+  }
+  const m = (e as { message?: unknown } | null)?.message;
+  return { k: 'failed', status: 0, message: String(m ?? e), fault: null };
+}
+
 export default function CarDetail({ id }: { id: string }) {
-  const [listing, setListing] = useState<EvidenceItem | null>(null);
-  const [corpus, setCorpus] = useState<CorpusMeta | null>(null);
-  const [scored, setScored] = useState<ScoredItem | null>(null);
-  const [refused, setRefused] = useState<string | null>(null);
-  const [blocked, setBlocked] = useState<Fault | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+  const [listingOutcome, setListingOutcome] =
+    useState<Outcome<ListingResponse>>({ k: 'pending' });
+  const [compareOutcome, setCompareOutcome] =
+    useState<Outcome<CompareResponse> | null>(null);
 
   useEffect(() => {
     let alive = true;
+    // A new id starts from nothing. No link on the site goes from one car to
+    // another, but a file must never be drawn under an id it is not for.
+    setListingOutcome({ k: 'pending' });
+    setCompareOutcome(null);
     api.listing(id)
       .then((r) => {
+        const ask = asksForDecision(r);     // reads the body — see decisionOf
         if (!alive) return;
-        setCorpus(r.corpus);
-        if (r.listing === null) {
-          // Null only ever means UNUSABLE — see lib/api.ts. The fault is not
-          // optional in that state, but the fallback is written out rather
-          // than asserted: a page that throws because a field it expected was
-          // absent is a worse answer than a page that says less.
-          setBlocked(r.fault ?? {
-            code: 'CORPUS_INVALID',
-            message: 'the corpus could not be read',
-            fa: 'پیکره‌ای بارگذاری نشده است، پس چیزی سرو نمی‌شود.',
-            still_available: [],
-          });
-          return undefined;
-        }
-        setListing(r.listing);
-        // A listing that is not a car has no decision to ask for: an
-        // estimate of an assignment is the mistake D52 exists to prevent.
-        if (!isVehicleClass(r.listing.product_class)) return undefined;
-        return api.compare([id]);
+        setListingOutcome({ k: 'ok', body: r });
+        if (!ask) return;
+        setCompareOutcome({ k: 'pending' });
+        api.compare([id])
+          .then((c) => {
+            decisionOf(c);
+            if (alive) setCompareOutcome({ k: 'ok', body: c });
+          })
+          .catch((e) => { if (alive) setCompareOutcome(failure(e)); });
       })
-      .then((c) => {
-        if (!alive || !c) return;
-        if (c.status.served && c.rows.length) {
-          setScored(c.rows[0]);
-        } else {
-          // `message`, not `fa`: this feeds the technical detail, and the
-          // Persian explanation is the prose the panel already carries. The
-          // branch is only reachable when a corpus WAS read, so
-          // ESTIMATOR_NOT_GATED is the only fault that can arrive and that
-          // prose is right for it. The `blocked` branch above is where the
-          // cause varies, and there the Persian is read off the fault.
-          setRefused(c.fault?.message ?? 'no estimator is gated on this corpus');
-        }
-      })
-      .catch((e) => {
-        if (!alive) return;
-        // A 404 from this API carries the envelope, so the reason is typed
-        // and in Persian. Only something that is NOT this API — a proxy, a
-        // dead socket — arrives without one, and that is the `err` branch.
-        if (e instanceof ApiError && e.fault) setBlocked(e.fault);
-        else setErr(String(e?.message ?? e));
-      });
+      .catch((e) => { if (alive) setListingOutcome(failure(e)); });
     return () => { alive = false; };
   }, [id]);
 
-  if (blocked) {
-    const noCorpus = SOURCE_FAULTS.has(blocked.code);
+  return <CarDetailView id={id} listingOutcome={listingOutcome}
+                        compareOutcome={compareOutcome} />;
+}
+
+/* The page, drawn from the two outcomes. Pure, like `ListingFile` below:
+ * nothing is fetched here, so any state the page can be in can be drawn from
+ * data. */
+export function CarDetailView({
+  id, listingOutcome, compareOutcome,
+}: {
+  id: string;
+  listingOutcome: Outcome<ListingResponse>;
+  compareOutcome: Outcome<CompareResponse> | null;
+}) {
+  const s = detailScreen(listingOutcome, compareOutcome);
+
+  if (s.k === 'blocked') {
+    const noCorpus = SOURCE_FAULTS.has(s.fault.code);
     return (
       <div className="panel border-bad">
         <div className="flex items-center gap-3 flex-wrap mb-3">
@@ -127,7 +233,7 @@ export default function CarDetail({ id }: { id: string }) {
           </p>
         </div>
         <p className="m-0 text-[15px] leading-[1.95] max-w-[62ch]">
-          {blocked.fa}
+          {s.fault.fa}
         </p>
         {/* The distinction the old «پیدا نشد» destroyed, said out loud — and
             only in the state where it is true. */}
@@ -139,7 +245,7 @@ export default function CarDetail({ id }: { id: string }) {
             است، نه دربارهٔ خودرو.
           </p>
         )}
-        {blocked.message && <TechDetail message={blocked.message} />}
+        {s.fault.message && <TechDetail message={s.fault.message} />}
         <Link href="/search" className="btn mt-4 inline-block">
           برگرد به جست‌وجو
         </Link>
@@ -147,7 +253,7 @@ export default function CarDetail({ id }: { id: string }) {
     );
   }
 
-  if (err) {
+  if (s.k === 'no_answer') {
     return (
       <div className="panel border-bad">
         <p className="eyebrow !text-bad">پاسخی نرسید</p>
@@ -155,7 +261,7 @@ export default function CarDetail({ id }: { id: string }) {
           سرویس جواب نداد یا جوابی داد که از این API نبود، پس دربارهٔ این
           خودرو هیچ چیزی نمی‌دانیم — نه اینکه پیدا نشد.
         </p>
-        <TechDetail message={err} />
+        <TechDetail message={s.message} />
         <Link href="/search" className="btn mt-4 inline-block">
           برگرد به جست‌وجو
         </Link>
@@ -163,13 +269,15 @@ export default function CarDetail({ id }: { id: string }) {
     );
   }
 
-  if (!listing) {
+  if (s.k === 'loading') {
     return <div className="panel text-ink-3 text-[13.5px]">در حال بارگذاری…</div>;
   }
 
+  const d = s.decision;
   return (
-    <ListingFile id={id} listing={listing} corpus={corpus} scored={scored}
-                 refused={refused} />
+    <ListingFile id={id} listing={s.listing} corpus={s.corpus}
+                 scored={d.k === 'scored' ? d.row : null}
+                 refused={d.k === 'refused' ? d.message : null} />
   );
 }
 
