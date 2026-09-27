@@ -3543,3 +3543,121 @@ vehicle answers 200 with the vehicle alone, and the assignment alone answers
 404 COMPARE_IDS_NOT_FOUND — a listing the corpus holds, reported as not in
 it. No corpus is gated (D43), so neither case is reachable, and neither is
 tested.
+
+## D64 — Deployed as one Vercel project of two services; the inbox is off
+
+The site has a public address, https://caro-rho.vercel.app. This records how
+it is deployed and why, what the deployment was measured to do on the day,
+and what was not measured. The platform is Vercel, the one the author
+already deploys to. Whether the site can be reached from Iran was raised
+before the choice and set aside; it was not measured.
+
+**The decision.** One Vercel project, with the site and the API as two
+services on one domain (`72daa23`). `vercel.json` at the repository root
+sends `/api/*` to the API and everything else to the site. One domain keeps
+the client's own paths: it writes `/api/...` in development and in production
+alike. The API's root is the repository root, so its function carries
+`caro/`, `data/corpora/` and `tests/` — the corpus fallback imports
+`tests/test_ranking.py`. The package declares numpy as its one dependency
+(`bfc8688`), and the API service installs the web requirements beside it.
+Measured before deploying, with `vercel build`: the function is 97 MB of a
+500 MB limit.
+
+The contact inbox is off (`57bfd30`). A function's disk does not keep what is
+written, so an inbox that accepted a message there would be losing it. With
+`CARO_INBOX=off` — set for production and for previews — the contact page
+draws no form. It says «صندوق پیام در این استقرار خاموش است», names the
+repository's GitHub Issues instead, and says before anyone writes that Issues
+are public. A server asked anyway answers 503, and so does one that cannot
+write: never a 500, and never a tracking number for a message that was not
+kept. `CARO_RUN` and `CARO_ADMIN_TOKEN` are unset, so the site serves run11
+and the admin inbox does not open.
+
+How to deploy is in webapp/README.md (`b545185`). The deployment settled one
+thing that file could not: it is made with the CLI from a clean clone.
+Connecting the repository so that a push deploys was refused with a 400 and
+left, so every deployment is a pull and a `deploy --prod` by hand.
+
+**Measured on the first deployment,** 2026-09-27, built from `b545185`, in a
+browser not signed in to Vercel:
+
+    /                        the corpus badge says REAL DATA
+    /search                  the example query: 76 listings considered,
+                             71 appraisable, 4 rows of evidence, NOT SERVED
+    /car/bama:0hg8shef       the car file, and its refusal
+    /car/bama:hubymydi       the listing file, headed as an assignment
+    /compare                 two cars and the assignment: three rows, the
+                             assignment's saying it is not a car
+    /contact                 no form and no input; one link, to Issues
+    /about                   63, 1673 and 15, the repository's numbers that day
+
+The query was «پراید زیر ۳۰۰ میلیون», one of the search page's examples; the
+refusal, «برآوردی برای این خودرو سرو نمی‌شود»; the assignment's heading,
+«این آگهی خودرو نیست — حواله». The search's JSON was identical, key for key,
+to the same query run locally on the same tree. `/api/contact/status`
+answered `open: false` and `/api/admin/status` `configured: false`; a listing
+the corpus does not hold came back 404 with the envelope, and a path the API
+does not have 404. `x-vercel-id` put the function in iad1; the edge that
+answered was fra1.
+
+**What the deployment found.** A car opened from the search results showed
+«پاسخی نرسید» and «هیچ چیزی نمی‌دانیم» where its file should have been. The
+browser's log had the listing answered 200 and the request for its decision
+failed with `net::ERR_NETWORK_CHANGED` — the network of the machine running
+the browser changing under it, not the platform. Reloaded, the page was
+right.
+
+Measured next, locally, against a fresh build of the same tree and the real
+API, with only the named request made to fail:
+
+    the listing        its decision                     the page
+    200                200, the refusal                 the file, and the refusal
+    200                dropped, two kinds of error      no file; sentence A
+    200                500, then 504, not the API's     no file; sentence A
+    200                this API's own 404               no file; sentence B
+    200                never answered, watched 8 s      the file, still deciding
+    dropped            not asked                        sentence A, rightly
+    200, assignment    not asked                        the listing file
+
+A is «پاسخی نرسید» over «هیچ چیزی نمی‌دانیم»; B is
+«این آگهی در پیکره‌ی جاری نیست». Every failure of the second request, once the
+first had answered, took the file with it and said something the first
+answer contradicted. The screen suite could not see it: the page decided
+inside `useEffect`, and drawn the way the suite draws, it was
+«در حال بارگذاری…» and nothing else.
+
+It was fixed apart from this decision, in three commits, and is not reopened
+here. The page's state became one pure function, with nothing a reader sees
+changed: the nine cases gave the same screen and the same text before and
+after (`199ea52`). The screen suite checks that function from real answers
+(`ccae472`). And a failed decision is drawn where the decision would have
+been, with the file kept (`e011af9`); the twelve checks that commit adds were
+all red against the page before it.
+
+The page still asks for its decision, once. On run11 the answer is, for all
+75 listings drawn as cars, exactly the refusal the listing's own envelope
+already carries. Not asking was measured and not chosen: it changes how the
+page is built for a gain that lasts until the first gated corpus, and with
+the file kept a dropped request no longer costs it anything. No retry either:
+it would hide a failure instead of drawing it.
+
+**Measured on the second deployment,** built from `e011af9`, the same day.
+`/about` said 1707. The car page's ordinary path was unchanged: the file, the
+refusal, the provenance. With `/api/compare` made to fail in the browser's
+own tab — the request never sent, the listing fetched from the deployed API —
+the file stayed and the decision's panel said «تصمیمی به این صفحه نرسید», with
+neither A nor B on the page. And, by the same accident as before, a network
+change dropped the listing's own request on one attempt: the page said A,
+which is now the one case A is for.
+
+**Not measured.** Cold start. The preview deployment, which was not opened.
+The contact POST on the deployment: its 503 was not asked for there — the
+status endpoint that answered `open: false` reads the same switch, and
+section 12 of the contract suite sends the POST. Whether the Issues link
+opens for a visitor not signed in to GitHub. And reachability from Iran, as
+said above.
+
+**What this does not settle.** The inbox is off, not replaced: a store that
+keeps what is written would be a decision of its own. Deployments stay manual
+while the repository is not connected. And compare's gated branch stays
+where D63 left it, blocked by D43.
