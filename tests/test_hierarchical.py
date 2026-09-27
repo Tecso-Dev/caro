@@ -492,6 +492,92 @@ check("  and a reason is still a string, so every existing caller works",
       all(isinstance(r, str) for r in _all_reasons)
       and "MAE" in " ".join(_all_reasons))
 
+# ---------------------------------------------------------------------------
+print("\nthe ridge both models fit with, against a solution found another "
+      "way")
+# ---------------------------------------------------------------------------
+# `_ridge_fit` is written out rather than imported — the normal equations on
+# centred data, solved by `np.linalg.solve` — and README.md says it is
+# asserted to match an independent solution to 1e-9. This is that assertion.
+#
+# The reference is least squares on the augmented system
+#
+#     [ Xc      ]       [ yc ]
+#     [ √α · I  ] w  =  [ 0  ]
+#
+# solved by SVD (`np.linalg.lstsq`): no X'X, no solve. It shares only the
+# centring, which is what an unpenalised intercept means.
+#
+# The problems are the ones the models solve: their own design matrices on
+# this suite's corpus, and seeded problems built the same way — a one-hot
+# column per trim, the Jalali year, the odometer in 100,000 km, log price —
+# with 5 to 400 rows, some fewer than the columns, and penalties a tenth to
+# ten times the models' own. Not arbitrary matrices: on 10,000 random ones —
+# features scaled up to 1e3, penalties down to 1e-6, some with more columns
+# than rows — the two solvers part by up to 3e-4, the conditioning of those
+# problems, which neither solver escapes. It lives in this suite because this
+# one needs numpy alone, so the claim is checked on every run the README
+# describes.
+from caro.appraisal import LogLinearQuantiles, _ridge_fit             # noqa: E402
+
+
+def _reference_ridge(X, y, alpha):
+    Xm, ym = X.mean(axis=0), float(y.mean())
+    A = np.vstack([X - Xm, np.sqrt(alpha) * np.eye(X.shape[1])])
+    b = np.concatenate([y - ym, np.zeros(X.shape[1])])
+    w = np.linalg.lstsq(A, b, rcond=None)[0]
+    return w, ym - float(Xm @ w)
+
+
+def _apart(fit, ref):
+    """How far two (coefficients, intercept) fits are, relative to the
+    reference's scale with a floor of 1 — the larger of the two parts."""
+    out = 0.0
+    for a, b in zip(fit, ref):
+        a, b = np.atleast_1d(a), np.atleast_1d(b)
+        out = max(out, float(np.max(np.abs(a - b))
+                             / max(1.0, float(np.max(np.abs(b))))))
+    return out
+
+
+_y = np.log(np.array([r.asking_price_toman for r in ROWS], dtype=float))
+for _m in (LogLinearQuantiles(), PartialPoolingQuantiles()):
+    _X = _m._design(ROWS, fit=True)
+    _d = _apart(_ridge_fit(_X, _y, _m.alpha),
+                _reference_ridge(_X, _y, _m.alpha))
+    check(f"{type(_m).__name__}'s own design, {_X.shape[0]}×{_X.shape[1]}, "
+          f"α={_m.alpha:g}: within 1e-9 ({_d:.1e})", _d < 1e-9)
+
+
+def _design_like(g):
+    n, k = int(g.integers(5, 401)), int(g.integers(1, 41))
+    trim = g.integers(0, k, size=n)
+    X = np.zeros((n, k + 2))
+    X[np.arange(n), trim] = 1.0
+    X[:, -2] = g.integers(1380, 1403, size=n)
+    X[:, -1] = g.uniform(0.0, 5.0, size=n)
+    y = (19.0 + 0.06 * (X[:, -2] - 1380) - 0.08 * X[:, -1]
+         + g.normal(0.0, 0.3, size=k)[trim] + g.normal(0.0, 0.05, size=n))
+    return X, y, float(g.choice([0.1, 1.0, 10.0]))
+
+
+_g = np.random.default_rng(20260927)
+_problems = [_design_like(_g) for _ in range(200)]
+_worst = max(_apart(_ridge_fit(X, y, a), _reference_ridge(X, y, a))
+             for X, y, a in _problems)
+_narrow = sum(X.shape[0] < X.shape[1] for X, _, _ in _problems)
+check(f"200 seeded problems shaped like them ({_narrow} with fewer rows than "
+      f"columns): within 1e-9 ({_worst:.1e})", _worst < 1e-9)
+
+# The tolerance has to be able to fail. The same problems against the
+# reference with twice the penalty must land far outside it; otherwise 1e-9
+# is a number nothing could have missed.
+_off = min(_apart(_ridge_fit(X, y, a), _reference_ridge(X, y, 2 * a))
+           for X, y, a in _problems)
+check(f"  control: with the reference's penalty doubled, the closest of the "
+      f"200 is {_off:.1e} apart", _off > 1e-6)
+
+
 print()
 if FAILS:
     print(f"FAILED ({len(FAILS)}): " + ", ".join(FAILS))
