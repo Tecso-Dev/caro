@@ -88,9 +88,9 @@ Measured before this was written, with Vercel CLI 60.1.3 and `vercel build`
 on the tree: both services build; the API function is 97 MB of a 500 MB
 limit; served from those files alone it answers the listing and contact
 endpoints, switches the inbox off with `CARO_INBOX=off`, and refuses a message
-with 503 when it cannot write. Not measured: the platform itself — cold start,
-the region the function runs in (Vercel's default is `iad1`), and what the
-first real deployment shows.
+with 503 when it cannot write. What the first real deployment showed, page by
+page, and the region its function runs in, iad1, are in D64
+(docs/DECISIONS.md). Still not measured: cold start.
 
 ## Why the requirements file is separate
 
@@ -130,7 +130,10 @@ python3 tests/run_all.py          # the whole suite, including W3 ranking
 cd webapp/web && npm run build    # types and the nine routes
 ```
 
-The API has no test suite of its own yet. It is thin enough that the
-interesting behaviour lives in `caro/` and is covered there — but "thin
-enough" is a judgement, not a guarantee, and this line should be deleted the
-day a decision starts being made in `webapp/api/`.
+The API has two suites of its own. `tests/test_api_contract.py` calls every
+endpoint, in every corpus state, against the client's types in `lib/api.ts`.
+`tests/test_screens.py` draws the site's own components with what those
+endpoints return, the car page in each state its two requests can leave it
+in among them. Both run under `tests/run_all.py`, and both need what the API
+needs; the second also needs node and `webapp/web/node_modules`. Without
+them a suite is skipped by name, and never counted as passed.
