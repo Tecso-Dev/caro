@@ -14,6 +14,17 @@
 // from the real API; this side only draws them. Constants are evaluated from
 // the module rather than parsed out of it, so a test that needs the sentence
 // a page prints never keeps a copy of it.
+//
+// It can also call one exported pure function, for a page whose state is
+// decided by one (the car page's `detailScreen`):
+//
+// request:  {"call": {"module": "components/CarDetail.tsx",
+//                     "name": "detailScreen", "args": [[a, b], ...]}}
+// response: {"markup": [], "consts": {}, "calls": [result, ...]}
+//
+// Each entry of `args` is one call's argument list, and each result must be
+// JSON — which is what a function that only decides, and draws nothing,
+// returns.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -60,15 +71,26 @@ const React = require(path.join(NM, 'react'));
 const { renderToStaticMarkup } = require(path.join(NM, 'react-dom/server'));
 
 const req = JSON.parse(fs.readFileSync(0, 'utf8'));
-const Component = require(path.join(WEB, req.component))[req.export];
-if (typeof Component !== 'function') {
-  throw new Error(`${req.component} exports no component named ${req.export}`);
+let markup = [];
+if (req.component) {
+  const Component = require(path.join(WEB, req.component))[req.export];
+  if (typeof Component !== 'function') {
+    throw new Error(`${req.component} exports no component named ${req.export}`);
+  }
+  markup = (req.props || []).map(
+    (p) => renderToStaticMarkup(React.createElement(Component, p)));
 }
-const markup = (req.props || []).map(
-  (p) => renderToStaticMarkup(React.createElement(Component, p)));
 const consts = {};
 if (req.consts) {
   const mod = require(path.join(WEB, req.consts.module));
   for (const name of req.consts.names) consts[name] = mod[name];
 }
-process.stdout.write(JSON.stringify({ markup, consts }));
+const calls = [];
+if (req.call) {
+  const fn = require(path.join(WEB, req.call.module))[req.call.name];
+  if (typeof fn !== 'function') {
+    throw new Error(`${req.call.module} exports no function named ${req.call.name}`);
+  }
+  for (const args of req.call.args) calls.push(fn(...args));
+}
+process.stdout.write(JSON.stringify({ markup, consts, calls }));

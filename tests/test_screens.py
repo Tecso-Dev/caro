@@ -1,4 +1,5 @@
-"""What a reader is shown for a listing that is not a car.
+"""What a reader is shown: a listing that is not a car, and the car page in
+each state its two requests can leave it in.
 
 Run: PYTHONPATH=. python3 tests/test_screens.py
 
@@ -16,15 +17,27 @@ about the markup a reader gets, not about which fields a component mentions:
 a component can read `product_class` and draw a car anyway, which is the
 failure this suite exists for.
 
+THE CAR PAGE'S STATE (§3). The car page asks two things — the listing, then
+a decision for it — and which screen a reader gets is decided from what the
+two requests came to by one pure function, `detailScreen`. §3 hands it real
+API answers, and failures shaped the way the page records them, and checks
+what it decides; then it draws `CarDetailView` from the same inputs and checks
+what a reader gets.
+
 WHAT IT CANNOT SEE. The wiring from `useEffect` to the component. The pages
-fetch; these two draw; this feeds the drawing half what the fetching half
-would get. Every listing is drawn WITH a decision's refusal, vehicle or not:
-a non-car file must not turn into a car file because somebody asked for an
-estimate.
+fetch; these draw; this feeds the drawing half what the fetching half would
+get. For the car page that half is now thin, but it is not empty: whether the
+effect records what each request came to — `failure()` in CarDetail.tsx,
+`json()` in lib/api.ts — and asks for a decision exactly when
+`asksForDecision` says so. §1 draws every listing WITH a decision's refusal,
+vehicle or not: a non-car file must not turn into a car file because
+somebody asked for an estimate.
 
 THE CONTROL. A vehicle, drawn the same way, must carry every one of the car
 file's own claims. Without it the negative checks below could pass on a
-page whose wording had merely changed.
+page whose wording had merely changed. §3 keeps the same rule for the other
+screens: a sentence it checks is absent is one it first finds where it
+belongs.
 """
 
 from __future__ import annotations
@@ -104,10 +117,8 @@ def classless(n: int = 2) -> str:
                      for i in range(n)]}, ensure_ascii=False)
 
 
-def render(component: str, export: str, props: list) -> tuple[dict | None, str]:
-    req = {"component": component, "export": export, "props": props,
-           "consts": {"module": "lib/format.ts",
-                      "names": ["NOT_A_CAR_FA", "PRODUCT_CLASS_FA"]}}
+def node(req: dict) -> tuple[dict | None, str]:
+    """One request to tests/render_view.cjs: draw, read constants, call."""
     try:
         p = subprocess.run(
             ["node", str(ROOT / "tests" / "render_view.cjs"), str(WEB)],
@@ -123,6 +134,18 @@ def render(component: str, export: str, props: list) -> tuple[dict | None, str]:
                    lines[-1])
         return None, err.strip()[:160]
     return json.loads(p.stdout), ""
+
+
+def render(component: str, export: str, props: list) -> tuple[dict | None, str]:
+    return node({"component": component, "export": export, "props": props,
+                 "consts": {"module": "lib/format.ts",
+                            "names": ["NOT_A_CAR_FA", "PRODUCT_CLASS_FA"]}})
+
+
+def call(module: str, name: str, args: list) -> tuple[list | None, str]:
+    """`name` from `module`, once per argument list; what each call returned."""
+    out, why = node({"call": {"module": module, "name": name, "args": args}})
+    return (out["calls"] if out is not None else None), why
 
 
 def as_json(model) -> dict:
@@ -218,6 +241,133 @@ if tout is not None:
                 check(f"  {' + '.join(ids)}: {i} says it is «{lab}», not a car",
                       row is not None and SAY in row and lab in row,
                       "no row" if row is None else "drawn like a car")
+
+
+# ---------------------------------------------------------------------------
+print("\n3 — the car page: which screen each pair of answers gets")
+# ---------------------------------------------------------------------------
+# The car page asks for the listing, then — for a car — for a decision, and
+# what a reader gets is decided from what the two requests came to. Each case
+# below is such a pair: answers the API really gives, and failures shaped the
+# way the page records a request that failed (`Outcome` in CarDetail.tsx).
+GONE = "bama:not-in-any-corpus"
+car = files[0][2]                            # VEH, first entry of §0's files
+nv_id, nv_cls, nv = files[1]                 # a listing that is not a car
+b0 = files[-1][2]                            # the classless fixture's row
+with serving(ART.parent):
+    missing = api.listing(GONE)
+    # A configured run that is not on disk: nothing is read, so the page may
+    # not even say the car is absent. `serving` puts the variable back.
+    os.environ[corpus_mod.RUN_ENV] = "run_no_such_thing"
+    corpus_mod.active.cache_clear()
+    unread = api.listing(VEH)
+check("  the API's own answers for the cases below: "
+      f"{missing.fault.code if missing.fault else None}, "
+      f"{unread.fault.code if unread.fault else None}",
+      missing.fault is not None and missing.fault.code == "LISTING_NOT_FOUND"
+      and unread.listing is None and unread.fault is not None
+      and unread.fault.code == "RUN_NOT_FOUND",
+      "the fixtures are not what the cases below say they are")
+
+PENDING = {"k": "pending"}
+
+
+def ok(model) -> dict:
+    return {"k": "ok", "body": as_json(model)}
+
+
+def failed(status: int, fault=None) -> dict:
+    """A request that failed, as the page records it: the status, the message
+    it would show under «جزئیات فنی», and the fault when this API sent one."""
+    f = as_json(fault) if fault is not None else None
+    return {"k": "failed", "status": status,
+            "message": f["message"] if f else str(status), "fault": f}
+
+
+STATES = [
+    # what happened; the listing's outcome, the decision's; screen, and the
+    # decision it holds (a file) or the fault it shows (blocked)
+    ("nothing has come back yet", PENDING, None, "loading", None),
+    ("the listing got no answer", failed(0), None, "no_answer", None),
+    ("the listing got a 500 that is not this API's", failed(500), None,
+     "no_answer", None),
+    ("the API says the listing is not in its corpus",
+     failed(404, missing.fault), None, "blocked", "LISTING_NOT_FOUND"),
+    ("the API read no corpus at all", ok(unread), None,
+     "blocked", "RUN_NOT_FOUND"),
+    (f"{VEH}, a car, before its decision is asked for", ok(car), None,
+     "file", "deciding"),
+    (f"{VEH}, its decision on the way", ok(car), PENDING, "file", "deciding"),
+    (f"{VEH}, its decision refused", ok(car), ok(refusal), "file", "refused"),
+    (f"{nv_id} ({nv_cls}), for which no decision is asked", ok(nv), None,
+     "file", "not_asked"),
+    ("b0 (unknown), for which no decision is asked", ok(b0), None,
+     "file", "not_asked"),
+]
+
+
+def held(s: dict):
+    if s.get("k") == "file":
+        return (s.get("decision") or {}).get("k")
+    if s.get("k") == "blocked":
+        return (s.get("fault") or {}).get("code")
+    return None
+
+
+got, why = call("components/CarDetail.tsx", "detailScreen",
+                [[lo, co] for _, lo, co, _, _ in STATES])
+check("detailScreen could be called", got is not None, why)
+if got is not None:
+    for (what, _, _, k, h), s in zip(STATES, got):
+        check(f"  {what} → {k}{' · ' + h if h else ''}",
+              (s.get("k"), held(s)) == (k, h),
+              f"got {s.get('k')} · {held(s)}")
+
+ASKS = [("a car", car, True), (f"{nv_id} ({nv_cls})", nv, False),
+        ("b0 (unknown)", b0, False), ("no corpus read", unread, False)]
+asks, why = call("components/CarDetail.tsx", "asksForDecision",
+                 [[as_json(r)] for _, r, _ in ASKS])
+check("asksForDecision could be called", asks is not None, why)
+if asks is not None:
+    for (what, _, want), a in zip(ASKS, asks):
+        check(f"  a decision is asked for {what}: {want}", a is want,
+              f"got {a}")
+
+# What a reader gets. The sentences are recognised the way CAR_CLAIMS
+# recognises the car file, and each is first found where it belongs — the
+# controls — so a reworded screen fails here instead of letting a check that
+# it is absent pass.
+KNOW_NOTHING = "هیچ چیزی نمی‌دانیم"
+NOT_IN_CORPUS = "این آگهی در پیکره‌ی جاری نیست"
+DECIDING = "در حال محاسبه‌ی تصمیم"
+
+
+def car_file(html: str) -> bool:
+    """The listing's own file: its heading, its id, its asking price."""
+    return CAR_CLAIMS[0] in html and VEH in html and CAR_CLAIMS[2] in html
+
+
+DRAWN = [("no answer", failed(0), None),
+         ("not in corpus", failed(404, missing.fault), None),
+         ("deciding", ok(car), PENDING),
+         ("refused", ok(car), ok(refusal))]
+dout, why = render("components/CarDetail.tsx", "CarDetailView", [
+    {"id": VEH, "listingOutcome": lo, "compareOutcome": co}
+    for _, lo, co in DRAWN])
+check("CarDetailView could be drawn", dout is not None, why)
+if dout is not None:
+    page = dict(zip((n for n, _, _ in DRAWN), dout["markup"]))
+    check(f"  control: a listing that got no answer says «{KNOW_NOTHING}»",
+          KNOW_NOTHING in page["no answer"] and not car_file(page["no answer"]),
+          "the sentence the checks below look for is not where it belongs")
+    check(f"  control: a listing the corpus does not hold says "
+          f"«{NOT_IN_CORPUS}»", NOT_IN_CORPUS in page["not in corpus"],
+          "the sentence the checks below look for is not where it belongs")
+    check(f"  {VEH}, its decision on the way: its file, and «{DECIDING}…»",
+          car_file(page["deciding"]) and DECIDING in page["deciding"])
+    check(f"  {VEH}, its decision refused: its file, with every claim",
+          all(x in page["refused"] for x in CAR_CLAIMS)
+          and VEH in page["refused"])
 
 
 print()
