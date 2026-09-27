@@ -709,6 +709,105 @@ check(f"  and /about says «{_want}» in both places it names the count",
       _about.count(_want) >= 2,
       f"found {_about.count(_want)} occurrence(s) of «{_want}»")
 
+# ---------------------------------------------------------------------------
+# scripts/setup.sh is the README's first command, and it tells whoever ran it
+# how many suites they now have. Both halves have been wrong before, with
+# every check green: its no-root message counted ten suites long after there
+# were more (4714ff8), and a commit carried its mode from 100755 to 100644,
+# so on a fresh clone the first command answered «Permission denied»
+# (512d115). The counts are recomputed here from what tests/run_all.py
+# declares each suite to need, and from the packages `--extras` installs;
+# the mode is read from the git index — what a clone gets — or, where there
+# is no index, from the file.
+print()
+import importlib.util                                                 # noqa: E402
+import shutil                                                         # noqa: E402
+import subprocess                                                     # noqa: E402
+
+_spec = importlib.util.spec_from_file_location(
+    "_run_all", ROOT / "tests" / "run_all.py")
+_run_all = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_run_all)
+_SETUP = ROOT / "scripts" / "setup.sh"
+_setup_src = _SETUP.read_text(encoding="utf-8")
+# Comment markers off and whitespace folded, so a sentence the header wraps
+# over four lines reads as one.
+_setup_text = " ".join(" ".join(
+    re.sub(r"^\s*#", " ", ln) for ln in _setup_src.splitlines()).split())
+
+_pk = re.search(r'if \[ "\$WANT_EXTRAS" = "1" \]; then\s*PKGS="([^"]+)"',
+                _setup_src)
+_extras = set(_pk.group(1).split()) if _pk else set()
+check(f"setup.sh --extras installs {sorted(_extras)}", bool(_extras),
+      "no PKGS line in the --extras branch — the counts below read it")
+
+
+def _runs_with(installed: set) -> int:
+    """How many suites run with these Python packages and nothing else."""
+    return sum(1 for s in _run_all.SUITES
+               if all(not n.startswith(("bin:", "path:"))
+                      and n.split(".")[0] in installed for n in s[3]))
+
+
+_WORDS = ("zero one two three four five six seven eight nine ten eleven "
+          "twelve thirteen fourteen fifteen sixteen seventeen eighteen "
+          "nineteen twenty").split()
+_NTH = ("zeroth first second third fourth fifth sixth seventh eighth ninth "
+        "tenth eleventh twelfth thirteenth fourteenth fifteenth sixteenth "
+        "seventeenth eighteenth nineteenth twentieth").split()
+_all = len(_run_all.SUITES)
+_bare = _runs_with({"numpy"})
+_ext = _runs_with(_extras)
+check(f"  run_all declares {_all} suites: {_bare} run with numpy alone, "
+      f"{_ext} with --extras, and exactly one needs more than that",
+      _all - _ext == 1,
+      f"{_all - _ext} suites need more than --extras; setup.sh names one, "
+      f"«the {_NTH[_all] if _all < len(_NTH) else _all}»")
+
+
+def _w(n: int) -> str:
+    return _WORDS[n] if 0 <= n < len(_WORDS) else str(n)
+
+
+for _pat, _want_words, _what in (
+        (r"so (\w+) of the (\w+) suites run instead of (\w+); "
+         r"the (\w+) also needs node",
+         (_w(_ext), _w(_all), _w(_bare), _NTH[_all]), "the header"),
+        (r'THEN="(\w+) of (\w+) suites — the (\w+) also needs node',
+         (_w(_ext), _w(_all), _NTH[_all]), "what --extras prints"),
+        (r'THEN="(\w+) of (\w+) suites — --extras adds (\w+), '
+         r'and the (\w+) needs --extras',
+         (_w(_bare), _w(_all), _w(_ext - _bare), _NTH[_all]),
+         "what a bare run prints"),
+        (r"message ends with (\w+) suites still skipped",
+         (_w(_ext - _bare),), "the ladder's comment"),
+        (r"it skips (\w+) of the (\w+) by name",
+         (_w(_all - _bare), _w(_all)), "the no-root message")):
+    _m = re.search(_pat, _setup_text)
+    if not _m:
+        check(f"  setup.sh still says {_what}", False,
+              f"«{_pat}» no longer matches — restore the sentence, or drop "
+              f"this check deliberately")
+        continue
+    check(f"  {_what}: «{_m.group(0)}»", _m.groups() == _want_words,
+          f"run_all says {' / '.join(_want_words)}")
+
+_mode = None
+if shutil.which("git"):
+    _p = subprocess.run(["git", "ls-files", "-s", "--", "scripts/setup.sh"],
+                        cwd=ROOT, capture_output=True, text=True)
+    if _p.returncode == 0 and _p.stdout.strip():
+        _mode = _p.stdout.split()[0]
+if _mode is not None:
+    check(f"scripts/setup.sh is executable in the git index ({_mode})",
+          _mode == "100755",
+          "a clone would answer «Permission denied» to the README's first "
+          "command")
+else:
+    check("scripts/setup.sh is executable on disk (no git index to read)",
+          bool(_SETUP.stat().st_mode & 0o111),
+          "the README's first command would answer «Permission denied»")
+
 
 print()
 if FAILS:
