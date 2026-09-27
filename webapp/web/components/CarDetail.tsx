@@ -46,6 +46,14 @@ import TermBars from '@/components/TermBars';
  * whole deployment in the first state: with `CARO_RUN` naming a run that is
  * not on disk, every car on the site reported itself missing.
  *
+ * All three are about the LISTING. A decision that does not come back is not
+ * a fourth: the listing did come back, so its file is drawn, and only the
+ * decision's own panel says the decision did not arrive (`unanswered`). It
+ * used to be drawn as the page failing — «هیچ چیزی نمی‌دانیم» under a listing
+ * that had just arrived, or «این آگهی در پیکره‌ی جاری نیست» about one the
+ * corpus had just returned — and the first was seen on the deployed site,
+ * when a network change dropped the second request.
+ *
  * Where that is decided. The effect in `CarDetail` only records what each
  * request came to, as data — an `Outcome` — and `detailScreen` decides from
  * the two what the page is. It fetches nothing, so every state this page can
@@ -86,7 +94,8 @@ export type Decision =
   | { k: 'not_asked' }
   | { k: 'deciding' }
   | { k: 'scored'; row: ScoredItem }
-  | { k: 'refused'; message: string };
+  | { k: 'refused'; message: string }
+  | { k: 'unanswered'; message: string };
 
 /* The API answered with no listing and no fault, which the contract does not
    allow: `listing` is null only when UNUSABLE, and UNUSABLE carries its fault.
@@ -117,9 +126,6 @@ export function detailScreen(
   const r = listingOutcome.body;
   // Null only ever means UNUSABLE — see lib/api.ts.
   if (r.listing === null) return { k: 'blocked', fault: r.fault ?? NO_CORPUS };
-  // As the page has always done it: a decision that failed is drawn as the
-  // page failing, and the listing that did arrive is not drawn at all.
-  if (compareOutcome?.k === 'failed') return fromFailure(compareOutcome);
   return { k: 'file', listing: r.listing, corpus: r.corpus,
            decision: decisionFor(r.listing, compareOutcome) };
 }
@@ -136,6 +142,14 @@ function decisionFor(
   listing: EvidenceItem, compareOutcome: Outcome<CompareResponse> | null,
 ): Decision {
   if (!isVehicleClass(listing.product_class)) return { k: 'not_asked' };
+  // The listing is here and its decision is not. That is a fact about the
+  // decision, so it is drawn where the decision would have been. Whatever the
+  // failure was — no answer, something that was not this API, or this API's
+  // own fault — it is not a statement about the car, so it replaces nothing
+  // the listing said.
+  if (compareOutcome?.k === 'failed') {
+    return { k: 'unanswered', message: compareOutcome.message };
+  }
   if (compareOutcome?.k !== 'ok') return { k: 'deciding' };
   return decisionOf(compareOutcome.body);
 }
@@ -277,7 +291,8 @@ export function CarDetailView({
   return (
     <ListingFile id={id} listing={s.listing} corpus={s.corpus}
                  scored={d.k === 'scored' ? d.row : null}
-                 refused={d.k === 'refused' ? d.message : null} />
+                 refused={d.k === 'refused' ? d.message : null}
+                 unanswered={d.k === 'unanswered' ? d.message : null} />
   );
 }
 
@@ -289,13 +304,15 @@ export function CarDetailView({
  * checks the markup a reader would get. A branch that can only be reached
  * through `useEffect` is a branch no test can see. */
 export function ListingFile({
-  id, listing, corpus, scored, refused,
+  id, listing, corpus, scored, refused, unanswered = null,
 }: {
   id: string;
   listing: EvidenceItem;
   corpus: CorpusMeta | null;
   scored: ScoredItem | null;
   refused: string | null;
+  /** Why the decision did not arrive, when it did not. */
+  unanswered?: string | null;
 }) {
   if (!isVehicleClass(listing.product_class)) {
     return <NotACarFile id={id} listing={listing} corpus={corpus} />;
@@ -411,6 +428,22 @@ export function ListingFile({
             همین پیکره سنجیده و پذیرفته شده باشد، و چنین چیزی وجود ندارد.
           </p>
           <TechDetail message={refused} />
+        </section>
+      ) : unanswered ? (
+        <section className="panel border-bad">
+          {/* The listing came back and its decision did not. What is above
+              is the listing's own and stays: a request that failed says
+              nothing about the car, so it takes nothing with it. No «NOT
+              SERVED» chip either — that names a refusal, and this page never
+              received one. */}
+          <p className="eyebrow !text-bad">تصمیمی به این صفحه نرسید</p>
+          <p className="m-0 text-[14px] leading-[1.95] max-w-[62ch]">
+            آنچه بالا می‌بینی از خود آگهی آمده و به این بخش وابسته نیست.
+            درخواستِ تصمیم — برآورد قیمت و محاسبه‌ی صرفه — پاسخی نگرفت که
+            بشود نشانش داد؛ پس اینجا نه برآوردی هست و نه ادعایی درباره‌ی اینکه
+            برآوردی هست یا نیست.
+          </p>
+          <TechDetail message={unanswered} />
         </section>
       ) : (
         <div className="panel text-ink-3 text-[13.5px]">

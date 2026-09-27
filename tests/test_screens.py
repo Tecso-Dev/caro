@@ -22,7 +22,10 @@ a decision for it — and which screen a reader gets is decided from what the
 two requests came to by one pure function, `detailScreen`. §3 hands it real
 API answers, and failures shaped the way the page records them, and checks
 what it decides; then it draws `CarDetailView` from the same inputs and checks
-what a reader gets.
+what a reader gets. Among the cases are the ones a deployment found: a
+decision that fails after its listing arrived — no answer, something that is
+not this API, or this API's own 404 — leaves the listing's file on the page,
+and only the decision says it did not come.
 
 WHAT IT CANNOT SEE. The wiring from `useEffect` to the component. The pages
 fetch; these draw; this feeds the drawing half what the fetching half would
@@ -256,6 +259,7 @@ nv_id, nv_cls, nv = files[1]                 # a listing that is not a car
 b0 = files[-1][2]                            # the classless fixture's row
 with serving(ART.parent):
     missing = api.listing(GONE)
+    none_of = api.compare(schemas.CompareRequest(ids=[GONE], q="خودرو"))
     # A configured run that is not on disk: nothing is read, so the page may
     # not even say the car is absent. `serving` puts the variable back.
     os.environ[corpus_mod.RUN_ENV] = "run_no_such_thing"
@@ -263,8 +267,11 @@ with serving(ART.parent):
     unread = api.listing(VEH)
 check("  the API's own answers for the cases below: "
       f"{missing.fault.code if missing.fault else None}, "
+      f"{none_of.fault.code if none_of.fault else None}, "
       f"{unread.fault.code if unread.fault else None}",
       missing.fault is not None and missing.fault.code == "LISTING_NOT_FOUND"
+      and none_of.fault is not None
+      and none_of.fault.code == "COMPARE_IDS_NOT_FOUND"
       and unread.listing is None and unread.fault is not None
       and unread.fault.code == "RUN_NOT_FOUND",
       "the fixtures are not what the cases below say they are")
@@ -299,6 +306,16 @@ STATES = [
      "file", "deciding"),
     (f"{VEH}, its decision on the way", ok(car), PENDING, "file", "deciding"),
     (f"{VEH}, its decision refused", ok(car), ok(refusal), "file", "refused"),
+    # A decision that failed after its listing arrived. The file stays; the
+    # decision says it did not come — whatever the failure was.
+    (f"{VEH}, its decision got no answer", ok(car), failed(0),
+     "file", "unanswered"),
+    (f"{VEH}, its decision got a 500 that is not this API's", ok(car),
+     failed(500), "file", "unanswered"),
+    (f"{VEH}, its decision got a 504", ok(car), failed(504),
+     "file", "unanswered"),
+    (f"{VEH}, its decision answered 404 with this API's own fault", ok(car),
+     failed(404, none_of.fault), "file", "unanswered"),
     (f"{nv_id} ({nv_cls}), for which no decision is asked", ok(nv), None,
      "file", "not_asked"),
     ("b0 (unknown), for which no decision is asked", ok(b0), None,
@@ -340,6 +357,7 @@ if asks is not None:
 KNOW_NOTHING = "هیچ چیزی نمی‌دانیم"
 NOT_IN_CORPUS = "این آگهی در پیکره‌ی جاری نیست"
 DECIDING = "در حال محاسبه‌ی تصمیم"
+NO_DECISION = "تصمیمی به این صفحه نرسید"
 
 
 def car_file(html: str) -> bool:
@@ -350,7 +368,12 @@ def car_file(html: str) -> bool:
 DRAWN = [("no answer", failed(0), None),
          ("not in corpus", failed(404, missing.fault), None),
          ("deciding", ok(car), PENDING),
-         ("refused", ok(car), ok(refusal))]
+         ("refused", ok(car), ok(refusal)),
+         ("no answer to the decision", ok(car), failed(0)),
+         ("a 500 to the decision", ok(car), failed(500)),
+         ("a 504 to the decision", ok(car), failed(504)),
+         ("this API's 404 to the decision", ok(car),
+          failed(404, none_of.fault))]
 dout, why = render("components/CarDetail.tsx", "CarDetailView", [
     {"id": VEH, "listingOutcome": lo, "compareOutcome": co}
     for _, lo, co in DRAWN])
@@ -368,6 +391,16 @@ if dout is not None:
     check(f"  {VEH}, its decision refused: its file, with every claim",
           all(x in page["refused"] for x in CAR_CLAIMS)
           and VEH in page["refused"])
+    for n in ("no answer to the decision", "a 500 to the decision",
+              "a 504 to the decision", "this API's 404 to the decision"):
+        html = page[n]
+        check(f"  {VEH}, {n}: its file is still drawn", car_file(html),
+              "the listing that arrived is not on the page")
+        said = [x for x in (KNOW_NOTHING, NOT_IN_CORPUS) if x in html]
+        check(f"    and only the decision says it did not come",
+              NO_DECISION in html and not said,
+              f"it says «{'», «'.join(said)}»" if said
+              else "the decision's panel does not say so")
 
 
 print()
