@@ -90,7 +90,15 @@ limit; served from those files alone it answers the listing and contact
 endpoints, switches the inbox off with `CARO_INBOX=off`, and refuses a message
 with 503 when it cannot write. What the first real deployment showed, page by
 page, and the region its function runs in, iad1, are in D64
-(docs/DECISIONS.md). Still not measured: cold start.
+(docs/DECISIONS.md).
+
+Cold start was measured once, on 2026-09-27, from one machine, straight
+after a deploy, each request on a new connection: the API's first answer came
+in 1.40 s to its first byte, the five after it in 0.82 to 1.29 s, and a
+static page, which never reaches the API, in 1.27 s. Whatever the first
+answer paid for starting is not distinguishable from the network at that
+resolution: it was 0.40 s slower than the median of the five that followed,
+and those five spread over 0.46 s.
 
 ## Why the requirements file is separate
 
