@@ -41,9 +41,12 @@ export default function ListingCard({
           </span>
           <h3 className="m-0 text-[19px] font-medium">
             {modelLabel(item.model_key)}
-            <span className="fig text-ink-2 text-[16px] mr-2">
+            {/* Isolated from the name for the reason CarDetail's heading
+                gives: a name ending in a trim code or a number would take
+                the year into its own run. */}
+            <bdi className="fig text-ink-2 text-[16px] mr-2">
               {faPlain(item.year_jalali)}
-            </span>
+            </bdi>
           </h3>
           {item.role_fa && (
             <span className="chip border-accent text-accent bg-accent-soft

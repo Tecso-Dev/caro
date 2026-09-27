@@ -1,5 +1,6 @@
-"""What a reader is shown: a listing that is not a car, and the car page in
-each state its two requests can leave it in.
+"""What a reader is shown: a listing that is not a car, the car page in each
+state its two requests can leave it in, and a year that stays apart from the
+name it follows.
 
 Run: PYTHONPATH=. python3 tests/test_screens.py
 
@@ -401,6 +402,60 @@ if dout is not None:
               NO_DECISION in html and not said,
               f"it says «{'», «'.join(said)}»" if said
               else "the decision's panel does not say so")
+
+
+# ---------------------------------------------------------------------------
+print("\n4 — the year beside a car's name is a unit of its own")
+# ---------------------------------------------------------------------------
+# A name that ends in a trim code or a number — «۱۳۱ SE», «manualr ۲۰۲۲» — is
+# a left-to-right run, and a year drawn after it in a plain span joined that
+# run: on the name's wrong side with no gap, «SE۱۳۹۶», or read as one number
+# with it, «۲۰۲۲۱۴۰۱». Measured in a browser on run11's car pages, 69 of 75
+# headings did that. How a browser lays a line out is not visible from here;
+# the cause is. So the check is that the year is drawn isolated, in a <bdi>,
+# on each surface this suite can draw that puts a year after a name: the car
+# file for every vehicle in run11, and the card a gated corpus serves.
+# Compare's scored header does the same, but is drawn only inside the page's
+# effect, and is not checked here.
+_FA = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+
+
+def isolated_year(html: str, tag: str, year) -> bool:
+    m = re.search(rf"<{tag}[^>]*>(.*?)</{tag}>", html, re.S)
+    y = str(year).translate(_FA)
+    return bool(m and re.search(rf"<bdi[^>]*>\s*{y}\s*</bdi>", m.group(1)))
+
+
+with serving(ART.parent):
+    _cars = [(x.listing_id, api.listing(x.listing_id))
+             for x in corpus_mod.active().listings
+             if CLS.get(x.listing_id) == "vehicle"]
+_cout, why = render("components/CarDetail.tsx", "ListingFile", [
+    {"id": i, "listing": as_json(d.listing), "corpus": as_json(d.corpus),
+     "scored": None, "refused": REFUSED} for i, d in _cars])
+check(f"every vehicle in run11 drawn as its car file ({len(_cars)})",
+      _cout is not None and len(_cars) > 0, why or "no vehicles to draw")
+if _cout is not None:
+    _run = [i for (i, d), html in zip(_cars, _cout["markup"])
+            if not isolated_year(html, "h1", d.listing.year_jalali)]
+    check(f"  the year beside the name is isolated in all "
+          f"{len(_cars) - len(_run)} of {len(_cars)}", not _run,
+          f"a plain span in {len(_run)}, e.g. {_run[:3]}")
+
+with tempfile.TemporaryDirectory() as d:
+    with serving(Path(d)):
+        _found = api.search(q="پراید", k=8)
+_items = list(_found.items)
+_kout, why = render("components/ListingCard.tsx", "default",
+                    [{"item": as_json(x)} for x in _items])
+check(f"the cards a gated corpus serves could be drawn ({len(_items)})",
+      _kout is not None and len(_items) > 0, why or "no cards to draw")
+if _kout is not None:
+    _run = [x.id for x, html in zip(_items, _kout["markup"])
+            if not isolated_year(html, "h3", x.year_jalali)]
+    check(f"  the year beside the name is isolated on all "
+          f"{len(_items) - len(_run)} of {len(_items)}", not _run,
+          f"a plain span on {len(_run)}")
 
 
 print()

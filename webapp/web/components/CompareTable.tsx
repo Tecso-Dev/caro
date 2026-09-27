@@ -272,9 +272,10 @@ export default function CompareTable() {
                                           border-line align-top">
                   <div className="font-medium text-[14px]">
                     {modelLabel(r.model_key)}{' '}
-                    <span className="fig text-ink-2">
+                    {/* Isolated from the name — see CarDetail's heading. */}
+                    <bdi className="fig text-ink-2">
                       {faPlain(r.year_jalali)}
-                    </span>
+                    </bdi>
                   </div>
                   {r.role_fa && (
                     <div className="text-[11.5px] text-accent mt-0.5">

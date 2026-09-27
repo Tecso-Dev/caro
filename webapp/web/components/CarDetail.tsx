@@ -326,9 +326,17 @@ export function ListingFile({
         <p className="eyebrow">پرونده‌ی خودرو · <span className="num">{id}</span></p>
         <h1 className="m-0 text-[28px] font-bold">
           {modelLabel(listing.model_key)}
-          <span className="fig text-ink-2 text-[22px] mr-3">
+          {/* `bdi`, not `span`: the year must not join the name's last run.
+              A name that ends in a trim code or a number — «۱۳۱ SE»,
+              «manualr ۲۰۲۲» — is a left-to-right run, and a plain span of
+              digits after it became part of that run: drawn on the name's
+              wrong side with no gap, «SE۱۳۹۶», or read as one number,
+              «۲۰۲۲۱۴۰۱». Measured on run11's car pages, 69 of 75 headings
+              did that. Isolated, the year is a unit of its own and the line
+              puts it after the name, where the margin keeps them apart. */}
+          <bdi className="fig text-ink-2 text-[22px] mr-3">
             {faPlain(listing.year_jalali)}
-          </span>
+          </bdi>
         </h1>
         <p className="mt-2 mb-0 text-[15px] text-ink-2">
           <span className="fig">{toman(listing.asking_price_toman)}</span>
