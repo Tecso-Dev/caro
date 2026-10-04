@@ -741,10 +741,9 @@ print("\n10 — the gate is applied before a reader sees a row")
 #
 # Queries are derived, not listed: every example chip, read from the
 # component as section 8 reads it, and one bare query per model the corpus
-# holds, at k=24 — the most `/api/search` accepts; reweight has no cap. The
-# reach check at the end is what makes 24 enough for both: each non-vehicle
-# must fall inside the first 24 of its own model's query, or the guard could
-# not see it leak.
+# holds, at k=24 — the most either endpoint accepts (section 14). The reach
+# check at the end is what makes 24 enough: each non-vehicle must fall inside
+# the first 24 of its own model's query, or the guard could not see it leak.
 
 from webapp.api.eligibility import FIELDS as _DECL               # noqa: E402
 
@@ -1193,6 +1192,25 @@ check(f"  the examples reach the case: {_apart13} listing(s) shown apart",
       _apart13 > 0,
       "nothing was shown apart, so the checks above cannot see the rule "
       "— said, not passed")
+
+
+# ---------------------------------------------------------------------------
+print("\n14 — reweight bounds k as search does")
+# ---------------------------------------------------------------------------
+# D60 recorded that `/api/search` caps k at 24 and `/api/search/reweight` took
+# any k. Measured on run11 with «پراید», 56 matches: reweight answered k=0
+# with 200 and an empty table, k=-1 with 200 and every match but the last —
+# a Python slice, silently — and k=1000 with all 56. Search answered 422 to
+# each. Over HTTP, because the bound is FastAPI's and exists only there.
+with corpus_dir(valid_artifact(product_class="vehicle")):
+    with contextlib.redirect_stdout(io.StringIO()):
+        _c14 = TestClient(api.app, raise_server_exceptions=False)
+    for _k, _want in ((0, 422), (-1, 422), (25, 422), (1, 200), (24, 200)):
+        _s = _c14.get("/api/search", params={"q": "۲۰۶", "k": _k}).status_code
+        _w = _c14.post("/api/search/reweight", params={"q": "۲۰۶", "k": _k},
+                       json={}).status_code
+        check(f"k={_k}: search {_s}, reweight {_w} — both {_want}",
+              _s == _want and _w == _want)
 
 print()
 if FAILS:

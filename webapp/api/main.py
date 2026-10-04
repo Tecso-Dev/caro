@@ -345,8 +345,14 @@ def search(q: str = Query(..., min_length=2, description="پرسش فارسی"),
 
 @app.post("/api/search/reweight", response_model=SearchResponse)
 def search_reweight(q: str, weights: ReweightRequest,
-                    k: int = 6) -> SearchResponse:
-    """The same query with the user's own weights. «بهترین» is a function."""
+                    k: int = Query(6, ge=1, le=24)) -> SearchResponse:
+    """The same query with the user's own weights. «بهترین» is a function.
+
+    `k` is bounded as `/api/search` bounds it; D60 recorded that it was not.
+    Unbounded, on run11 «پراید» — 56 matches — answered k=0 with 200 and an
+    empty table, and k=-1 with 200 and every match but the last: a slice,
+    silently.
+    """
     c = corpus_mod.active()
     spec = c.pipeline.parser.parse(q)
     given = {f: v for f, v in weights.model_dump().items() if v is not None}
