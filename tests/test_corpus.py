@@ -787,12 +787,14 @@ if _doc_rows:
 
     # ---- what the card surfaces draw, read out of them -------------------
     #
-    # Three components draw payload rows, not one: the evidence grid in
-    # `SearchResults.tsx` — the table an ungated corpus shows, and the one an
-    # assignment reached (D60) — `ListingCard.tsx` on a gated corpus, and
-    # `CompareTable.tsx`. Compare has no flag of its own in the table. It is
-    # a grid of rows a reader is shown, so it is held to the card's rules,
-    # and that is a judgement rather than an oversight.
+    # Four components handle payload rows, not one: the evidence tables in
+    # `SearchEvidence.tsx` — what an ungated corpus shows, and where an
+    # assignment once reached (D60), moved out of `SearchResults.tsx`, which
+    # now addresses the shortlist's rows by id and hands them on —
+    # `ListingCard.tsx` on a gated corpus, and `CompareTable.tsx`. Compare has
+    # no flag of its own in the table. It is a grid of rows a reader is
+    # shown, so it is held to the card's rules, and that is a judgement
+    # rather than an oversight.
     #
     # `id` and `url` are exempt, named here rather than left implicit: a card
     # uses them to ADDRESS a row — a React key, the link to /car/[id] — and
@@ -802,10 +804,13 @@ if _doc_rows:
     # The rest is the detail check's shape. A field of `EvidenceItem` is one
     # this table judges and must be `card=yes`; a field only `ScoredItem` has
     # is a ranking output, which this table does not describe at all and D50
-    # governs instead; anything that is neither fails — which is also what
+    # governs instead; a field only `UncheckedItem` has is the API's verdict
+    # on the buyer's query, not a fact about the car, and is likewise not
+    # judged here; anything that is none of these fails — which is also what
     # stops a variable named `r` somewhere else in a file from passing as a
     # row.
-    _CARDS = (("SearchResults.tsx", "r"),
+    _CARDS = (("SearchEvidence.tsx", "r"),
+              ("SearchResults.tsx", "it"),
               ("ListingCard.tsx", "item"),
               ("CompareTable.tsx", "r"))
     _IDENTIFIERS = {"id", "url"}
@@ -814,6 +819,10 @@ if _doc_rows:
                      _API_TS.read_text(encoding="utf-8"), _re.S)
     _ts_scored = _ts_evidence | (
         set(_re.findall(r"(?m)^\s*(\w+)\??\s*:", _sc.group(1))) if _sc else set())
+    _uc = _re.search(r"export interface UncheckedItem[^{]*\{(.*?)\n\}",
+                     _API_TS.read_text(encoding="utf-8"), _re.S)
+    _ts_verdict = (set(_re.findall(r"(?m)^\s*(\w+)\??\s*:", _uc.group(1)))
+                   if _uc else set()) - _ts_evidence
 
     # Which components draw rows is DERIVED too. A guard over a list of
     # renderers is the hand-kept list again one level up, and the renderer it
@@ -841,13 +850,19 @@ if _doc_rows:
               len(_u) > 0,
               "found nothing: the file is missing or the pattern no longer "
               "matches, and a check over nothing proves nothing")
-        check(f"  every field it reads belongs to EvidenceItem or ScoredItem",
-              bool(_ts_scored) and _u <= _ts_scored,
-              f"in neither interface: {sorted(_u - _ts_scored)}")
-        _ranking = sorted(_u - _ts_evidence)
+        check(f"  every field it reads belongs to EvidenceItem, ScoredItem "
+              f"or UncheckedItem",
+              bool(_ts_scored) and _u <= _ts_scored | _ts_verdict,
+              f"in none of them: {sorted(_u - _ts_scored - _ts_verdict)}")
+        _ranking = sorted(_u - _ts_evidence - _ts_verdict)
         if _ranking:
             print(f"    ranking outputs, which this table does not judge: "
                   f"{', '.join(_ranking)}")
+        _verdict = sorted(_u & _ts_verdict)
+        if _verdict:
+            print(f"    the API's verdict on the query, not a fact about the "
+                  f"car, which this table does not judge: "
+                  f"{', '.join(_verdict)}")
         for _f in sorted(_u & _ts_evidence):
             if _f in _IDENTIFIERS:
                 print(f"    {_f}: addresses the row, says nothing about the car")

@@ -13,7 +13,7 @@
  *    different facts, and neither of them is zero.
  */
 
-import { PRICE_STATUS_UNUSABLE } from '@/lib/api';
+import { PRICE_STATUS_UNUSABLE, type ConstraintKey } from '@/lib/api';
 
 const FA = new Intl.NumberFormat('fa-IR', { useGrouping: true });
 const FA_PLAIN = new Intl.NumberFormat('fa-IR', { useGrouping: false });
@@ -55,6 +55,21 @@ export const PRICE_STATUS_FA: Record<string, string> = {
   ambiguous: 'قیمت مبهم',
   negotiable: 'توافقی',
   absent: 'قیمت اعلام‌نشده',
+};
+
+/* What a listing shown apart has no value for — one phrase per
+ * `ConstraintKey`, said about the record rather than about the seller: a
+ * value can be missing because the page never gave it or because it was never
+ * recorded, and the table cannot tell which. A `Record` over the union, so a
+ * key the server adds without a phrase here stops the build. */
+export const UNCHECKED_FA: Record<ConstraintKey, string> = {
+  budget: 'قیمت نقدی ثبت‌نشده',
+  year: 'سال ساخت ثبت‌نشده',
+  mileage: 'کارکرد ثبت‌نشده',
+  accident: 'وضعیت بدنه ثبت‌نشده',
+  unclear_documents: 'وضعیت سند ثبت‌نشده',
+  manual: 'نوع گیربکس ثبت‌نشده',
+  repaint: 'وضعیت رنگ بدنه ثبت‌نشده',
 };
 
 /** The rule `docs/FIELD_PROVENANCE.md` states for a price on a card:

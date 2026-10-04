@@ -1,14 +1,13 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { api, type SearchResponse, type WeightSet } from '@/lib/api';
-import { askingPrice, faNum, faPlain, km, modelLabel }
-  from '@/lib/format';
+import { faNum, faPlain } from '@/lib/format';
 import IntentPanel from '@/components/IntentPanel';
 import ListingCard from '@/components/ListingCard';
 import SearchBox from '@/components/SearchBox';
+import { SearchEvidence } from '@/components/SearchEvidence';
 import TechDetail from '@/components/TechDetail';
 import WeightSliders from '@/components/WeightSliders';
 
@@ -135,9 +134,15 @@ export default function SearchResults() {
                   {faNum(data.items.length)}</b></span>
               </>
             )}
-            {!data.status.served && data.evidence?.length > 0 && (
-              <span>شواهد نمایش‌داده‌شده <b className="fig">
-                {faNum(data.evidence.length)}</b></span>
+            {!data.status.served && (
+              <>
+                <span>منطبق <b className="fig">
+                  {faNum(data.evidence_total)}</b></span>
+                {data.evidence_unchecked_total > 0 && (
+                  <span className="text-warn">سنجیده‌نشده <b className="fig">
+                    {faNum(data.evidence_unchecked_total)}</b></span>
+                )}
+              </>
             )}
           </div>
 
@@ -191,86 +196,16 @@ export default function SearchResults() {
               {/* TWO REASONS ARRIVE HERE AND ONLY ONE OF THEM WAS EVER SAID.
                   The panel above explains why no RANKING is served — the
                   estimator has not cleared the gate. It says nothing about
-                  whether any listing matched, and until this branch existed
-                  an empty evidence table simply rendered nothing at all: the
-                  page ended after the refusal. A reader then attributes the
-                  emptiness to the refusal, which is wrong and is the exact
-                  conflation the whole envelope exists to prevent. `run11`
-                  has no 206 in it; that is a fact about the corpus, not
-                  about the gate. */}
-              {data.evidence?.length === 0 ? (
-                <section className="panel">
-                  <p className="eyebrow">هیچ آگهی منطبقی پیدا نشد</p>
-                  <p className="m-0 text-[14.5px] leading-[1.95] text-ink-2
-                                max-w-[62ch]">
-                    این جدا از بالاست. رتبه‌بندی به‌خاطر دروازه‌ی پذیرش سرو
-                    نمی‌شود؛ این یکی درباره‌ی خودِ پرسش است: از{' '}
-                    <b className="fig text-ink">{faNum(data.considered)}</b>{' '}
-                    آگهی این پیکره، هیچ‌کدام با قیدهایی که نوشتی منطبق نبود.
-                  </p>
-                  {/* And the reader must not be left thinking the ladder ran
-                      and failed. It never runs here — see `search()` in
-                      webapp/api/main.py: relaxing a buyer's constraints to
-                      hunt for a shortlist that cannot be served would report
-                      «قیدها شل شد» when the constraints were never the
-                      problem. */}
-                  <p className="m-0 mt-3 text-[12.5px] leading-[1.9] text-ink-3
-                                max-w-[62ch]">
-                    قیدها همان‌طور که گفتی به‌کار رفتند و شل نشدند — وقتی
-                    رتبه‌بندی سرو نمی‌شود، شل‌کردن قیدها دنبال فهرستی می‌گردد
-                    که به‌هرحال ساخته نمی‌شود. جمله را بازتر بنویس تا دوباره
-                    امتحان کنیم.
-                  </p>
-                </section>
-              ) : (
-                <section>
-                  <p className="eyebrow">
-                    شواهد — آگهی‌های منطبق، بدون برآورد و بدون ترتیب
-                  </p>
-                  <div className="border border-line bg-surface rounded-[3px]
-                                  overflow-x-auto">
-                    <table className="w-full border-collapse text-[13px]
-                                      min-w-[520px]">
-                      <thead>
-                        <tr className="text-ink-3 text-[11.5px]">
-                          {['خودرو', 'مدل', 'کارکرد', 'قیمت پیشنهادی', ''].map(
-                            (h) => (
-                              <th key={h} className="text-right font-normal
-                                                     px-4 py-2.5 border-b
-                                                     border-line">{h}</th>
-                            ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.evidence.map((r) => (
-                          <tr key={r.id}>
-                            <td className="px-4 py-2.5 border-b border-line">
-                              {modelLabel(r.model_key)}
-                            </td>
-                            <td className="px-4 py-2.5 border-b border-line fig">
-                              {faPlain(r.year_jalali)}
-                            </td>
-                            <td className="px-4 py-2.5 border-b border-line fig">
-                              {km(r.mileage_km)}
-                            </td>
-                            <td className="px-4 py-2.5 border-b border-line fig">
-                              {askingPrice(r.asking_price_toman,
-                                           r.price_status, r.price_kind)}
-                            </td>
-                            <td className="px-4 py-2.5 border-b border-line">
-                              <Link href={`/car/${encodeURIComponent(r.id)}`}
-                                    className="text-accent hover:underline
-                                               text-[12.5px]">
-                                پرونده
-                              </Link>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-              )}
+                  whether any listing matched, and until the evidence had a
+                  branch for none an empty table simply rendered nothing at
+                  all: the page ended after the refusal. A reader then
+                  attributes the emptiness to the refusal, which is wrong and
+                  is the exact conflation the whole envelope exists to
+                  prevent. `run11` has no 206 in it; that is a fact about the
+                  corpus, not about the gate. SearchEvidence draws both
+                  branches, and the listings that could not be checked apart
+                  from the matches. */}
+              <SearchEvidence data={data} />
             </>
           ) : (
             <>

@@ -1,6 +1,7 @@
 """What a reader is shown: a listing that is not a car, the car page in each
-state its two requests can leave it in, and a year that stays apart from the
-name it follows.
+state its two requests can leave it in, a year that stays apart from the name
+it follows, and search's matches kept apart from listings that could not be
+checked.
 
 Run: PYTHONPATH=. python3 tests/test_screens.py
 
@@ -456,6 +457,106 @@ if _kout is not None:
     check(f"  the year beside the name is isolated on all "
           f"{len(_items) - len(_run)} of {len(_items)}", not _run,
           f"a plain span on {len(_run)}")
+
+
+# ---------------------------------------------------------------------------
+print("\n5 — search: a match is drawn as one only where it was checked")
+# ---------------------------------------------------------------------------
+# The API now sends the evidence in two lists: listings every stated
+# constraint was checked against and met, and listings that broke none but
+# could not be checked against some (`webapp/api/constraints.py`). The
+# second kind is not a match, and the reader must not be told it is one. So
+# `SearchEvidence` is drawn with what search really returns for every example
+# chip on run11, at the k=8 the results page asks for; for two queries that
+# match nothing — one with listings apart, one without; and for one whose
+# listings apart are more than a table holds. The checks read the markup:
+# which table each row is in, and what it says is missing.
+_BOX5 = (WEB / "components" / "SearchBox.tsx").read_text(encoding="utf-8")
+_m5 = re.search(r"const EXAMPLES = \[(.*?)\];", _BOX5, re.S)
+_Q5 = (re.findall(r"'([^']+)'", _m5.group(1)) if _m5 else []) \
+    + ["پراید زیر ۱۰ میلیون", "تیبا زیر ۱۰ میلیون", "پراید سند آزاد"]
+with serving(ART.parent):
+    _found5 = [(q, api.search(q=q, k=8)) for q in _Q5]
+
+_eout, why = node({"component": "components/SearchEvidence.tsx",
+                   "export": "SearchEvidence",
+                   "props": [{"data": as_json(r)} for _, r in _found5],
+                   "consts": {"module": "components/SearchEvidence.tsx",
+                              "names": ["MATCHED_FA", "APART_FA", "NONE_FA"]}})
+_fout, why2 = node({"consts": {"module": "lib/format.ts",
+                               "names": ["UNCHECKED_FA"]}})
+check(f"SearchEvidence could be drawn for {len(_found5)} answers",
+      _eout is not None and _fout is not None, why or why2)
+
+
+def _sections(html: str) -> dict[str, str]:
+    return dict(re.findall(
+        r'<section[^>]*data-evidence="(\w+)"[^>]*>(.*?)</section>', html, re.S))
+
+
+def _rows(html: str) -> dict[str, str]:
+    return dict(re.findall(r'<tr data-listing="([^"]+)">(.*?)</tr>', html,
+                           re.S))
+
+
+def _text(html: str) -> str:
+    """What a reader reads: no tags, no React's text-node comments."""
+    t = re.sub(r"<!--.*?-->", "", html, flags=re.S)
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", t))
+
+
+_reach5 = {"matched beyond k": False, "apart": False,
+           "apart beyond k": False, "none+apart": False, "none": False}
+if _eout is not None and _fout is not None:
+    MATCHED, APART, NONE = (_eout["consts"][n]
+                            for n in ("MATCHED_FA", "APART_FA", "NONE_FA"))
+    PHRASE = _fout["consts"]["UNCHECKED_FA"]
+    for (q, r), html in zip(_found5, _eout["markup"]):
+        sec = _sections(html)
+        got_m = _rows(sec.get("matched", ""))
+        got_a = _rows(sec.get("apart", ""))
+        want_m = [x.id for x in r.evidence]
+        want_a = {x.id: x.unchecked for x in r.evidence_unchecked}
+        check(f"  «{q[:30]}» — {len(want_m)} drawn as matches, "
+              f"{len(want_a)} apart, each in its own table",
+              list(got_m) == want_m and set(got_a) == set(want_a)
+              and not set(got_m) & set(want_a),
+              f"matches drawn {list(got_m)} · apart drawn {list(got_a)}")
+        _named = [i for i, keys in want_a.items()
+                  if not all(PHRASE[k] in got_a.get(i, "") for k in keys)]
+        check("    each row apart says what is missing",
+              not _named, f"not said for {_named}")
+        _quiet = [i for i, row in got_m.items()
+                  if any(p in row for p in PHRASE.values())]
+        check("    and no match carries such a phrase (the control)",
+              not _quiet, f"on {_quiet}")
+        check("    the heading that says «منطبق» is over matches alone",
+              (MATCHED in sec.get("matched", "")) == (r.evidence_total > 0)
+              and MATCHED not in sec.get("apart", "")
+              and (APART in sec.get("apart", "")) == bool(want_a),
+              f"sections drawn: {sorted(sec)}")
+        check(f"    «{NONE}» exactly when nothing matched "
+              f"({r.evidence_total})",
+              (NONE in html) == (r.evidence_total == 0)
+              and ("none" in sec) == (r.evidence_total == 0))
+        for kind, shown, total in (
+                ("matched", len(r.evidence), r.evidence_total),
+                ("apart", len(r.evidence_unchecked),
+                 r.evidence_unchecked_total)):
+            if total > shown:
+                _of = (f"{shown} از {total}").translate(_FA)
+                check(f"    {kind}: says it shows {shown} of {total}",
+                      _of in _text(sec.get(kind, "")),
+                      "a table of the first k reads as all of them")
+                _reach5[f"{kind} beyond k"] = True
+        if want_a:
+            _reach5["apart"] = True
+        if r.evidence_total == 0:
+            _reach5["none+apart" if want_a else "none"] = True
+
+for _case, _hit in _reach5.items():
+    check(f"  the answers reach the case «{_case}»", _hit,
+          "nothing drawn for it — said, not passed")
 
 
 print()
