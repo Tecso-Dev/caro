@@ -180,10 +180,13 @@ class EvidenceItem(BaseModel):
 
 
 # The constraints a listing can fail to be checked against, by the names
-# `webapp/api/constraints.py` judges them under. A Literal for the same reason
-# `FaultCode` is one: the client draws a sentence for each member, and a
-# member it has no sentence for would reach the screen as a bare token.
-ConstraintKey = Literal["budget", "year", "mileage"]
+# `webapp/api/constraints.py` judges them under: the three the buyer states as
+# numbers, then the red lines under their `DEAL_BREAKER_CUES` names. A Literal
+# for the same reason `FaultCode` is one: the client draws a sentence for each
+# member, and a member it has no sentence for would reach the screen as a bare
+# token.
+ConstraintKey = Literal["budget", "year", "mileage",
+                        "accident", "unclear_documents", "manual", "repaint"]
 
 
 class UncheckedItem(EvidenceItem):

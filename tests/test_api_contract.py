@@ -981,9 +981,12 @@ from webapp.api import constraints                                  # noqa: E402
 
 
 def _L(price=500_000_000, *, status="display_confirmed", kind="cash",
-       year=1398, km=100_000):
+       year=1398, km=100_000, cond="intact", docs=False, gearbox="automatic",
+       trim=None):
     return SimpleNamespace(asking_price_toman=price, price_status=status,
-                           price_kind=kind, year_jalali=year, mileage_km=km)
+                           price_kind=kind, year_jalali=year, mileage_km=km,
+                           body_condition=cond, document_issue=docs,
+                           gearbox=gearbox, trim=trim)
 
 
 def _u(x, spec):
@@ -1018,6 +1021,79 @@ check("  a constraint the buyer did not state is not judged at all",
       constraints.judge(_L(None, year=None, km=None),
                         IntentSpec(raw_query="t")) == {})
 
+# The red lines. Each from the one field that answers it; silence is unknown.
+from caro.ranking import DEAL_BREAKER_CUES                          # noqa: E402
+
+
+def _red(line, **kw):
+    return _u(_L(**kw), IntentSpec(raw_query="t", deal_breakers=(line,)))
+
+
+check("every red line the parser can record has a rule",
+      set(constraints.RED_LINES) == set(DEAL_BREAKER_CUES),
+      f"no rule: {sorted(set(DEAL_BREAKER_CUES) - set(constraints.RED_LINES))}")
+check("  and every name a listing can be unchecked on is one the client knows",
+      set(typing.get_args(schemas.ConstraintKey))
+      == {"budget", "year", "mileage"} | set(constraints.RED_LINES),
+      str(sorted(typing.get_args(schemas.ConstraintKey))))
+check("«تصادفی نباشه»: an accident is left out, a stated body is a match, "
+      "silence is named",
+      _red("accident", cond="accident") is None
+      and _red("accident", cond="multi_paint") == []
+      and _red("accident", cond="unknown") == ["accident"]
+      and _red("accident", cond=None) == ["accident"])
+check("«سند آزاد»: a document issue is left out, none stated is named",
+      _red("unclear_documents", docs=True) is None
+      and _red("unclear_documents", docs=False) == []
+      and _red("unclear_documents", docs=None) == ["unclear_documents"])
+check("«اتومات»: a manual gearbox is left out, an unrecorded one is named",
+      _red("manual", gearbox="manual") is None
+      and _red("manual", gearbox="automatic") == []
+      and _red("manual", gearbox=None) == ["manual"])
+check("  with none recorded, a trim word that IS the gearbox answers it",
+      _red("manual", gearbox=None, trim="manual") is None
+      and _red("manual", gearbox=None, trim="Automatic") == [])
+check("  and nothing else in a trim does — an artefact stays unknown",
+      _red("manual", gearbox=None, trim="manualr") == ["manual"]
+      and _red("manual", gearbox=None, trim="gx lmt") == ["manual"]
+      and _red("manual", gearbox="automatic", trim="manual") == [])
+check("«بدون رنگ»: only `intact` meets it, every rung above breaks it",
+      _red("repaint", cond="intact") == []
+      and all(_red("repaint", cond=c) is None for c in
+              ("minor_paint", "multi_paint", "replaced_part", "accident"))
+      and _red("repaint", cond="unknown") == ["repaint"])
+check("  a red line with no rule is not met, it is unknown",
+      constraints.judge(_L(), IntentSpec(raw_query="t",
+                                         deal_breakers=("no_such_rule",)))
+      == {"no_such_rule": "unknown"})
+
+
+# The red lines read off the artifact's own field names, so that the rule is
+# stated here a second time rather than borrowed from the code it checks.
+_RED13 = {   # line: (field, values that break it, values that meet it)
+    "accident": ("condition", {"accident"},
+                 {"intact", "minor_paint", "multi_paint", "replaced_part"}),
+    "unclear_documents": ("document_issue", {True}, {False}),
+    "manual": ("gearbox", {"manual"}, {"automatic"}),
+    "repaint": ("condition",
+                {"minor_paint", "multi_paint", "replaced_part", "accident"},
+                {"intact"}),
+}
+
+
+def _gear13(rec: dict):
+    """The gearbox the artifact records, or else a trim word that is one."""
+    if rec.get("gearbox") in ("manual", "automatic"):
+        return rec["gearbox"]
+    words = set((rec.get("trim") or "").lower().split()) & {"manual",
+                                                            "automatic"}
+    return words.pop() if len(words) == 1 else None
+
+
+def _red13(rec: dict, line: str):
+    field, breaks, meets = _RED13[line]
+    return _gear13(rec) if line == "manual" else rec.get(field)
+
 
 def _value_missing(rec: dict, i) -> list[str]:
     """What the artifact holds no value for, among the constraints `i` states
@@ -1032,6 +1108,10 @@ def _value_missing(rec: dict, i) -> list[str]:
         out.append("year")
     if i.max_mileage_km is not None and rec.get("mileage_km") is None:
         out.append("mileage")
+    for line in i.deal_breakers:
+        _, breaks, meets = _RED13[line]
+        if _red13(rec, line) not in breaks | meets:
+            out.append(line)
     return out
 
 
@@ -1044,7 +1124,9 @@ def _value_breaks(rec: dict, i) -> bool:
                       and p < i.budget_min_toman)))
             or (i.year_min is not None and y is not None and y < i.year_min)
             or (i.max_mileage_km is not None and m is not None
-                and m > i.max_mileage_km))
+                and m > i.max_mileage_km)
+            or any(_red13(rec, line) in _RED13[line][1]
+                   for line in i.deal_breakers))
 
 
 _art13 = ROOT / "data" / "corpora" / f"{RUN}.json"

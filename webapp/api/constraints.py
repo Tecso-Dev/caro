@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from typing import Literal
 
+from caro.ingest.divar_car import GEARBOX
 from caro.ingest.quality import UNUSABLE_PRICE
 
 Verdict = Literal["met", "broken", "unknown"]
@@ -58,12 +59,85 @@ def asking_price(x) -> int | None:
     return x.asking_price_toman
 
 
+# The buyer's red lines — `DEAL_BREAKER_CUES` in caro/ranking.py, which the
+# intent panel prints under «خط قرمز» as understood. `_evidence`'s filter
+# never read them: «تصادفی نباشه» let an accident through, and «اتومات» let
+# anything through. Each is judged from the one field that answers it, and
+# silence is `unknown`, never `met`.
+#
+#   accident           body_condition — `accident` breaks it. The rule the
+#                      ranked path's `has_accident` already uses.
+#   unclear_documents  document_issue — True breaks it. Likewise the ranked
+#                      path's `has_unclear_documents`.
+#   manual             gearbox — «اتومات» makes a manual gearbox the red
+#                      line, so `manual` breaks it and `automatic` meets it.
+#                      With no gearbox recorded, a trim word that IS one of
+#                      those two answers it: the page draws trim `manual` as
+#                      «دنده‌ای», and a row so named cannot be shown as not
+#                      knowing. Nothing else in a trim is read — `manualr` is
+#                      a parse artefact (format.ts) and stays one. run11
+#                      carries no gearbox (FIELD_PROVENANCE.md), and one of
+#                      its trims is the bare word.
+#   repaint            body_condition — «بدون رنگ» is the bottom rung of a
+#                      ladder on which the worst disclosed claim wins
+#                      (BODY_CONDITION in caro/ingest/divar_car.py), so only
+#                      `intact` meets it and every rung above breaks it: a
+#                      replaced panel is not a body without paint.
+#
+# The ranked path has no rule for the last two, and lets an unknown through
+# all four. It ranks nothing on a real corpus yet (D43), and it is not
+# changed here.
+_LADDER_ABOVE_INTACT = frozenset(
+    {"minor_paint", "multi_paint", "replaced_part", "accident"})
+
+
+def _accident(x) -> Verdict:
+    c = getattr(x, "body_condition", None)
+    if c in (None, "unknown"):
+        return "unknown"
+    return "broken" if c == "accident" else "met"
+
+
+def _unclear_documents(x) -> Verdict:
+    d = getattr(x, "document_issue", None)
+    if d is None:
+        return "unknown"
+    return "broken" if d else "met"
+
+
+def _gearbox(x) -> str | None:
+    g = getattr(x, "gearbox", None)
+    if g in GEARBOX:
+        return g
+    named = set((getattr(x, "trim", None) or "").lower().split()) & set(GEARBOX)
+    return named.pop() if len(named) == 1 else None
+
+
+def _manual(x) -> Verdict:
+    g = _gearbox(x)
+    if g == "manual":
+        return "broken"
+    return "met" if g == "automatic" else "unknown"
+
+
+def _repaint(x) -> Verdict:
+    c = getattr(x, "body_condition", None)
+    if c == "intact":
+        return "met"
+    return "broken" if c in _LADDER_ABOVE_INTACT else "unknown"
+
+
+RED_LINES = {"accident": _accident, "unclear_documents": _unclear_documents,
+             "manual": _manual, "repaint": _repaint}
+
+
 def judge(x, spec) -> dict[str, Verdict]:
     """Each constraint the buyer stated, and what this listing says to it.
 
     Keyed by the names the payload carries in `UncheckedItem.unchecked`. A
     constraint the buyer did not state is absent, not `met`: there is nothing
-    to report about it.
+    to report about it. A red line with no rule here is `unknown` — it was
+    stated, and nothing checked it.
     """
     out: dict[str, Verdict] = {}
 
@@ -87,6 +161,10 @@ def judge(x, spec) -> dict[str, Verdict]:
         m = x.mileage_km
         out["mileage"] = ("unknown" if m is None
                           else "broken" if m > spec.max_mileage_km else "met")
+
+    for line in spec.deal_breakers:
+        rule = RED_LINES.get(line)
+        out[line] = rule(x) if rule is not None else "unknown"
 
     return out
 
