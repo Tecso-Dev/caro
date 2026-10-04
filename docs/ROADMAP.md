@@ -1,76 +1,95 @@
 # Roadmap — the honest gap list
 
-## Against the challenge brief
+What is left to do, kept current. Each item says what is true now, where it
+was recorded, and what comes first. An open item goes into code only after it
+has been measured; the measurement comes first and the decision is made on
+it, in its own commit.
+
+Last revised 2026-10-04, at `8f855f6`.
+
+## Where it stands against the brief
 
 The brief asks for: **crawl offers → normalize messy data → rank by user
 intent → explain the best choice**.
 
 | Requirement | State |
 |---|---|
-| crawl offers | ⚠️ **built, not yet run.** `DivarCarAdapter` collects public car listings with enforced politeness and stop-on-block; `CsvAdapter` ingests an external scraper's output. Parsing is tested offline against realistic fixtures. The live network path has not been exercised. |
-| normalize messy data | ✅ **built.** Persian numerals and amount words, prices in toman and rial, mileage, Jalali and Gregorian years, make/model aliases, trim, gearbox, fuel, colour — and body condition from free text, severity-ordered so the worse disclosed claim wins. |
-| rank by user intent | ✅ **built** (`caro/ranking.py`). Persian intent parsing, hard filters, relaxation ladder, inspectable scoring, diversity — and a win-rate benchmark against sort-by-price. |
-| explain the best choice | ✅ built, and the strongest part of the system. |
+| crawl offers | ⚠️ **one source run.** `BamaAdapter` has run, and its output is the published corpus `data/corpora/run11.json`: 76 listings, 71 of them appraisable. `DivarCarAdapter` is built and tested offline, and its live path has never run. Sheypoor and Khodro45 have no adapter. |
+| normalize messy data | ✅ **built.** Persian numerals and amount words, toman and rial, mileage, Jalali and Gregorian years, make/model aliases, trim, gearbox, fuel, colour, and body condition from free text. |
+| rank by user intent | ⚠️ **built, not served on real data.** `caro/ranking.py` parses Persian intent, filters, relaxes and scores. No estimator has cleared the acceptance gate on a real corpus (D43), so on run11 the site shows evidence, not a ranking. |
+| explain the best choice | ✅ **built.** |
+| deployed | ✅ https://caro-rho.vercel.app — one Vercel project of two services (D64). |
 
-**Read that table honestly: the deepest work sits on the last row, and the
-first three are where the remaining work is.** The decision layer is only
-useful once something feeds it a ranked candidate set.
+## Next — small, open, recorded
 
-## Next, in order
+1. **Links to the old repository.** The repository is now
+   `github.com/Tecso-Dev/caro`. Four places still name the old one: the
+   contact page's GitHub Issues link (`ELSEWHERE` in `webapp/api/contact.py`),
+   which the deployed site shows; the clone command in `README.md`;
+   `docs/WORKING_AGREEMENT.md`; and `docs/DEMO_SCRIPT.md`.
 
-### 1. Ingest — run it
-`DivarCarAdapter` exists and its parsing is tested. What remains is a first
-live run, which is a decision rather than a build:
+2. **The buyer's own constraints fail open** (D60, still open in D61).
+   `keeps()` in `webapp/api/main.py` lets a listing whose price, year or
+   mileage is unknown through the budget, year and mileage it was asked for.
+   Seen on the deployed site: «پراید زیر ۳۰۰ میلیون» returned four rows of
+   evidence, and two of them had no price. First: count, on run11 and the
+   search page's example queries, how many rows pass only because a value is
+   missing. Then decide: leave them out, or show them apart and say what is
+   not known.
 
-- Review Divar's terms and robots directives for the car category, and record
-  the finding in the run log whatever it says.
-- Start with one city and a handful of pages. Volume is not the point.
-- Set `CARO_SELLER_SALT` in the environment. The hash helper refuses to run
-  without it, because an unsalted hash of a phone number is a phone number.
-- Expect to be blocked eventually. The adapter halts and says so; that is the
-  designed behaviour, not a bug to work around.
+3. **`/api/search/reweight` takes any `k`** (D60), where `/api/search` caps it
+   at 24.
 
-### 2. Ranking + intent — DONE, see `caro/ranking.py`
-Built as described below. Kept here because the shape is worth reading:
+4. **`mileage_status` is not on the payload** (D61). FIELD_PROVENANCE.md
+   marks it `card=yes`, but no rule states how an odometer's status travels
+   with the number, the way one does for a price.
 
-```
-Persian query → IntentSpec (budget, use case, deal-breakers, weights)
-              → candidate retrieval + hard filters
-              → relaxation ladder when < 3 survive, with a report of what loosened
-              → score = value − risk − running cost + liquidity …
-              → diversity pass
-              → top N, each already carrying a Verdict
-```
+5. **Writing an Issue needs a GitHub account**, and the contact page does not
+   say so; reading them does not. One sentence, if wanted.
 
-Two requirements worth stating up front: the weights must be **visible and
-adjustable** by the user, and the relaxation must **say what it loosened**
-rather than silently widening the net.
+## Next — the product gaps
 
-The number that decides whether this is a product: **win-rate against
-sort-by-price on realistic queries.** Currently 100% win-rate, +22% uplift on
-the synthetic corpus — and getting there required fixing a real bug the
-benchmark exposed (risk normalised instead of priced). On real data this
-needs the blind human panel, not a ground-truth utility function.
+1. **Data.**
+   - Divar: a first live run of `DivarCarAdapter`. Review Divar's terms and
+     robots directives for the car category first, and record the finding
+     whatever it says. One city and a handful of pages; volume is not the
+     point. `CARO_SELLER_SALT` must be set. Expect to be blocked; the adapter
+     stops and says so, and that is the design.
+   - Sheypoor and Khodro45: adapters, under the same rules.
+   - Longitudinal collection. Time-dependent and unrecoverable: a day not
+     collected is gone.
 
-### 3. Real-data evaluation
-Corpus inventory first — row count, date range, models, missingness, repost
-candidates, tier coverage — then run the existing gate:
+2. **An estimator that clears the gate on real data** (D43). Run the ladder
+   in `caro/appraisal.py` — `GlobalQuantiles`, `ComparableQuantiles`,
+   `LogLinearQuantiles`, and `PartialPoolingQuantiles` — against
+   `AcceptanceGate` on a larger real corpus, and report whichever wins; if it
+   is the baseline, ship the baseline and say why. Until one clears, nothing
+   is ranked on real data, and compare's gated branch stays unmeasurable:
+   when it becomes measurable, build the three-state fixture (vehicle,
+   assignment, `unknown`) and measure detail, compare alone, compare beside a
+   vehicle, and search.
 
-```
-GlobalQuantiles → ComparableQuantiles → LogLinearQuantiles → LightGBM
-```
+3. **Accident damage from listing photos.** Not built. When it is, its output
+   is recorded as inferred, not observed, and says «قابل تشخیص نیست» when it
+   cannot tell.
 
-Report whichever wins. If it is the baseline, ship the baseline and say why.
+4. **Authenticator-based login.** Not built. The admin view opens today with
+   `CARO_ADMIN_TOKEN`, and with the token unset it does not open at all.
 
-### 4. Longitudinal collection
-Time-dependent and unrecoverable: a day not collected is gone. Price-change and
-repost signals are dense within days; disappearance-as-transaction-proxy is
-sparse and should not be claimed on a short window.
+5. **Deploy on push.** Not connected. The Vercel GitHub App has to be
+   installed where the repository now lives, `Tecso-Dev`. Until then each
+   deployment is a pull and a `vercel deploy --prod` by hand.
 
-### 5. Calibrate the confidence policy
-Bands are currently judgement. With real data they should be revisited against
-observed decision quality and relabelled — or kept, and honestly described as
-policy.
+6. **Calibrate the confidence policy.** The bands are judgement. With real
+   data they should be revisited against observed decision quality and
+   relabelled — or kept, and described honestly as policy.
+
+## Requests
+
+Items to add. Each one moves into a list above once it has been measured and
+decided.
+
+-
 
 ## Deliberately not planned
 
