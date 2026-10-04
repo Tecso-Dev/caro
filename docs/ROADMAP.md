@@ -5,7 +5,7 @@ was recorded, and what comes first. An open item goes into code only after it
 has been measured; the measurement comes first and the decision is made on
 it, in its own commit.
 
-Last revised 2026-10-04, at `8f855f6`.
+Last revised 2026-10-04.
 
 ## Where it stands against the brief
 
@@ -22,11 +22,13 @@ intent → explain the best choice**.
 
 ## Next — small, open, recorded
 
-1. **Links to the old repository.** The repository is now
-   `github.com/Tecso-Dev/caro`. Four places still name the old one: the
-   contact page's GitHub Issues link (`ELSEWHERE` in `webapp/api/contact.py`),
-   which the deployed site shows; the clone command in `README.md`;
-   `docs/WORKING_AGREEMENT.md`; and `docs/DEMO_SCRIPT.md`.
+1. **The contact page still sends people to the old repository.** Its GitHub
+   Issues link (`ELSEWHERE` in `webapp/api/contact.py`) names
+   `sahandmusanezhad/caro`, and that is still where an issue can be written:
+   `Tecso-Dev/caro` is a fork of it, and a fork starts with Issues turned
+   off — its page, seen signed out on 2026-10-04, has no Issues tab. First:
+   decide where issues are written. If on `Tecso-Dev/caro`, turn Issues on
+   there (Settings → General → Features), and only then move the link.
 
 2. **The buyer's own constraints fail open** (D60, still open in D61).
    `keeps()` in `webapp/api/main.py` lets a listing whose price, year or

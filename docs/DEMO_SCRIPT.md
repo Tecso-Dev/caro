@@ -238,7 +238,7 @@ SYNTHETIC    pipeline behaviour · ranking mechanics ·
 ۷۱۶ assertion · ۸ suite · ۴۶ decision · ۵ اجرای زنده روی باما
 ۰ ادعای بدون شواهد در خروجی
 
-github.com/sahandmusanezhad/caro
+github.com/Tecso-Dev/caro
 ```
 
 > **VO (last line):** چیزی که ساختیم یک مدل قیمت نیست. سیستمی است که مرزِ

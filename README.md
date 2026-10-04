@@ -144,7 +144,7 @@ CARO reports uncertainty about prices. It also reports **uncertainty about
 its own ability to assess uncertainty**, and refuses on it.
 
 ```
-git clone https://github.com/sahandmusanezhad/caro && cd caro
+git clone https://github.com/Tecso-Dev/caro && cd caro
 ./scripts/setup.sh                  # finds or installs numpy; tells you what to run
 #                                   add --extras, and npm install in
 #                                   webapp/web, for all fifteen suites

@@ -38,7 +38,7 @@ other is not evidence of anything.
   fallback — a session has no shell on the owner's computer, so `git add`,
   `git commit` and `git push` are his commands and nobody else's.
 - **Never handle the owner's GitHub token**, and never push from the
-  sandbox. The remote is `github.com/sahandmusanezhad/caro`, branch `main`,
+  sandbox. The remote is `github.com/Tecso-Dev/caro`, branch `main`,
   and the credentials for it live on his machine and stay there.
 - **Prepare each commit so it is green on its own.** The working tree may
   hold several pending changes at once, so `run_all.py` before a commit
