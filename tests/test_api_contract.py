@@ -425,6 +425,10 @@ with corpus_dir(valid_artifact(product_class="vehicle")):
           not ({"estimate_toman", "opportunity_toman", "score"}
                & set(schemas.EvidenceItem.model_fields)),
           str(sorted(schemas.EvidenceItem.model_fields)))
+    check("  nor UncheckedItem, the evidence that could not be checked",
+          not ({"estimate_toman", "opportunity_toman", "score"}
+               & set(schemas.UncheckedItem.model_fields)),
+          str(sorted(schemas.UncheckedItem.model_fields)))
     check("  which is what makes this structural rather than a check",
           "estimate_toman" in schemas.ScoredItem.model_fields)
 
@@ -493,6 +497,7 @@ PAIRS = [
     ("Fault", schemas.Fault),
     ("Envelope", schemas.Envelope),
     ("EvidenceItem", schemas.EvidenceItem),
+    ("UncheckedItem", schemas.UncheckedItem),
     ("ScoredItem", schemas.ScoredItem),
     ("WeightSet", schemas.Weights),
     ("Intent", schemas.Intent),
@@ -538,7 +543,8 @@ def ts_union(name: str) -> set[str] | None:
 
 
 for ts_name, literal in (("CorpusKind", schemas.CorpusKind),
-                         ("FaultCode", schemas.FaultCode)):
+                         ("FaultCode", schemas.FaultCode),
+                         ("ConstraintKey", schemas.ConstraintKey)):
     got = ts_union(ts_name)
     want = set(typing.get_args(literal))
     if got is None:
@@ -610,8 +616,10 @@ if _m:
             # `evidence` is what an ungated corpus can still show. On a gated
             # one the same query would fill `items` instead, so both count —
             # the assertion is that the example leads somewhere, not which
-            # branch it lands in.
-            _n = len(_r.evidence) + len(_r.items)
+            # branch it lands in. Listings shown apart, because a constraint
+            # could not be checked against them, are somewhere too.
+            _n = (len(_r.evidence) + len(_r.evidence_unchecked)
+                  + len(_r.items))
             check(f"  «{_q[:38]}» → {_n}", _n > 0,
                   "this example finds nothing in the shipped corpus")
     finally:
@@ -775,7 +783,8 @@ else:
         check(f"  serving the real corpus (kind={_kind10})",
               _kind10 == "REAL", _kind10)
         for _q, _ep, _r in _res10:
-            _shown = list(_r.evidence) + list(_r.items)
+            _shown = (list(_r.evidence) + list(_r.evidence_unchecked)
+                      + list(_r.items))
             _past = sorted({x.id for x in _shown
                             if _cls10.get(x.id) != "vehicle"})
             check(f"  {_ep:<8} «{_q[:30]}» — {len(_shown)} row(s), none "
@@ -945,6 +954,163 @@ with tempfile.TemporaryDirectory() as _d:
             os.environ.pop("CARO_INBOX", None)
         else:
             os.environ["CARO_INBOX"] = _kept[2]
+
+
+# ---------------------------------------------------------------------------
+print("\n13 — a match is a listing every stated constraint was checked against")
+# ---------------------------------------------------------------------------
+#
+# `_evidence` used to run a comparison only when the listing carried the
+# value, so a listing with no price passed «زیر ۳۰۰ میلیون» and one with no
+# odometer passed «کم‌کارکرد» (D60, D61). `webapp/api/constraints.py` gives a
+# constraint three answers — met, broken, unknown — and a listing is a match
+# only when every constraint the buyer stated is met; one that breaks none and
+# lacks a value for some is shown apart, naming it.
+#
+# First the rule, on listings built here, so that every branch is reached
+# whether or not the shipped corpus holds a case for it. Then every example
+# chip on the shipped corpus, with each listing's values read from the
+# ARTIFACT by id rather than from the payload, for the reason section 10
+# gives: a guard that takes its verdict from what it guards passes the day
+# the payload agrees with itself.
+
+from types import SimpleNamespace                                   # noqa: E402
+
+from caro.ranking import IntentSpec                                 # noqa: E402
+from webapp.api import constraints                                  # noqa: E402
+
+
+def _L(price=500_000_000, *, status="display_confirmed", kind="cash",
+       year=1398, km=100_000):
+    return SimpleNamespace(asking_price_toman=price, price_status=status,
+                           price_kind=kind, year_jalali=year, mileage_km=km)
+
+
+def _u(x, spec):
+    return constraints.unchecked(constraints.judge(x, spec))
+
+
+_BUDGET = IntentSpec(raw_query="t", budget_max_toman=600_000_000)
+_STATED = IntentSpec(raw_query="t", budget_max_toman=600_000_000,
+                     year_min=1395, max_mileage_km=150_000)
+
+check("a price inside the budget is a match", _u(_L(), _BUDGET) == [])
+check("  above it, the listing is left out",
+      _u(_L(700_000_000), _BUDGET) is None)
+check("  no price at all: not a match, and «budget» is named",
+      _u(_L(None, status="absent", kind="negotiable"), _BUDGET) == ["budget"])
+check("  a cash figure with no status recorded is still checked",
+      _u(_L(status=None), _BUDGET) == []
+      and _u(_L(700_000_000, status=None), _BUDGET) is None)
+check("  a financing total under the budget is not inside it",
+      _u(_L(300_000_000, kind="financing_total"), _BUDGET) == ["budget"])
+check("  nor a figure whose status is unusable",
+      _u(_L(300_000_000, status="ambiguous"), _BUDGET) == ["budget"])
+check("  a floor is checked the same way",
+      _u(_L(None), IntentSpec(raw_query="t", budget_min_toman=1)) == ["budget"]
+      and _u(_L(), IntentSpec(raw_query="t",
+                              budget_min_toman=600_000_000)) is None)
+check("no year and no odometer: both named, in the order judged",
+      _u(_L(year=None, km=None), _STATED) == ["year", "mileage"])
+check("  one broken constraint leaves a listing out, whatever else is unknown",
+      _u(_L(None, km=900_000), _STATED) is None)
+check("  a constraint the buyer did not state is not judged at all",
+      constraints.judge(_L(None, year=None, km=None),
+                        IntentSpec(raw_query="t")) == {})
+
+
+def _value_missing(rec: dict, i) -> list[str]:
+    """What the artifact holds no value for, among the constraints `i` states
+    — in judge order. A price counts only as the card would draw it."""
+    out = []
+    if i.budget_max_toman is not None or i.budget_min_toman is not None:
+        drawn = ((rec.get("price_kind") or "absent") == "cash"
+                 and rec.get("price_status") not in _py_unusable)
+        if rec.get("asking_price_toman") is None or not drawn:
+            out.append("budget")
+    if i.year_min is not None and rec.get("year_jalali") is None:
+        out.append("year")
+    if i.max_mileage_km is not None and rec.get("mileage_km") is None:
+        out.append("mileage")
+    return out
+
+
+def _value_breaks(rec: dict, i) -> bool:
+    p, y, m = (rec.get("asking_price_toman"), rec.get("year_jalali"),
+               rec.get("mileage_km"))
+    return ((p is not None and "budget" not in _value_missing(rec, i)
+             and ((i.budget_max_toman is not None and p > i.budget_max_toman)
+                  or (i.budget_min_toman is not None
+                      and p < i.budget_min_toman)))
+            or (i.year_min is not None and y is not None and y < i.year_min)
+            or (i.max_mileage_km is not None and m is not None
+                and m > i.max_mileage_km))
+
+
+_art13 = ROOT / "data" / "corpora" / f"{RUN}.json"
+_rec13 = {x["listing_id"]: x for x in json.loads(
+    _art13.read_text(encoding="utf-8"))["listings"]}
+_box13 = (ROOT / "webapp/web/components/SearchBox.tsx").read_text(
+    encoding="utf-8")
+_m13 = re.search(r"const EXAMPLES = \[(.*?)\];", _box13, re.S)
+_chips13 = re.findall(r"'([^']+)'", _m13.group(1)) if _m13 else []
+_K13 = 8                                     # what the results page asks for
+
+_was, _was_run = corpus_reader.CORPORA, os.environ.get(corpus_mod.RUN_ENV)
+corpus_reader.CORPORA = _art13.parent
+os.environ.pop(corpus_mod.RUN_ENV, None)
+corpus_mod.active.cache_clear()
+try:
+    with contextlib.redirect_stdout(io.StringIO()):
+        _res13 = [(q, api.search(q=q, k=_K13)) for q in _chips13]
+finally:
+    corpus_reader.CORPORA = _was
+    if _was_run is None:
+        os.environ.pop(corpus_mod.RUN_ENV, None)
+    else:
+        os.environ[corpus_mod.RUN_ENV] = _was_run
+    corpus_mod.active.cache_clear()
+
+for _q, _r in _res13:
+    _i = _r.intent
+    _bad = [x.id for x in _r.evidence if _value_missing(_rec13[x.id], _i)]
+    check(f"  «{_q[:30]}» — {len(_r.evidence)} match(es), each checked "
+          f"against every constraint stated", not _bad,
+          f"a match with a value missing: {_bad}")
+    _wrong = [(x.id, x.unchecked) for x in _r.evidence_unchecked
+              if not x.unchecked
+              or x.unchecked != _value_missing(_rec13[x.id], _i)]
+    check(f"    {len(_r.evidence_unchecked)} shown apart, each naming what "
+          f"its listing lacks", not _wrong, f"named wrongly: {_wrong}")
+    _broke = [x.id for x in list(_r.evidence) + list(_r.evidence_unchecked)
+              if _value_breaks(_rec13[x.id], _i)]
+    check("    nothing shown breaks a constraint stated", not _broke,
+          f"shown, and breaking one: {_broke}")
+    # The totals, counted in the artifact: every vehicle of the model asked
+    # for that breaks nothing, split by whether a value is missing. Checked
+    # against the payload's own lists alone, a total that reported only the
+    # rows shown would agree with itself.
+    _cand = [rec for rec in _rec13.values()
+             if rec.get("product_class") == "vehicle"
+             and (not _i.models
+                  or (rec.get("model") or "").lower() in _i.models)
+             and not _value_breaks(rec, _i)]
+    _want_m = sum(1 for rec in _cand if not _value_missing(rec, _i))
+    _want_a = len(_cand) - _want_m
+    check(f"    the totals count every one ({_r.evidence_total} matched, "
+          f"{_r.evidence_unchecked_total} apart), the lists the first "
+          f"{_K13} of each",
+          (_r.evidence_total, _r.evidence_unchecked_total)
+          == (_want_m, _want_a)
+          and len(_r.evidence) == min(_want_m, _K13)
+          and len(_r.evidence_unchecked) == min(_want_a, _K13),
+          f"the artifact holds {_want_m} matched and {_want_a} apart")
+
+_apart13 = sum(len(r.evidence_unchecked) for _, r in _res13)
+check(f"  the examples reach the case: {_apart13} listing(s) shown apart",
+      _apart13 > 0,
+      "nothing was shown apart, so the checks above cannot see the rule "
+      "— said, not passed")
 
 print()
 if FAILS:

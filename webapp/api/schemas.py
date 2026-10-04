@@ -179,6 +179,25 @@ class EvidenceItem(BaseModel):
     price_kind: str | None = None
 
 
+# The constraints a listing can fail to be checked against, by the names
+# `webapp/api/constraints.py` judges them under. A Literal for the same reason
+# `FaultCode` is one: the client draws a sentence for each member, and a
+# member it has no sentence for would reach the screen as a bare token.
+ConstraintKey = Literal["budget", "year", "mileage"]
+
+
+class UncheckedItem(EvidenceItem):
+    """A listing that breaks none of the buyer's constraints and could not be
+    checked against at least one, because it carries no value for it.
+
+    It is not a match, and it does not travel in `evidence`. `unchecked` names
+    what could not be checked and is never empty: a listing with nothing
+    unchecked is a match.
+    """
+
+    unchecked: list[ConstraintKey]
+
+
 class ScoredItem(EvidenceItem):
     """A listing with a decision attached. Only reachable when served.
 
@@ -250,7 +269,16 @@ class SearchResponse(Envelope):
     items: list[ScoredItem] = Field(default_factory=list)
     # What is still true when nothing may be ranked. Carries no estimate by
     # construction — see `EvidenceItem`.
+    #
+    # Only listings that MEET every constraint the buyer stated. One that
+    # carries no value for some constraint and breaks none is not a match; it
+    # travels in `evidence_unchecked`, saying which. Each list is the first k
+    # of its kind, and each total is how many there are in all, so a page can
+    # say «8 of 51» instead of letting 8 stand for every match.
     evidence: list[EvidenceItem] = Field(default_factory=list)
+    evidence_total: int = 0
+    evidence_unchecked: list[UncheckedItem] = Field(default_factory=list)
+    evidence_unchecked_total: int = 0
 
 
 class ListingResponse(Envelope):

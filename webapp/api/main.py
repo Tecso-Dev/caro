@@ -44,12 +44,14 @@ from fastapi.middleware.cors import CORSMiddleware                 # noqa: E402
 from caro.appraisal import NotBenchmarked                          # noqa: E402
 from caro.ranking import Weights as RankWeights                    # noqa: E402
 from caro.ranking import diversify, retrieve                       # noqa: E402
+from webapp.api import constraints                                 # noqa: E402
 from webapp.api import corpus as corpus_mod                        # noqa: E402
 from webapp.api.contact import router as contact_router            # noqa: E402
 from webapp.api.schemas import (                                   # noqa: E402
     CompareRequest, CompareResponse, CorpusMeta, CorpusResponse, Envelope,
     EvidenceItem, Fault, HealthResponse, Intent, ListingResponse,
-    ReweightRequest, ScoredItem, SearchResponse, ServingStatus, Weights,
+    ReweightRequest, ScoredItem, SearchResponse, ServingStatus,
+    UncheckedItem, Weights,
 )
 
 app = FastAPI(title="CARO", version="0.2.0",
@@ -218,8 +220,9 @@ def _intent(spec) -> Intent:
                             "mileage", "recency")}))
 
 
-def _evidence(c, spec, cands, k: int) -> list[EvidenceItem]:
-    """What can still be shown when no ranking may be served.
+def _evidence(c, spec, cands, k: int) -> dict:
+    """What can still be shown when no ranking may be served — the four
+    evidence fields of a SearchResponse.
 
     On a corpus whose rows all fail eligibility, `cands` is empty and serving
     it would show an empty table under a heading promising matching listings.
@@ -227,35 +230,40 @@ def _evidence(c, spec, cands, k: int) -> list[EvidenceItem]:
     chooses, and then ONLY the constraints the buyer stated — model, budget,
     year, odometer. No relaxation ladder, no ordering, no estimate. It is a
     filter, not a retrieval, and it is not pretending to be the second one.
+
+    A listing that carries no value for a constraint is not let through it:
+    it is not a match, and it goes apart, saying which constraint it could
+    not be checked against. The rule is `constraints.judge`.
     """
     if cands:
-        return [_row_evidence(r) for r in cands[:k]]
+        # Appraisal Rows: eligibility required every value judged here, so
+        # nothing in them is unknown.
+        return {"evidence": [_row_evidence(r) for r in cands[:k]],
+                "evidence_total": len(cands)}
 
-    def keeps(x) -> bool:
+    matched, apart = [], []
+    for x in c.listings:
         # The gate (D52): only `vehicle` is shown as a car. `unknown` does
         # not pass — a record whose class was never determined is not a car,
         # which is the rule eligibility already applies before a row can be
         # scored. Rows above need no check for the same reason.
         if x.product_class != "vehicle":
-            return False
+            continue
         if spec.model_hints and (x.model or "").lower() not in spec.model_hints:
-            return False
-        p = x.asking_price_toman
-        if spec.budget_max_toman is not None and p is not None \
-                and p > spec.budget_max_toman:
-            return False
-        if spec.budget_min_toman is not None and p is not None \
-                and p < spec.budget_min_toman:
-            return False
-        if spec.year_min is not None and x.year_jalali is not None \
-                and x.year_jalali < spec.year_min:
-            return False
-        if spec.max_mileage_km is not None and x.mileage_km is not None \
-                and x.mileage_km > spec.max_mileage_km:
-            return False
-        return True
+            continue
+        missing = constraints.unchecked(constraints.judge(x, spec))
+        if missing is None:
+            continue
+        (apart if missing else matched).append((x, missing))
 
-    return [_listing_evidence(x) for x in c.listings if keeps(x)][:k]
+    return {
+        "evidence": [_listing_evidence(x) for x, _ in matched[:k]],
+        "evidence_total": len(matched),
+        "evidence_unchecked": [
+            UncheckedItem(**_listing_evidence(x).model_dump(), unchecked=m)
+            for x, m in apart[:k]],
+        "evidence_unchecked_total": len(apart),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -305,7 +313,7 @@ def search(q: str = Query(..., min_length=2, description="پرسش فارسی"),
             considered=len(c.listings) or len(c.rows),
             appraisable=len(c.rows),
             candidates=0, relaxed=False, relaxation_fa="",
-            items=[], evidence=_evidence(c, spec, [], k))
+            items=[], **_evidence(c, spec, [], k))
 
     cands, used, rep = retrieve(c.rows, spec)
     try:
@@ -321,7 +329,7 @@ def search(q: str = Query(..., min_length=2, description="پرسش فارسی"),
             appraisable=len(c.rows),
             candidates=len(cands), relaxed=rep.relaxed,
             relaxation_fa=rep.text_fa() if rep.relaxed else "",
-            items=[], evidence=_evidence(c, used, cands, k))
+            items=[], **_evidence(c, used, cands, k))
 
     items = diversify(scored, k=k)
     return SearchResponse(
@@ -356,7 +364,7 @@ def search_reweight(q: str, weights: ReweightRequest,
             considered=len(c.listings) or len(c.rows),
             appraisable=len(c.rows),
             candidates=0, relaxed=False, relaxation_fa="",
-            items=[], evidence=_evidence(c, spec, [], k))
+            items=[], **_evidence(c, spec, [], k))
 
     cands, used, rep = retrieve(c.rows, spec)
     try:
@@ -369,7 +377,7 @@ def search_reweight(q: str, weights: ReweightRequest,
             appraisable=len(c.rows),
             candidates=len(cands), relaxed=rep.relaxed,
             relaxation_fa=rep.text_fa() if rep.relaxed else "",
-            items=[], evidence=_evidence(c, used, cands, k))
+            items=[], **_evidence(c, used, cands, k))
 
     return SearchResponse(
         **_envelope(c, served=True).model_dump(),

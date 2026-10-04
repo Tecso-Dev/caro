@@ -143,6 +143,18 @@ export interface EvidenceItem {
   price_kind: string | null;
 }
 
+/** The constraints a listing can fail to be checked against — the names
+ *  `webapp/api/constraints.py` judges them under. The contract suite holds
+ *  this union to the Python Literal member for member. */
+export type ConstraintKey = 'budget' | 'year' | 'mileage';
+
+/** A listing that breaks none of the buyer's constraints and could not be
+ *  checked against at least one: it carries no value for it. Not a match —
+ *  it never travels in `evidence` — and `unchecked` is never empty. */
+export interface UncheckedItem extends EvidenceItem {
+  unchecked: ConstraintKey[];
+}
+
 export interface ScoredItem extends EvidenceItem {
   /* Narrowed from `EvidenceItem`: a row that was scored cleared eligibility,
      and eligibility is exactly the check that these are present and
@@ -197,7 +209,13 @@ export interface SearchResponse extends Envelope {
   relaxed: boolean;
   relaxation_fa: string;
   items: ScoredItem[];
+  /* Only listings that MEET every constraint the buyer stated; one that
+     carries no value for some constraint is in `evidence_unchecked`. Each
+     list is the first k of its kind and each total counts them all. */
   evidence: EvidenceItem[];
+  evidence_total: number;
+  evidence_unchecked: UncheckedItem[];
+  evidence_unchecked_total: number;
 }
 
 export interface ListingResponse extends Envelope {
