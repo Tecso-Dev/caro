@@ -131,6 +131,27 @@ RED_LINES = {"accident": _accident, "unclear_documents": _unclear_documents,
              "manual": _manual, "repaint": _repaint}
 
 
+def odometer(x) -> int | None:
+    """The odometer reading a constraint may use, or None.
+
+    Only a `plausible` reading decides anything (D22's grades,
+    caro.ingest.quality.Validity). `unknown` has no number. `suspicious` has
+    one the seller should not be believed on — the 999999 placeholder, or
+    fewer than 1,500 km a year on a car three or more years old. `impossible`
+    has one no passenger car can have. Each is unknown to the constraint, and
+    stays itself on the listing: the reason travels as `mileage_status`, and
+    the page says which.
+
+    The filter before this compared every number alike, so D21's own examples
+    went both wrong ways: 1 km on a 1385 Pride met «کم‌کارکرد», and 999,990 km
+    broke it. A record that states no status at all is not trusted either.
+    On run11 every reading is plausible, so nothing there changes.
+    """
+    if getattr(x, "mileage_status", None) != "plausible":
+        return None
+    return x.mileage_km
+
+
 def judge(x, spec) -> dict[str, Verdict]:
     """Each constraint the buyer stated, and what this listing says to it.
 
@@ -158,7 +179,7 @@ def judge(x, spec) -> dict[str, Verdict]:
                        else "broken" if y < spec.year_min else "met")
 
     if spec.max_mileage_km is not None:
-        m = x.mileage_km
+        m = odometer(x)
         out["mileage"] = ("unknown" if m is None
                           else "broken" if m > spec.max_mileage_km else "met")
 

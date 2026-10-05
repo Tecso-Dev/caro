@@ -1019,12 +1019,12 @@ from webapp.api import constraints                                  # noqa: E402
 
 
 def _L(price=500_000_000, *, status="display_confirmed", kind="cash",
-       year=1398, km=100_000, cond="intact", docs=False, gearbox="automatic",
-       trim=None):
+       year=1398, km=100_000, ms="plausible", cond="intact", docs=False,
+       gearbox="automatic", trim=None):
     return SimpleNamespace(asking_price_toman=price, price_status=status,
                            price_kind=kind, year_jalali=year, mileage_km=km,
-                           body_condition=cond, document_issue=docs,
-                           gearbox=gearbox, trim=trim)
+                           mileage_status=ms, body_condition=cond,
+                           document_issue=docs, gearbox=gearbox, trim=trim)
 
 
 def _u(x, spec):
@@ -1052,9 +1052,29 @@ check("  a floor is checked the same way",
       and _u(_L(), IntentSpec(raw_query="t",
                               budget_min_toman=600_000_000)) is None)
 check("no year and no odometer: both named, in the order judged",
-      _u(_L(year=None, km=None), _STATED) == ["year", "mileage"])
+      _u(_L(year=None, km=None, ms="unknown"), _STATED) == ["year", "mileage"])
 check("  one broken constraint leaves a listing out, whatever else is unknown",
-      _u(_L(None, km=900_000), _STATED) is None)
+      _u(_L(None, km=400_000), _STATED) is None)
+
+# The odometer, in the four grades of caro.ingest.quality.Validity (D22). Only
+# `plausible` lets the number decide; the other three are unknown to the
+# constraint and keep their own name on the listing. D21's own examples are
+# the cases: the filter before this compared every number alike, and got them
+# wrong in both directions.
+_KM = IntentSpec(raw_query="t", max_mileage_km=120_000)
+check("odometer plausible: 100,000 meets «کم‌کارکرد», 200,000 breaks it",
+      _u(_L(km=100_000), _KM) == [] and _u(_L(km=200_000), _KM) is None)
+check("  unknown, no number: unknown",
+      _u(_L(km=None, ms="unknown"), _KM) == ["mileage"])
+check("  suspicious, 1 km on a 1385 car: unknown — it no longer meets the cap",
+      _u(_L(km=1, year=1385, ms="suspicious"), _KM) == ["mileage"])
+check("  suspicious, the 999,990 placeholder: unknown — nor breaks it",
+      _u(_L(km=999_990, ms="suspicious"), _KM) == ["mileage"])
+check("  impossible, −5,000 or 2,000,000: unknown, whichever side",
+      _u(_L(km=-5_000, ms="impossible"), _KM) == ["mileage"]
+      and _u(_L(km=2_000_000, ms="impossible"), _KM) == ["mileage"])
+check("  a number whose status was never recorded is not trusted",
+      _u(_L(km=90_000, ms=None), _KM) == ["mileage"])
 check("  a constraint the buyer did not state is not judged at all",
       constraints.judge(_L(None, year=None, km=None),
                         IntentSpec(raw_query="t")) == {})
@@ -1144,7 +1164,9 @@ def _value_missing(rec: dict, i) -> list[str]:
             out.append("budget")
     if i.year_min is not None and rec.get("year_jalali") is None:
         out.append("year")
-    if i.max_mileage_km is not None and rec.get("mileage_km") is None:
+    if i.max_mileage_km is not None and (
+            rec.get("mileage_km") is None
+            or rec.get("mileage_status") != "plausible"):
         out.append("mileage")
     for line in i.deal_breakers:
         _, breaks, meets = _RED13[line]
@@ -1162,6 +1184,7 @@ def _value_breaks(rec: dict, i) -> bool:
                       and p < i.budget_min_toman)))
             or (i.year_min is not None and y is not None and y < i.year_min)
             or (i.max_mileage_km is not None and m is not None
+                and rec.get("mileage_status") == "plausible"
                 and m > i.max_mileage_km)
             or any(_red13(rec, line) in _RED13[line][1]
                    for line in i.deal_breakers))
@@ -1250,6 +1273,69 @@ with corpus_dir(valid_artifact(product_class="vehicle")):
                        json={}).status_code
         check(f"k={_k}: search {_s}, reweight {_w} — both {_want}",
               _s == _want and _w == _want)
+
+
+# ---------------------------------------------------------------------------
+print("\n15 — an odometer's four grades, through search")
+# ---------------------------------------------------------------------------
+# Section 13 holds the rule on objects built for it; this sends the same
+# cases through the API, from an artifact written to a temporary directory —
+# never data/corpora/, for the reason `corpus_dir` gives. run11 holds no
+# suspicious or impossible reading, so without this no endpoint would ever be
+# seen to carry one. It is a test of the contract, not a measurement: it says
+# what the API does with each grade, and nothing about how often a corpus
+# holds one.
+#
+# Each row: id, odometer, grade (None: the record states none), year, and
+# where «۲۰۶ کم‌کارکرد» — a cap of 120,000 — must put it, with what the
+# filter before this did with it.
+_ODO = [
+    ("o_ok", 100_000, "plausible", 1398, "match", "match"),
+    ("o_hi", 200_000, "plausible", 1398, "out", "out"),
+    ("o_none", None, "unknown", 1398, "apart", "apart"),
+    ("o_low", 1, "suspicious", 1385, "apart", "match"),
+    ("o_ph", 999_990, "suspicious", 1398, "apart", "out"),
+    ("o_neg", -5_000, "impossible", 1398, "apart", "match"),
+    ("o_huge", 2_000_000, "impossible", 1398, "apart", "out"),
+    ("o_bare", 90_000, None, 1398, "apart", "match"),
+]
+
+
+def _odometer_artifact() -> str:
+    rows = []
+    for i, km, ms, year, *_ in _ODO:
+        r = {"listing_id": i, "product_class": "vehicle",
+             "asking_price_toman": 500_000_000, "price_kind": "cash",
+             "price_status": "display_confirmed", "year_jalali": year,
+             "make": "peugeot", "model": "206", "trim": "TU5"}
+        if km is not None:
+            r["mileage_km"] = km
+        if ms is not None:
+            r["mileage_status"] = ms
+        rows.append(r)
+    return json.dumps({"schema": SCHEMA, "run_id": RUN, "source": "bama.ir",
+                       "collected_on": "2026-10-05", "listings": rows},
+                      ensure_ascii=False)
+
+
+with corpus_dir(_odometer_artifact()):
+    _r15 = api.search(q="۲۰۶ کم‌کارکرد", k=24)
+check("the query states the cap it is about",
+      _r15.intent.max_mileage_km == 120_000, str(_r15.intent.max_mileage_km))
+_where = {x.id: "match" for x in _r15.evidence}
+_where.update({x.id: "apart" for x in _r15.evidence_unchecked})
+_sent15 = {x.id: x for x in list(_r15.evidence) + list(_r15.evidence_unchecked)}
+for _i, _km, _ms, _y, _want, _was in _ODO:
+    _got = _where.get(_i, "out")
+    check(f"  {_i}: {_km} km, {_ms or 'no grade'} → {_want}"
+          + (f" (the filter before: {_was})" if _was != _want else ""),
+          _got == _want, f"got {_got}")
+    if _got == "apart":
+        _x = _sent15[_i]
+        check(f"    named «mileage», with its number and grade kept",
+              _x.unchecked == ["mileage"] and _x.mileage_km == _km
+              and _x.mileage_status == _ms,
+              f"{_x.unchecked} {_x.mileage_km} {_x.mileage_status}")
 
 print()
 if FAILS:
