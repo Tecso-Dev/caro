@@ -22,38 +22,29 @@ intent → explain the best choice**.
 
 ## Next — small, open, recorded
 
-1. **The contact page still sends people to the old repository.** Its GitHub
-   Issues link (`ELSEWHERE` in `webapp/api/contact.py`) names
-   `sahandmusanezhad/caro`, and that is still where an issue can be written:
-   `Tecso-Dev/caro` is a fork of it, and a fork starts with Issues turned
-   off — its page, seen signed out on 2026-10-04, has no Issues tab. First:
-   decide where issues are written. If on `Tecso-Dev/caro`, turn Issues on
-   there (Settings → General → Features), and only then move the link.
+1. **The ranked path's red lines — blocked by a real estimator** (D43, D66).
+   `_passes` in `caro/ranking.py` has no rule for `manual` or `repaint` and
+   lets an unknown through all four; the evidence path judges all four and
+   holds an unknown apart (`webapp/api/constraints.py`). Measured on
+   SYNTHETIC and left as it is: its rows carry none of the fields the
+   evidence rules read, and swapping `_passes` alone sends an unknown into
+   budget and odometer relaxation and an empty shortlist (D66). It reopens
+   when all three hold: an estimator clears the acceptance gate on a real
+   corpus; the rows real ranking scores carry the evidence the four rules
+   read; and the measurement is run again — met, broken and unknown, the
+   shortlist, the relaxation ladder, and the comparison with price-sort. No
+   commit makes the ranked path evidence-aware before then.
 
-2. **The intent panel contradicts itself on two of the five examples.**
-   Text the parser acted on is listed again under «بخش‌هایی که نفهمیدیم —
-   نادیده گرفته شدند»: «ماشین اول خانواده» and «تصادفی نباشه» on the family
-   example, «ماشین برای اسنپ» and «کم مصرف» on the Snapp one, because
-   `unparsed` in `RuleIntentParser` counts only the budget and year clauses
-   as consumed. The same two examples print a raw token among the
-   assumptions: «وزن‌ها از پیش‌فرض «ride_hailing» شروع شد». Both are also in
-   `demo/ranking_data.json` and the hand-kept `demo/index.html`, so fixing
-   the parser is a decision about the demo as well.
-
-3. **The ranked path's red lines are not the evidence path's.** `_passes` in
-   `caro/ranking.py` has no rule for `manual` or `repaint` — no corpus sets
-   `has_manual` or `has_repaint` — and lets a listing whose condition or
-   documents are unknown through `accident` and `unclear_documents`. The
-   evidence path judges all four and holds an unknown apart
-   (`webapp/api/constraints.py`). Nothing is ranked on a real corpus yet
-   (D43); before anything is, the two should apply one rule.
-
-4. **`mileage_status` is not on the payload** (D61). FIELD_PROVENANCE.md
-   marks it `card=yes`, but no rule states how an odometer's status travels
-   with the number, the way one does for a price.
-
-5. **Writing an Issue needs a GitHub account**, and the contact page does not
-   say so; reading them does not. One sentence, if wanted.
+2. **`mileage_status` is not on the payload** (D61). FIELD_PROVENANCE.md
+   marks it `card=yes` and says it "travels with the number or neither
+   renders", but the payload does not carry it, so a card draws the number
+   alone. Measured on 2026-10-05: run11 holds 73 plausible odometers and 3
+   unknown — all three without a number — and none suspicious or
+   impossible, so a rule changes nothing visible there today. Proposed, not
+   decided: send it; draw the number only where it is plausible and say
+   «مشکوک» or «ناممکن» where it is not, as the card does for a price; and
+   check the odometer constraint only against a plausible number, holding
+   the rest apart.
 
 ## Next — the product gaps
 
@@ -93,7 +84,9 @@ intent → explain the best choice**.
    Vercel GitHub App has to be installed where the repository now lives,
    `Tecso-Dev`. By hand: refused on 2026-10-05, the CLI (62.2.0) answering
    «Error: Not authorized» in the deploy clone. Until one of them works the
-   site serves `a636ea6`, and nothing D65 records is on it.
+   site serves `a636ea6`, and nothing D65 records is on it. Before the next
+   deployment, Issues has to be on at `Tecso-Dev/caro`: the contact page
+   now sends people there.
 
 6. **Calibrate the confidence policy.** The bands are judgement. With real
    data they should be revisited against observed decision quality and
