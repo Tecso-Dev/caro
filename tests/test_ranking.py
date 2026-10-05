@@ -151,6 +151,34 @@ for _sx, _uc in ((s2, "ride_hailing"), (s3, "family_first_car")):
           bool(_named) and all(USE_CASE_FA[_uc] in a and _uc not in a
                                for a in _named), str(_named))
 
+# «بخش‌هایی که نفهمیدیم» lists what the parser could NOT map (D14). It also
+# listed what it did: «تصادفی نباشه» sat under «خط قرمز» and under
+# «نفهمیدیم» on the same panel, and so did «ماشین برای اسنپ» and «کم مصرف».
+def _left(q):
+    return [t.strip() for t in P.parse(q).unparsed]
+
+for q, want, why in [
+    ("ماشین اول خانواده، تصادفی نباشه، بودجه ۱.۲ میلیارد", [],
+     "a use case and a red line are understood"),
+    ("ماشین برای اسنپ، کم‌مصرف، قطعاتش ارزون باشه، زیر ۸۰۰ میلیون",
+     ["قطعاتش ارزون باشه"], "a weight's cue is understood; the parts are not"),
+    ("مدل ۹۸ به بالا، کارکرد زیر ۹۰ هزار", [],
+     "«به بالا» goes with the year, the odometer clause is understood"),
+    ("ماشین برای رفت و آمد سرکار، کم‌خرج، تا ۱.۳ میلیارد", [],
+     "a cue across « و » covers both sides of it"),
+    ("یه ماشین خوب حدود ۱.۲ میلیارد", [],
+     "a decimal point is not a separator"),
+    ("پراید، رنگ سفید باشه، تا ۵۰۰ میلیون", ["رنگ سفید باشه"],
+     "the control: a clause nothing mapped is still listed"),
+    # The rule's cost, pinned so that it changes on purpose: a clause is
+    # understood as a whole, as one naming a model always was, so words the
+    # parser did not map are not listed when they share a clause with a cue.
+    ("ماشین برای اسنپ با قطعات ارزون، زیر ۸۰۰ میلیون", [],
+     "a clause holding a cue is understood whole — the parts go unlisted"),
+]:
+    check(f"«{q[:34]}» → not understood: {want or 'nothing'}",
+          _left(q) == want, f"got {_left(q)} — {why}")
+
 s4 = P.parse("مدل ۹۸ به بالا، کارکرد زیر ۹۰ هزار")
 check("2-digit year expands to 1398", s4.year_min == 1398, str(s4.year_min))
 check("explicit mileage cap", s4.max_mileage_km == 90_000, str(s4.max_mileage_km))

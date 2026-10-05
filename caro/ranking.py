@@ -269,6 +269,11 @@ class RuleIntentParser:
         q = normalize_fa(query)
         assumptions: list[str] = []
         consumed: list[str] = []
+        # Cues that changed the spec — a use case, a red line, a weight, a
+        # soft budget, an odometer. Not removed from the text the way a
+        # number's clause is; a clause holding one is understood. See
+        # `unparsed` below.
+        acted: list[str] = []
 
         budget_max = budget_min = None
         hard = True
@@ -287,22 +292,31 @@ class RuleIntentParser:
             # No clause said it, but the query may still name a price. This
             # is an inference, so it is recorded as one; what it may not do
             # is read a model number or a year as a budget, which is why it
-            # goes through `money_amount` rather than `parse_amount`.
-            budget_max = money_amount(q)
+            # goes through `_MONEY` — `money_amount`, with the span kept —
+            # rather than `parse_amount`.
+            mm = _MONEY.search(q)
+            budget_max = parse_amount(mm.group(0)) if mm else None
             if budget_max is not None:
+                acted.append(mm.group(0))
                 assumptions.append("عدد قیمت را سقف بودجه فرض کردیم")
         m = re.search(r"(?:بالای|از)\s*([^،]*?)\s*(?:به بالا)", q)
         if m:
             budget_min = parse_amount(m.group(1))
-        if re.search(r"(انعطاف|تقریبا|حدود|کمی بیشتر)", q):
+            if budget_min is not None:
+                acted.append(m.group(0))
+        m = re.search(r"(انعطاف|تقریبا|حدود|کمی بیشتر)", q)
+        if m:
             hard = False
+            acted.append(m.group(0))
             assumptions.append("بودجه را انعطاف‌پذیر در نظر گرفتیم")
 
         models = tuple(k for k, al in MODEL_ALIASES.items()
                        if any(a in q for a in al))
 
         year_min = None
-        m = re.search(r"مدل\s*(\d{2,4})", q)
+        # «به بالا» after the year is the same statement — a floor — so it
+        # is consumed with it rather than left behind as text not understood.
+        m = re.search(r"مدل\s*(\d{2,4})(?:\s*به\s*بالا)?", q)
         if m:
             y = int(m.group(1))
             year_min = 1300 + y if y < 100 else y
@@ -329,14 +343,18 @@ class RuleIntentParser:
             # budget phrase leaking in ("کارکرد ... تا ۱.۵ میلیارد").
             if unit or v >= 1000:
                 max_km = v
-        if max_km is None and _LOW_MILEAGE_CUE.search(q):
+                acted.append(m.group(0))
+        cue = _LOW_MILEAGE_CUE.search(q)
+        if max_km is None and cue:
             max_km = 120_000
+            acted.append(cue.group(0))
             assumptions.append("«کم‌کارکرد» را حداکثر ۱۲۰٬۰۰۰ کیلومتر گرفتیم")
 
         use_case = "unspecified"
         for uc, cues in USE_CASE_CUES.items():
             if any(c in q for c in cues):
                 use_case = uc
+                acted.extend(c for c in cues if c in q)
                 break
         if use_case == "unspecified" and re.search(r"(کم مصرف|کم خرج|کم هزینه)", q):
             use_case = "commute"
@@ -344,6 +362,8 @@ class RuleIntentParser:
 
         breakers = tuple(k for k, cues in DEAL_BREAKER_CUES.items()
                          if any(c in q for c in cues))
+        for k in breakers:
+            acted.extend(c for c in DEAL_BREAKER_CUES[k] if c in q)
 
         risk = ("risk_averse" if ("accident" in breakers or
                                   use_case == "family_first_car")
@@ -351,20 +371,44 @@ class RuleIntentParser:
                 else "balanced")
 
         w = WEIGHT_PRESETS.get(use_case, Weights())
-        if re.search(r"(کم مصرف|کم خرج|کم هزینه|بنزین)", q):
+        costs = re.findall(r"(کم مصرف|کم خرج|کم هزینه|بنزین)", q)
+        if costs:
             w = replace(w, running_cost=w.running_cost + 0.10)
+            acted.extend(costs)
         if use_case != "unspecified":
             assumptions.append(
                 f"وزن‌ها از پیش‌فرض «{USE_CASE_FA.get(use_case, use_case)}» "
                 "شروع شد — قابل تغییر است")
 
+        # What is left for «بخش‌هایی که نفهمیدیم»: the clauses between
+        # commas, once the clauses that set a number are taken out, less any
+        # that names a model or holds a cue the parser acted on. It used to
+        # keep the second kind, so a query's own red line could sit under
+        # «فهمیدیم» as «خط قرمز» and under «نفهمیدیم» as ignored, both at once —
+        # «تصادفی نباشه» on the family example, «ماشین برای اسنپ» and
+        # «کم مصرف» on the Snapp one.
+        #
+        # A clause is understood as a whole, the way one naming a model always
+        # was. Overlap is measured on spans, so a cue that runs across a
+        # separator — «رفت و آمد» across « و » — covers both sides; and a
+        # point between two digits is a decimal, not a separator, so
+        # «۱.۲ میلیارد» is not cut into «… 1» and «2 میلیارد».
         rest = q
         for c in consumed:
             rest = rest.replace(c, " ")
-        unparsed = tuple(t for t in re.split(r"[،.]| و ", rest)
-                         if len(t.strip()) > 6
-                         and not any(a in t for al in MODEL_ALIASES.values()
-                                     for a in al))[:4]
+        spans = [(m.start(), m.end()) for c in acted
+                 for m in re.finditer(re.escape(c), rest)]
+        clauses, start = [], 0
+        for sep in re.finditer(r"،|(?<!\d)\.|\.(?!\d)| و ", rest):
+            clauses.append((start, sep.start()))
+            start = sep.end()
+        clauses.append((start, len(rest)))
+        unparsed = tuple(rest[a:b] for a, b in clauses
+                         if len(rest[a:b].strip()) > 6
+                         and not any(al in rest[a:b]
+                                     for als in MODEL_ALIASES.values()
+                                     for al in als)
+                         and not any(s < b and e > a for s, e in spans))[:4]
 
         return IntentSpec(
             raw_query=query, budget_max_toman=budget_max,
