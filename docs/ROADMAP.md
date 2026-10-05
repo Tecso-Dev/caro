@@ -46,6 +46,22 @@ intent → explain the best choice**.
    compare. A financing total or an unusable extraction would be drawn on
    the car page as the asking price; run11 carries neither. Not decided.
 
+3. **A red ranking check hides three suites' verdicts** (D68). The API
+   builds SYNTHETIC by importing `tests/test_ranking.py` (`_synthetic` in
+   `webapp/api/corpus.py`), and that suite raises SystemExit when a check
+   is red. So a red ranking check also stops the contract, screens and
+   corpus suites before a verdict of their own: measured on 2026-10-05,
+   five of ten mutations did that. run_all still fails, so nothing goes
+   green that should not; what is lost is what the three would have said.
+   The same import runs in the API process whenever it serves SYNTHETIC.
+   Not decided.
+
+4. **Two rules nothing holds** (D68). `ELSEWHERE` is checked only against
+   itself, so pointing it at another repository turns nothing red; and no
+   query the suites parse needs `unparsed`'s decimal rule, because every
+   point in them sits inside an amount the parser acted on. Measured by
+   mutation on 2026-10-05. Not decided.
+
 ## Next — the product gaps
 
 1. **Data.**
@@ -84,9 +100,9 @@ intent → explain the best choice**.
    Vercel GitHub App has to be installed where the repository now lives,
    `Tecso-Dev`. By hand: refused on 2026-10-05, the CLI (62.2.0) answering
    «Error: Not authorized» in the deploy clone. Until one of them works the
-   site serves `a636ea6`, and nothing D65 records is on it. Before the next
-   deployment, Issues has to be on at `Tecso-Dev/caro`: the contact page
-   now sends people there.
+   site serves `a636ea6`: nothing D65 to D68 record is on it, and its
+   contact page still sends people to the old repository's Issues. Issues
+   is on at `Tecso-Dev/caro`, where the next deployment sends them (D68).
 
 6. **Calibrate the confidence policy.** The bands are judgement. With real
    data they should be revisited against observed decision quality and
