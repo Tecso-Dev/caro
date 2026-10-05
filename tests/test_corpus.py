@@ -912,6 +912,24 @@ if _doc_rows:
               f"number", "mileage_status" in _u,
               "it reads mileage_km and never mileage_status")
 
+    # The price's rule can be read off a surface the same way, which the
+    # check above it does not do: it asserts that the two fields arrive. A
+    # component that reads the amount and neither field the rule names draws
+    # a figure it cannot qualify. The car page did — its heading and its
+    # «قیمت پیشنهادی» cell called `toman()` — and on run11 it said «ثبت‌نشده»
+    # where search and compare said «توافقی». A file-level check: the car
+    # page also draws a non-car's declared amount, which is not an asking
+    # price and is meant to be drawn as it stands.
+    for _name, _var in [(_RENDERER.name, "listing")] + list(_CARDS):
+        _path = ROOT / "webapp" / "web" / "components" / _name
+        _u = _consumed(_path, _var)
+        if "asking_price_toman" not in _u:
+            continue
+        check(f"  {_name} reads both of the price rule's fields wherever it "
+              f"reads the amount", _PRICE_GATES <= _u,
+              f"it reads asking_price_toman and not "
+              f"{sorted(_PRICE_GATES - _u)}")
+
 
 print()
 if FAILS:

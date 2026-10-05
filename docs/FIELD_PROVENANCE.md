@@ -165,10 +165,10 @@ page**. It says nothing about whether the amount is possible for the car.
 the number means (D52). A financing total can be display-confirmed and is
 still not what anyone is asking for the car.
 
-So a card renders an asking price only when **both** gates pass, and the rule
-has to name its fields with their vocabularies, because `negotiable` is a
-member of `PriceStatus` *and* a member of `price_kind` and the same word means
-two different things:
+So a card, and the car page, renders an asking price only when **both** gates
+pass, and the rule has to name its fields with their vocabularies, because
+`negotiable` is a member of `PriceStatus` *and* a member of `price_kind` and
+the same word means two different things:
 
     price_status ∈ {display_confirmed, …}     AND     price_kind == cash
 

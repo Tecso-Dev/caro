@@ -7,7 +7,8 @@ import {
   type Fault, type ListingResponse, type ScoredItem,
 } from '@/lib/api';
 import {
-  NOT_A_CAR_FA, classLabel, compact, conditionLabel, faNum, faPlain,
+  NOT_A_CAR_FA, askingPrice, classLabel, compact, conditionLabel, faNum,
+  faPlain,
   isAppraisalRow, isVehicleClass, modelLabel, odometer, toman, trimLabel,
 } from '@/lib/format';
 import TechDetail from '@/components/TechDetail';
@@ -338,8 +339,15 @@ export function ListingFile({
             {faPlain(listing.year_jalali)}
           </bdi>
         </h1>
+        {/* The price by the rule search and compare draw it with,
+            `askingPrice()`: a figure that is not a cash asking price is said
+            as what it is. With `toman()` here, the two run11 listings whose
+            price is «توافقی» everywhere else were «ثبت‌نشده» on this page. */}
         <p className="mt-2 mb-0 text-[15px] text-ink-2">
-          <span className="fig">{toman(listing.asking_price_toman)}</span>
+          <span className="fig">
+            {askingPrice(listing.asking_price_toman, listing.price_status,
+                         listing.price_kind)}
+          </span>
           <span className="text-ink-3"> · </span>
           <span className="fig">
             {odometer(listing.mileage_km, listing.mileage_status,
@@ -361,7 +369,9 @@ export function ListingFile({
           <F k="سال (شمسی)" v={faPlain(listing.year_jalali)} num />
           <F k="کارکرد" v={odometer(listing.mileage_km, listing.mileage_status,
                                      isAppraisalRow(listing))} num />
-          <F k="قیمت پیشنهادی" v={toman(listing.asking_price_toman)} num />
+          <F k="قیمت پیشنهادی" v={askingPrice(listing.asking_price_toman,
+                                             listing.price_status,
+                                             listing.price_kind)} num />
           <F k="رنگ" v={listing.color ?? 'ثبت‌نشده'} />
           <F k="وضعیت بدنه" v={conditionLabel(listing.condition)} />
           {/* Eight cells, not twelve. «گیربکس», «سوخت», «استان» and «نوع

@@ -697,6 +697,118 @@ if _c7 is not None:
               and [x.id for x in _search7.evidence] == ["o_ok"],
               f"apart {sorted(_apart)} · matched {[x.id for x in _search7.evidence]}")
 
+
+# ---------------------------------------------------------------------------
+print("\n8 — the car page says a price the way search and compare do")
+# ---------------------------------------------------------------------------
+# FIELD_PROVENANCE.md's rule for a price — `price_kind` cash and a
+# `price_status` that is not unusable, or the figure is not an asking price —
+# is `askingPrice()` in lib/format.ts. Search and compare drew with it; the
+# car page drew `toman()`, so on run11 its heading and its «قیمت پیشنهادی»
+# cell said «ثبت‌نشده» for the two listings search and compare call
+# «توافقی». Drawn here: six listings, one for each kind of price, served from
+# a temporary artifact the way the API sends them; an appraisal row, which
+# carries neither field; and run11's own «توافقی» listings beside a cash one.
+# Both places must say exactly the expected thing, and an amount that is not
+# an asking price must be nowhere on the page.
+_P8 = [   # id, kind, status, amount, what both places say
+    ("p_cash", "cash", "display_confirmed", 500_000_000, "amount"),
+    ("p_so", "cash", "structured_only", 450_000_000, "amount"),
+    ("p_neg", "negotiable", "absent", None, ("kind", "negotiable")),
+    ("p_fin", "financing_total", "display_confirmed", 900_000_000,
+     ("kind", "financing_total")),
+    ("p_amb", "cash", "ambiguous", 500_000_000, ("status", "ambiguous")),
+    ("p_abs", "absent", "absent", None, ("kind", "absent")),
+]
+_rows8 = []
+for _i, _k, _s, _a, _ in _P8:
+    _r = {"listing_id": _i, "product_class": "vehicle", "price_kind": _k,
+          "price_status": _s, "year_jalali": 1398, "mileage_km": 90_000,
+          "mileage_status": "plausible", "make": "peugeot", "model": "206",
+          "trim": "TU5"}
+    if _a is not None:
+        _r["asking_price_toman"] = _a
+    _rows8.append(_r)
+
+with tempfile.TemporaryDirectory() as d:
+    (Path(d) / f"{RUN}.json").write_text(json.dumps(
+        {"schema": SCHEMA, "run_id": RUN, "source": "bama.ir",
+         "collected_on": "2026-10-06", "listings": _rows8},
+        ensure_ascii=False), encoding="utf-8")
+    with serving(Path(d)):
+        _built8 = [(i, api.listing(i)) for i, *_ in _P8]
+
+_L11 = json.loads(ART.read_text(encoding="utf-8"))["listings"]
+_neg11 = sorted(x["listing_id"] for x in _L11
+                if x.get("product_class") == "vehicle"
+                and x.get("price_kind") == "negotiable")
+_cash11 = next(x for x in _L11 if x.get("product_class") == "vehicle"
+               and x.get("price_kind") == "cash"
+               and x.get("price_status") == "display_confirmed"
+               and x.get("asking_price_toman"))
+with serving(ART.parent):
+    _run8 = [(i, api.listing(i)) for i in _neg11 + [_cash11["listing_id"]]]
+
+check("the API sends each built listing's price fields as the artifact "
+      "holds them",
+      all(r.listing is not None
+          and (r.listing.price_kind, r.listing.price_status,
+               r.listing.asking_price_toman) == (k, s, a)
+          for (_, r), (_i, k, s, a, _w) in zip(_built8, _P8)),
+      str([(r.listing.price_kind, r.listing.price_status,
+            r.listing.asking_price_toman) if r.listing else None
+           for _, r in _built8]))
+check("run11 holds «توافقی» listings to draw, and a cash one",
+      len(_neg11) > 0, "nothing to draw — said, not passed")
+
+_row8 = {"id": "p_row", "url": "", "model_key": "peugeot 206 TU5",
+         "make": "peugeot", "model": "206", "trim": "TU5",
+         "year_jalali": 1398, "mileage_km": 90_000,
+         "asking_price_toman": 500_000_000, "product_class": "vehicle",
+         "price_status": None, "price_kind": None, "mileage_status": None}
+_props8 = ([{"id": i, "listing": as_json(r.listing), "corpus": as_json(r.corpus),
+             "scored": None, "refused": REFUSED} for i, r in _built8]
+           + [{"id": "p_row", "listing": _row8,
+               "corpus": as_json(_built8[0][1].corpus), "scored": None,
+               "refused": REFUSED}]
+           + [{"id": i, "listing": as_json(r.listing),
+               "corpus": as_json(r.corpus), "scored": None,
+               "refused": REFUSED} for i, r in _run8])
+_out8, why = node({"component": "components/CarDetail.tsx",
+                   "export": "ListingFile", "props": _props8,
+                   "consts": {"module": "lib/format.ts",
+                              "names": ["PRICE_KIND_FA", "PRICE_STATUS_FA"]}})
+check("the car file could be drawn for each", _out8 is not None, why)
+if _out8 is not None:
+    _KIND8 = _out8["consts"]["PRICE_KIND_FA"]
+    _STAT8 = _out8["consts"]["PRICE_STATUS_FA"]
+
+    def _toman8(a):
+        return f"{a:,}".replace(",", "٬").translate(_FA) + " تومان"
+
+    _cases8 = ([(i, a, w) for i, _k, _s, a, w in _P8]
+               + [("p_row", 500_000_000, "amount")]
+               + [(i, None, ("kind", "negotiable")) for i in _neg11]
+               + [(_cash11["listing_id"], _cash11["asking_price_toman"],
+                   "amount")])
+    for (_i, _a, _w), _html in zip(_cases8, _out8["markup"]):
+        _want = (_toman8(_a) if _w == "amount"
+                 else (_KIND8 if _w[0] == "kind" else _STAT8)[_w[1]])
+        _head = re.search(r'class="mt-2 mb-0[^"]*"><span class="fig">(.*?)'
+                          r'</span>', _html, re.S)
+        _cell = re.search(r"<dt[^>]*>قیمت پیشنهادی</dt><dd[^>]*>(.*?)</dd>",
+                          _html, re.S)
+        _got = [_text(m.group(1)).strip() if m else None
+                for m in (_head, _cell)]
+        _shown = (_a is not None and _w != "amount"
+                  and _toman8(_a).split(" ")[0] in _text(_html))
+        check(f"  {_i} → «{_want}» in the heading and under «قیمت پیشنهادی»"
+              + ("" if _w == "amount" or _a is None
+                 else ", its amount nowhere"),
+              _got == [_want, _want] and not _shown,
+              f"heading {_got[0]!r} · cell {_got[1]!r}"
+              + (" · the amount is on the page" if _shown else ""))
+
 print()
 if FAILS:
     print(f"FAILED ({len(FAILS)}): " + ", ".join(FAILS))

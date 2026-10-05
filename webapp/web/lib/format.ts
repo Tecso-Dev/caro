@@ -75,7 +75,8 @@ export const UNCHECKED_FA: Record<ConstraintKey, string> = {
   repaint: 'وضعیت رنگ بدنه ثبت‌نشده',
 };
 
-/** The rule `docs/FIELD_PROVENANCE.md` states for a price on a card:
+/** The rule `docs/FIELD_PROVENANCE.md` states for a price on a card and
+ *  on the car page:
  *
  *      price_status ∉ PRICE_STATUS_UNUSABLE   AND   price_kind === 'cash'
  *
