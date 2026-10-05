@@ -3661,3 +3661,133 @@ said above.
 keeps what is written would be a decision of its own. Deployments stay manual
 while the repository is not connected. And compare's gated branch stays
 where D63 left it, blocked by D43.
+
+## D65 — A listing is a match only where every constraint stated was checked
+
+D60 and D61 recorded it and left it open. On a corpus no estimator has
+cleared, search answers from the listings directly, and its filter compared a
+listing's price, year and odometer with the buyer's budget, year and mileage
+only when the listing carried the value. A missing value passed.
+
+**Measured first,** on run11, with the five examples under the search box at
+the k=8 the results page asks for. Of the 36 rows drawn as
+«آگهی‌های منطبق», 3 were there only because a value was missing: two of the
+four answering «پراید زیر ۳۰۰ میلیون» — both «توافقی», and both accidents —
+and one of the eight answering the Quik example, which has no odometer.
+Across every match rather than the rows drawn, each of the three budget
+examples held 2 such listings and the Quik example 2. Which of them were
+drawn was decided by the corpus's order, not by anything the buyer said.
+
+**The decision.** A constraint has three answers for a listing — met,
+broken, unknown — and a listing is a match only when every constraint the
+buyer stated is met (`bb9ec55`, `webapp/api/constraints.py`). One that
+breaks any is left out. One that breaks none and lacks a value for some is
+shown apart, saying which, in a field of its own, `evidence_unchecked`. Each
+list is the first k of its kind and each has a total, so a page can say how
+many there are in all. The budget is checked against the figure the card
+draws as an asking price — the rule of `askingPrice()` — so a financing total
+is unknown to it; run11 holds no such figure.
+
+Leaving the unknown out was the other choice, and it was measured: 56, 2, 51,
+69 and 7 matches, and nothing said about the listings removed. A count of
+them was the third. Shown apart, a listing can be opened from its row; a
+count cannot. And with the matches first, an unknown no longer takes the
+place of one: the first row answering «پراید زیر ۳۰۰ میلیون» had been a
+listing with no price.
+
+**The red lines came with it** (`0aa8e07`). The roadmap item named budget,
+year and mileage. But the parser also records four red lines, the intent
+panel prints them under «خط قرمز» as understood, and the filter never read
+them — so the table apart would have drawn the family example's two
+accidents under «تصادفی نباشه». Each is judged from the one field that
+answers it, silence unknown:
+
+    accident           body condition `accident` breaks it — the ranked
+                       path's own rule
+    unclear_documents  a document issue breaks it — likewise
+    manual             a manual gearbox breaks it, an automatic one meets
+                       it; with none recorded, a trim word that is itself
+                       one of the two answers it, and nothing else in a
+                       trim does — `manualr` stays the artefact format.ts
+                       calls it
+    repaint            only `intact` meets «بدون رنگ»; every rung above
+                       it on the severity ladder breaks it
+
+The last two are judgements, written down so that they can be disagreed
+with: a replaced panel is read as not a body without paint, and a trim is
+read for a gearbox only where it says the word.
+
+**On run11, after:**
+
+                                     before   matched   apart   left out
+    «پراید»                              56        56       0          0
+    «پراید زیر ۳۰۰ میلیون»                 4         2       2          0
+    the Snapp example                     53        51       2          0
+    the family example                    71        67       2          2
+    the Quik example                       9         0       8          1
+
+The family example's two left out are the two accidents, which had been
+passing for want of a price. The Quik example matches nothing: run11 records
+no gearbox, so whether any of its listings is automatic is not known, and
+one is left out because its trim is the word `manual`. That is the honest
+answer to «اتومات» on this corpus, and the chip that asks it is kept.
+
+**The page** (`6df2840`) draws two tables from `SearchEvidence.tsx`, a pure
+view: the matches under the heading they always had, and the listings apart
+under one of their own, the cell beside each name saying what is not
+recorded — beside it, because a phone shows a table's first columns and
+scrolls for the rest. A table says «۸ از ۵۱» when it is not all of them, and
+the header counts matches and listings apart instead of rows drawn. And
+reweight bounds k as search does (`e8602d7`): unbounded, «پراید» answered
+k=0 with 200 and an empty table, and k=-1 with every match but the last.
+
+**How it is held.** Contract §13 holds the rule on listings built for it,
+then runs every example on run11 and reads each row's values from the
+ARTIFACT by id: no match lacks a value, every row apart names exactly what
+it lacks, nothing shown breaks a constraint, and both totals equal the
+counts in the artifact — not the payload's own lists, which a total that
+reported only the rows sent would agree with. §14 sends k over HTTP to both
+endpoints. Screens §5 draws the view with search's real answers for the five
+examples and three more queries, and checks which table each row lands in
+and what it says is missing; its reach checks fail if no answer holds
+listings apart, more of either kind than a table holds, or nothing matching.
+The corpus suite's surface guard reads `SearchEvidence.tsx`; `unchecked` is
+the API's verdict on the query, not a field FIELD_PROVENANCE.md judges.
+
+**Measured.** Eleven mutations, each count written down before its run:
+
+                                                     predicted      red
+                                                     ctr   scr    ctr   scr
+    as committed                                       0     0      0     0
+    a missing price counts as met — the old filter     7     0      7     0
+    any unknown leaves the listing out                16     3     16     3
+    the red lines not judged                          13     1     13     1
+    the budget reads the raw amount                    2     0      2     0
+    «بدون رنگ»: a replaced panel, an accident unknown  1     0      1     0
+    the trim not read for a gearbox                    4     0      4     0
+    each total counts only the rows sent               3     1      3     2
+    reweight takes any k again                         3     0      3     0
+    the matched table also draws the rows apart        0     4      0     4
+    the cell saying what is missing drawn empty        0     6      0     6
+
+Ten exactly. The totals mutation cut both totals and the prediction counted
+the matches' alone; the second red is the table apart no longer saying it is
+cut. No other suite went red in any run. Each commit is green on its own —
+1757, 1766, 1825, 1830 and 1830 assertions across 15 suites — with the web
+build passing; the chain was applied to a fresh clone before it was sent;
+and the search page was looked at, built, against the real API, at desktop
+and phone width, with no horizontal scroll.
+
+**Not measured.** The deployed site. The deploy of `bef900e` was refused on
+2026-10-05 — the CLI, now 62.2.0, answered «Error: Not authorized» — and the
+deploy clone had been at `a636ea6` until it pulled this chain, so none of it
+is on the site yet.
+
+**What this does not settle.** The ranked path keeps its own red lines: it
+has no rule for `manual` or `repaint`, and lets an unknown through all four;
+it ranks nothing on a real corpus yet (D43). The intent panel still lists
+text the parser acted on under «نفهمیدیم», and prints a raw use-case token,
+on two of the five examples. «اتومات» stays unanswerable until a corpus
+carries a gearbox. And how an odometer's status travels with the number is
+still D61's question: a suspicious odometer is checked like a plausible one.
+All four are in docs/ROADMAP.md.
