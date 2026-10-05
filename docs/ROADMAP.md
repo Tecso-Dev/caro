@@ -35,18 +35,7 @@ intent → explain the best choice**.
    shortlist, the relaxation ladder, and the comparison with price-sort. No
    commit makes the ranked path evidence-aware before then.
 
-2. **The car page draws a price without the rule search and compare use.**
-   `ListingFile` in `CarDetail.tsx` draws its heading and its «قیمت
-   پیشنهادی» cell with `toman()`; search and compare draw the same field
-   with `askingPrice()`, the rule FIELD_PROVENANCE.md states for a price,
-   and the car page is sent both fields that rule reads (`detail=yes`).
-   Measured on 2026-10-05: on run11 the two surfaces disagree on 2 of 75
-   cars — the two whose price is «توافقی» and carries no amount are drawn
-   «ثبت‌نشده» in both places on their car page, and «توافقی» in search and
-   compare. A financing total or an unusable extraction would be drawn on
-   the car page as the asking price; run11 carries neither. Not decided.
-
-3. **A red ranking check hides three suites' verdicts** (D68). The API
+2. **A red ranking check hides three suites' verdicts** (D68). The API
    builds SYNTHETIC by importing `tests/test_ranking.py` (`_synthetic` in
    `webapp/api/corpus.py`), and that suite raises SystemExit when a check
    is red. So a red ranking check also stops the contract, screens and
@@ -56,7 +45,7 @@ intent → explain the best choice**.
    The same import runs in the API process whenever it serves SYNTHETIC.
    Not decided.
 
-4. **Two rules nothing holds** (D68). `ELSEWHERE` is checked only against
+3. **Two rules nothing holds** (D68). `ELSEWHERE` is checked only against
    itself, so pointing it at another repository turns nothing red; and no
    query the suites parse needs `unparsed`'s decimal rule, because every
    point in them sits inside an amount the parser acted on. Measured by
