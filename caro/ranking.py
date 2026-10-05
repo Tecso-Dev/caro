@@ -150,6 +150,21 @@ USE_CASE_CUES: dict[str, tuple[str, ...]] = {
     "cargo": ("بار", "وانت", "باربری"),
 }
 
+# What each use case is called on the page. The intent panel prints these
+# names under «کاربرد» (USE_CASE_FA in components/IntentPanel.tsx), and the
+# assumption that says the weights started from a use case's defaults names it
+# the same way. It used to print the key: «ride_hailing» inside a Persian
+# sentence, the bare-token failure the panel's own risk labels once had. The
+# contract suite holds the two maps equal, member for member.
+USE_CASE_FA: dict[str, str] = {
+    "ride_hailing": "مسافرکشی (اسنپ/تپسی)",
+    "family_first_car": "ماشین اول خانواده",
+    "commute": "رفت‌وآمد شهری",
+    "resale_flip": "خرید برای فروش مجدد",
+    "cargo": "باربری",
+    "unspecified": "مشخص نشده",
+}
+
 DEAL_BREAKER_CUES: dict[str, tuple[str, ...]] = {
     "accident": ("تصادفی نباشه", "تصادفی نباش", "بدون تصادف", "سالم باشه"),
     "repaint": ("بدون رنگ", "رنگ نداشته باشه", "بی رنگ"),
@@ -340,7 +355,8 @@ class RuleIntentParser:
             w = replace(w, running_cost=w.running_cost + 0.10)
         if use_case != "unspecified":
             assumptions.append(
-                f"وزن‌ها از پیش‌فرض «{use_case}» شروع شد — قابل تغییر است")
+                f"وزن‌ها از پیش‌فرض «{USE_CASE_FA.get(use_case, use_case)}» "
+                "شروع شد — قابل تغییر است")
 
         rest = q
         for c in consumed:

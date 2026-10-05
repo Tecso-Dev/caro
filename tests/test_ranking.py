@@ -17,6 +17,7 @@ from caro.ranking import (
     diversify, normalize_fa, parse_amount, retrieve, winrate_vs_price_sort,
     LEDGER_INPUTS, CONDITION_RISK, IMPUTED_MARK, decision_ledger,
     features_from_listing, risk_from_condition, _passes,
+    USE_CASE_CUES, USE_CASE_FA,
 )
 
 FAILS: list[str] = []
@@ -137,6 +138,18 @@ check("accident is a deal-breaker", "accident" in s3.deal_breakers)
 check("family buyer is risk averse", s3.risk_profile == "risk_averse")
 check("risk outweighs value for a family",
       s3.weights.risk > s3.weights.value)
+
+# An assumption names a use case the way the page does. It printed the key —
+# «وزن‌ها از پیش‌فرض «ride_hailing» شروع شد» — on two of the five examples
+# under the search box.
+check("every use case the parser can choose has a Persian name",
+      set(USE_CASE_CUES) | {"unspecified"} <= set(USE_CASE_FA),
+      f"no name: {sorted(set(USE_CASE_CUES) | {'unspecified'} - set(USE_CASE_FA))}")
+for _sx, _uc in ((s2, "ride_hailing"), (s3, "family_first_car")):
+    _named = [a for a in _sx.assumptions if "از پیش‌فرض" in a]
+    check(f"  the weights' assumption says «{USE_CASE_FA[_uc]}», not «{_uc}»",
+          bool(_named) and all(USE_CASE_FA[_uc] in a and _uc not in a
+                               for a in _named), str(_named))
 
 s4 = P.parse("مدل ۹۸ به بالا، کارکرد زیر ۹۰ هزار")
 check("2-digit year expands to 1398", s4.year_min == 1398, str(s4.year_min))

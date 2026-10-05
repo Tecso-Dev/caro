@@ -570,6 +570,21 @@ check("PRICE_STATUS_UNUSABLE ≡ quality.UNUSABLE_PRICE, member for member",
       f"missing in TS: {sorted(_py_unusable - _ts_unusable) or DASH} · "
       f"not in Python: {sorted(_ts_unusable - _py_unusable) or DASH}")
 
+# The use-case names, the same way. The intent panel prints them under
+# «کاربرد», and the parser names them inside an assumption on the same panel:
+# two copies of one vocabulary, held to each other name for name, so the
+# panel cannot call a use case one thing and its assumption another.
+from caro.ranking import USE_CASE_FA as _PY_UC                    # noqa: E402
+
+_ip = (ROOT / "webapp/web/components/IntentPanel.tsx").read_text(
+    encoding="utf-8")
+_uc = re.search(r"const USE_CASE_FA: Record<string, string> = \{(.*?)\};",
+                _ip, re.S)
+_ts_uc = dict(re.findall(r"(\w+):\s*'([^']*)'", _uc.group(1))) if _uc else {}
+check("IntentPanel's USE_CASE_FA ≡ caro.ranking.USE_CASE_FA, name for name",
+      bool(_ts_uc) and _ts_uc == _PY_UC,
+      f"differ on: {sorted(k for k in set(_ts_uc) | set(_PY_UC) if _ts_uc.get(k) != _PY_UC.get(k))}")
+
 
 # ---------------------------------------------------------------------------
 print("\n8 — every example on the search box still finds something")
