@@ -544,7 +544,8 @@ def ts_union(name: str) -> set[str] | None:
 
 for ts_name, literal in (("CorpusKind", schemas.CorpusKind),
                          ("FaultCode", schemas.FaultCode),
-                         ("ConstraintKey", schemas.ConstraintKey)):
+                         ("ConstraintKey", schemas.ConstraintKey),
+                         ("MileageStatus", schemas.MileageStatus)):
     got = ts_union(ts_name)
     want = set(typing.get_args(literal))
     if got is None:
@@ -569,6 +570,17 @@ check("PRICE_STATUS_UNUSABLE ≡ quality.UNUSABLE_PRICE, member for member",
       _ts_unusable == _py_unusable,
       f"missing in TS: {sorted(_py_unusable - _ts_unusable) or DASH} · "
       f"not in Python: {sorted(_ts_unusable - _py_unusable) or DASH}")
+
+# The odometer's statuses are the quality layer's own, not a third copy of
+# them: a status the parser can write and the payload cannot carry would
+# fail validation on the way out, as a 500.
+from caro.ingest.quality import Validity                          # noqa: E402
+
+check("MileageStatus ≡ quality.Validity, member for member",
+      set(typing.get_args(schemas.MileageStatus))
+      == {v.value for v in Validity},
+      f"{sorted(typing.get_args(schemas.MileageStatus))} vs "
+      f"{sorted(v.value for v in Validity)}")
 
 # The use-case names, the same way. The intent panel prints them under
 # «کاربرد», and the parser names them inside an assumption on the same panel:
@@ -690,6 +702,16 @@ else:
         print("    the corpus holds no non-vehicle, so the distinguishing "
               "case has nothing to run on — said, not passed")
 
+    # The odometer's status travels with its number (FIELD_PROVENANCE.md) only
+    # if the artifact holds one beside every number. run11 does; a corpus that
+    # did not would hand the payload a number with nothing to grade it.
+    _bare = sorted(i for i, r in _art.items()
+                   if r.get("mileage_km") is not None
+                   and r.get("mileage_status") is None)
+    check(f"  every odometer reading in the artifact states its status "
+          f"({sum(1 for r in _art.values() if r.get('mileage_km') is not None)})",
+          not _bare, f"a number with no status: {_bare}")
+
     _was, _was_run = corpus_reader.CORPORA, os.environ.get(corpus_mod.RUN_ENV)
     corpus_reader.CORPORA = _art_path.parent
     os.environ.pop(corpus_mod.RUN_ENV, None)
@@ -713,10 +735,12 @@ else:
             # client applies to None. Both paths build a row through
             # `_listing_evidence`, so this follows the value from the
             # artifact to the payload rather than testing one endpoint.
-            _want = {k: _art[_id].get(k) for k in ("price_status", "price_kind")}
+            _want = {k: _art[_id].get(k) for k in ("price_status", "price_kind",
+                                                    "mileage_status")}
             _sent = {k: getattr(_resp.listing, k, None) for k in _want}
-            check(f"  and the price rule's fields for {_id} "
-                  f"({_want['price_status']} / {_want['price_kind']})",
+            check(f"  and the fields the card's rules read for {_id} "
+                  f"({_want['price_status']} / {_want['price_kind']} / "
+                  f"{_want['mileage_status']})",
                   _sent == _want, f"the renderer receives {_sent}")
     finally:
         corpus_reader.CORPORA = _was

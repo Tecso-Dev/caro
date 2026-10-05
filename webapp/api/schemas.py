@@ -142,6 +142,14 @@ class Envelope(BaseModel):
 # Payload pieces
 # ---------------------------------------------------------------------------
 
+# What an odometer reading is worth, as `caro.ingest.quality.Validity` grades
+# it (D21, D22): `plausible`, a reading; `unknown`, no number; `suspicious`, a
+# number the seller should not be believed on — the 999999 placeholder, or
+# under 1,500 km a year on a car three or more years old; `impossible`, one
+# no passenger car can have. The contract suite holds this to Validity.
+MileageStatus = Literal["plausible", "suspicious", "impossible", "unknown"]
+
+
 class EvidenceItem(BaseModel):
     """A listing as parsed. D50: there is no field here for an estimate.
 
@@ -177,6 +185,12 @@ class EvidenceItem(BaseModel):
     # Null on an appraisal Row, which carries neither: see `_row_evidence`.
     price_status: str | None = None
     price_kind: str | None = None
+    # The odometer's status, beside the number it grades. FIELD_PROVENANCE.md:
+    # it "travels with the number or neither renders", and a card cannot draw
+    # a number with its status when it is sent the number alone. Null on an
+    # appraisal Row, which carries none: a real one exists only after
+    # eligibility refused every odometer but a plausible one.
+    mileage_status: MileageStatus | None = None
 
 
 # The constraints a listing can fail to be checked against, by the names

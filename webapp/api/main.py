@@ -178,7 +178,8 @@ def _listing_evidence(x) -> EvidenceItem:
         condition=x.body_condition, province=x.city,
         seller_type=getattr(x, "seller_type", None),
         product_class=x.product_class,
-        price_status=x.price_status, price_kind=x.price_kind)
+        price_status=x.price_status, price_kind=x.price_kind,
+        mileage_status=x.mileage_status)
 
 
 def _scored(s, rank: int) -> ScoredItem:

@@ -113,6 +113,11 @@ export interface Envelope {
  * Payload
  * ------------------------------------------------------------------ */
 
+/** What an odometer reading is worth, as `caro.ingest.quality.Validity`
+ *  grades it (D21, D22). The contract suite holds this union to it, member
+ *  for member. */
+export type MileageStatus = 'plausible' | 'suspicious' | 'impossible' | 'unknown';
+
 /** A listing as parsed. There is no estimate field here, by design (D50):
  *  a refusal returns these, so a refusal carrying an estimate cannot be
  *  constructed on either side of the wire. */
@@ -141,6 +146,10 @@ export interface EvidenceItem {
      not need to: eligibility applied both before it could be scored. */
   price_status: string | null;
   price_kind: string | null;
+  /* The odometer's status, beside the number it grades: FIELD_PROVENANCE.md
+     says it travels with the number or neither renders. Null on an
+     appraisal row, whose odometer eligibility already checked. */
+  mileage_status: MileageStatus | null;
 }
 
 /** The constraints a listing can fail to be checked against — the names
