@@ -18,7 +18,7 @@ intent → explain the best choice**.
 | normalize messy data | ✅ **built.** Persian numerals and amount words, toman and rial, mileage, Jalali and Gregorian years, make/model aliases, trim, gearbox, fuel, colour, and body condition from free text. |
 | rank by user intent | ⚠️ **built, not served on real data.** `caro/ranking.py` parses Persian intent, filters, relaxes and scores. No estimator has cleared the acceptance gate on a real corpus (D43), so on run11 the site shows evidence, not a ranking. |
 | explain the best choice | ✅ **built.** |
-| deployed | ✅ https://caro-rho.vercel.app — one Vercel project of two services (D64). |
+| deployed | ⚠️ **behind `main`.** https://caro-rho.vercel.app — one Vercel project of two services (D64) — serves `a636ea6`. The deploy after it was refused; see «Deploying» below. |
 
 ## Next — small, open, recorded
 
@@ -89,9 +89,11 @@ intent → explain the best choice**.
 4. **Authenticator-based login.** Not built. The admin view opens today with
    `CARO_ADMIN_TOKEN`, and with the token unset it does not open at all.
 
-5. **Deploy on push.** Not connected. The Vercel GitHub App has to be
-   installed where the repository now lives, `Tecso-Dev`. Until then each
-   deployment is a pull and a `vercel deploy --prod` by hand.
+5. **Deploying.** Neither way works today. On push: not connected — the
+   Vercel GitHub App has to be installed where the repository now lives,
+   `Tecso-Dev`. By hand: refused on 2026-10-05, the CLI (62.2.0) answering
+   «Error: Not authorized» in the deploy clone. Until one of them works the
+   site serves `a636ea6`, and nothing D65 records is on it.
 
 6. **Calibrate the confidence policy.** The bands are judgement. With real
    data they should be revisited against observed decision quality and
