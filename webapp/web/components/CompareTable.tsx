@@ -9,7 +9,7 @@ import {
 } from '@/lib/api';
 import {
   NOT_A_CAR_FA, askingPrice, classLabel, faNum, faPlain, fixed,
-  isVehicleClass, km, modelLabel, toman,
+  isAppraisalRow, isVehicleClass, km, modelLabel, odometer, toman,
 } from '@/lib/format';
 import TechDetail from '@/components/TechDetail';
 
@@ -89,7 +89,7 @@ export function EvidenceRows({ evidence }: { evidence: EvidenceItem[] }) {
                 {faPlain(r.year_jalali)}
               </td>
               <td className="px-4 py-2.5 border-b border-line fig">
-                {km(r.mileage_km)}
+                {odometer(r.mileage_km, r.mileage_status, isAppraisalRow(r))}
               </td>
               <td className="px-4 py-2.5 border-b border-line fig">
                 {askingPrice(r.asking_price_toman,

@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import type { ScoredItem } from '@/lib/api';
-import { askingPrice, compact, faNum, faPlain, km, modelLabel, toman }
-  from '@/lib/format';
+import {
+  askingPrice, compact, faNum, faPlain, modelLabel, odometer, toman,
+} from '@/lib/format';
 import TermBars from '@/components/TermBars';
 
 /* One car, with the whole arithmetic on the card.
@@ -94,7 +95,9 @@ export default function ListingCard({
 
       {/* facts ---------------------------------------------------------- */}
       <dl className="mt-4 m-0 flex flex-wrap gap-x-7 gap-y-1 text-[13px]">
-        <Fact k="کارکرد" v={km(item.mileage_km)} />
+        {/* A scored row carries no grade: on a real corpus eligibility
+            required a plausible odometer before it was scored. */}
+        <Fact k="کارکرد" v={odometer(item.mileage_km, item.mileage_status, true)} />
         <Fact k="مدل" v={faPlain(item.year_jalali)} />
         {typeof item.features.risk === 'number' && (
           <Fact k="ریسک برآوردشده"

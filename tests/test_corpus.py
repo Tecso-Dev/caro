@@ -898,6 +898,20 @@ if _doc_rows:
               _PRICE_GATES <= _ts_evidence,
               f"not on EvidenceItem: {sorted(_PRICE_GATES - _ts_evidence)}")
 
+    # The odometer has a rule of its own in the same table: `mileage_status`
+    # "travels with the number or neither renders". That one CAN be read off
+    # a surface — a component that reads the number and never its grade
+    # draws a reading it cannot stand behind — so it is asserted on every
+    # surface that reads `mileage_km`, the detail page included.
+    for _name, _var in [(_RENDERER.name, "listing")] + list(_CARDS):
+        _path = ROOT / "webapp" / "web" / "components" / _name
+        _u = _consumed(_path, _var)
+        if "mileage_km" not in _u:
+            continue
+        check(f"  {_name} reads the odometer's grade wherever it reads the "
+              f"number", "mileage_status" in _u,
+              "it reads mileage_km and never mileage_status")
+
 
 print()
 if FAILS:

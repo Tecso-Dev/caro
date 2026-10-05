@@ -1,7 +1,8 @@
 """What a reader is shown: a listing that is not a car, the car page in each
 state its two requests can leave it in, a year that stays apart from the name
 it follows, search's matches kept apart from listings that could not be
-checked, and where the closed inbox sends a reader.
+checked, where the closed inbox sends a reader, and an odometer drawn only
+with its grade.
 
 Run: PYTHONPATH=. python3 tests/test_screens.py
 
@@ -585,6 +586,116 @@ if _iout is not None:
           and _iout["consts"]["ACCOUNT_FA"] in _text(_ihtml),
           "the sentence is not on the page")
 
+
+
+# ---------------------------------------------------------------------------
+print("\n7 — an odometer is drawn with its grade, on every surface")
+# ---------------------------------------------------------------------------
+# The API sends `mileage_status` beside `mileage_km`, and the constraint lets
+# only a plausible reading decide (test_api_contract §13, §15). This is the
+# page's half: search's two tables, the car file and compare's evidence rows,
+# each drawn with what the API returns for the same eight cases contract §15
+# sends — from a temporary artifact, because run11 holds no suspicious or
+# impossible reading. A number is drawn only where it is plausible; every
+# other grade is said in its place, in one of the phrases that keep D22's
+# three cases apart.
+_ODO7 = [   # id, odometer, grade (None: the record states none), year
+    ("o_ok", 100_000, "plausible", 1398), ("o_hi", 200_000, "plausible", 1398),
+    ("o_none", None, "unknown", 1398), ("o_low", 1, "suspicious", 1385),
+    ("o_ph", 999_990, "suspicious", 1398), ("o_neg", -5_000, "impossible", 1398),
+    ("o_huge", 2_000_000, "impossible", 1398), ("o_bare", 90_000, None, 1398),
+]
+_rows7 = []
+for _i, _km, _ms, _y in _ODO7:
+    _r = {"listing_id": _i, "product_class": "vehicle",
+          "asking_price_toman": 500_000_000, "price_kind": "cash",
+          "price_status": "display_confirmed", "year_jalali": _y,
+          "make": "peugeot", "model": "206", "trim": "TU5"}
+    if _km is not None:
+        _r["mileage_km"] = _km
+    if _ms is not None:
+        _r["mileage_status"] = _ms
+    _rows7.append(_r)
+
+with tempfile.TemporaryDirectory() as d:
+    (Path(d) / f"{RUN}.json").write_text(json.dumps(
+        {"schema": SCHEMA, "run_id": RUN, "source": "bama.ir",
+         "collected_on": "2026-10-05", "listings": _rows7},
+        ensure_ascii=False), encoding="utf-8")
+    with serving(Path(d)):
+        _search7 = api.search(q="۲۰۶ کم‌کارکرد", k=24)
+        _detail7 = [(i, api.listing(i)) for i, *_ in _ODO7]
+        _cmp7 = api.compare(schemas.CompareRequest(
+            ids=[i for i, *_ in _ODO7], q="۲۰۶"))
+
+_c7, why = node({"consts": {"module": "lib/format.ts",
+                            "names": ["ODOMETER_FA", "ODOMETER_UNGRADED_FA"]}})
+check("the phrases could be read", _c7 is not None, why)
+if _c7 is not None:
+    _FA7 = _c7["consts"]["ODOMETER_FA"]
+    _phr = {"unknown": _FA7["unknown"], "suspicious": _FA7["suspicious"],
+            "impossible": _FA7["impossible"],
+            None: _c7["consts"]["ODOMETER_UNGRADED_FA"]}
+    check("  three grades, three different phrases, and a fourth for none",
+          len(set(_phr.values())) == 4, str(_phr))
+
+    def _expect7(km, ms):
+        """Exactly what goes where the odometer is drawn: the number where
+        the grade is plausible, the grade's phrase everywhere else."""
+        if ms == "plausible":
+            return (f"{km:,}".replace(",", "٬").translate(_FA) + " کیلومتر")
+        return _phr[ms]
+
+    def _cells(row_html):
+        return [_text(c).strip()
+                for c in re.findall(r"<td[^>]*>(.*?)</td>", row_html, re.S)]
+
+    _sout, why = node({"component": "components/SearchEvidence.tsx",
+                       "export": "SearchEvidence",
+                       "props": [{"data": as_json(_search7)}]})
+    _fout, why2 = render("components/CarDetail.tsx", "ListingFile", [
+        {"id": i, "listing": as_json(r.listing), "corpus": as_json(r.corpus),
+         "scored": None, "refused": REFUSED} for i, r in _detail7])
+    _eout, why3 = render("components/CompareTable.tsx", "EvidenceRows",
+                         [{"evidence": [as_json(x) for x in _cmp7.evidence]}])
+    check("search, the car file and compare could be drawn",
+          None not in (_sout, _fout, _eout), why or why2 or why3)
+    if None not in (_sout, _fout, _eout):
+        _srows = _rows(_sout["markup"][0])
+        _erows = _rows(_eout["markup"][0])
+        for (_i, _km, _ms, _y), _fhtml in zip(_ODO7, _fout["markup"]):
+            _want = _expect7(_km, _ms)
+            _seen, _bad = [], []
+            if _i in _srows:
+                # A match: name, year, odometer, price, link. Held apart:
+                # name, why, year, odometer, price, link — and the why is the
+                # odometer's own grade, since the cap is all it was asked.
+                _c = _cells(_srows[_i])
+                _odo = _c[3] if len(_c) == 6 else _c[2]
+                _why = _c[1] if len(_c) == 6 else None
+                _seen.append("search")
+                if _odo != _want or (_why is not None and _why != _want):
+                    _bad.append(f"search: {_odo!r} / why {_why!r}")
+            _dd = re.search(r"<dt[^>]*>کارکرد</dt><dd[^>]*>(.*?)</dd>", _fhtml,
+                            re.S)
+            _seen.append("car file")
+            if (not _dd or _text(_dd.group(1)).strip() != _want
+                    or (_ms != "plausible" and "کیلومتر" in _text(_fhtml))):
+                _bad.append(f"car file: "
+                            f"{_text(_dd.group(1)).strip() if _dd else None!r}")
+            if _i in _erows:
+                _odo = _cells(_erows[_i])[2]
+                _seen.append("compare")
+                if _odo != _want:
+                    _bad.append(f"compare: {_odo!r}")
+            check(f"  {_i} ({_ms or 'no grade'}, {_km}) → «{_want}» on "
+                  f"{' · '.join(_seen)}", not _bad, "; ".join(_bad))
+        _apart = {x.id for x in _search7.evidence_unchecked}
+        check("  search holds every grade but plausible apart, and draws the "
+              "plausible one under the cap as its match",
+              _apart == {"o_none", "o_low", "o_ph", "o_neg", "o_huge", "o_bare"}
+              and [x.id for x in _search7.evidence] == ["o_ok"],
+              f"apart {sorted(_apart)} · matched {[x.id for x in _search7.evidence]}")
 
 print()
 if FAILS:

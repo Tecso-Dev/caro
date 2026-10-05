@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import type { EvidenceItem, SearchResponse, UncheckedItem } from '@/lib/api';
-import { UNCHECKED_FA, askingPrice, faNum, faPlain, km, modelLabel }
-  from '@/lib/format';
+import {
+  UNCHECKED_FA, askingPrice, faNum, faPlain, isAppraisalRow, modelLabel,
+  odometer, odometerWhy,
+} from '@/lib/format';
 
 /* The evidence a refusal can still show, in two tables that never mix.
  *
@@ -40,7 +42,9 @@ function Facts({ r }: { r: EvidenceItem }) {
   return (
     <>
       <td className={`${TD} fig`}>{faPlain(r.year_jalali)}</td>
-      <td className={`${TD} fig`}>{km(r.mileage_km)}</td>
+      <td className={`${TD} fig`}>
+        {odometer(r.mileage_km, r.mileage_status, isAppraisalRow(r))}
+      </td>
       <td className={`${TD} fig`}>
         {askingPrice(r.asking_price_toman, r.price_status, r.price_kind)}
       </td>
@@ -159,7 +163,9 @@ export function SearchEvidence({ data }: { data: Evidence }) {
               <tr key={r.id} data-listing={r.id}>
                 <Name r={r} />
                 <td className={`${TD} text-warn text-[12.5px]`}>
-                  {r.unchecked.map((k) => UNCHECKED_FA[k] ?? k).join('، ')}
+                  {r.unchecked.map((k) => (k === 'mileage'
+                    ? odometerWhy(r.mileage_km, r.mileage_status)
+                    : UNCHECKED_FA[k] ?? k)).join('، ')}
                 </td>
                 <Facts r={r} />
                 <FileLink id={r.id} />

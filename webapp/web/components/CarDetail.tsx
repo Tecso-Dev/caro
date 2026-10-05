@@ -8,7 +8,7 @@ import {
 } from '@/lib/api';
 import {
   NOT_A_CAR_FA, classLabel, compact, conditionLabel, faNum, faPlain,
-  isVehicleClass, km, modelLabel, toman, trimLabel,
+  isAppraisalRow, isVehicleClass, modelLabel, odometer, toman, trimLabel,
 } from '@/lib/format';
 import TechDetail from '@/components/TechDetail';
 import TermBars from '@/components/TermBars';
@@ -341,7 +341,10 @@ export function ListingFile({
         <p className="mt-2 mb-0 text-[15px] text-ink-2">
           <span className="fig">{toman(listing.asking_price_toman)}</span>
           <span className="text-ink-3"> · </span>
-          <span className="fig">{km(listing.mileage_km)}</span>
+          <span className="fig">
+            {odometer(listing.mileage_km, listing.mileage_status,
+                      isAppraisalRow(listing))}
+          </span>
         </p>
       </div>
 
@@ -356,7 +359,8 @@ export function ListingFile({
           <F k="مدل" v={listing.model ? modelLabel(listing.model) : '—'} />
           <F k="تیپ" v={trimLabel(listing.trim)} />
           <F k="سال (شمسی)" v={faPlain(listing.year_jalali)} num />
-          <F k="کارکرد" v={km(listing.mileage_km)} num />
+          <F k="کارکرد" v={odometer(listing.mileage_km, listing.mileage_status,
+                                     isAppraisalRow(listing))} num />
           <F k="قیمت پیشنهادی" v={toman(listing.asking_price_toman)} num />
           <F k="رنگ" v={listing.color ?? 'ثبت‌نشده'} />
           <F k="وضعیت بدنه" v={conditionLabel(listing.condition)} />

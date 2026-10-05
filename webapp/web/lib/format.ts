@@ -13,7 +13,10 @@
  *    different facts, and neither of them is zero.
  */
 
-import { PRICE_STATUS_UNUSABLE, type ConstraintKey } from '@/lib/api';
+import {
+  PRICE_STATUS_UNUSABLE, type ConstraintKey, type EvidenceItem,
+  type MileageStatus,
+} from '@/lib/api';
 
 const FA = new Intl.NumberFormat('fa-IR', { useGrouping: true });
 const FA_PLAIN = new Intl.NumberFormat('fa-IR', { useGrouping: false });
@@ -117,6 +120,61 @@ export function signed(n: number): string {
 export function km(n: number | null | undefined): string {
   if (n == null) return 'ثبت‌نشده';
   return `${faNum(n)} کیلومتر`;
+}
+
+/** An appraisal row carries no provenance fields at all — eligibility checked
+ *  them before it could be scored — and every listing carries at least its
+ *  price kind: corpus_reader records `absent` rather than nothing. The same
+ *  test `askingPrice()` makes. */
+export function isAppraisalRow(
+  r: Pick<EvidenceItem, 'price_status' | 'price_kind'>,
+): boolean {
+  return r.price_status == null && r.price_kind == null;
+}
+
+/* What an odometer reading is said as, by its grade (D21, D22). Three
+ * phrases, because D22 keeps three things apart: no number, a number the
+ * seller should not be believed on, and a number no car can have. Counting
+ * them together would hide all three. */
+export const ODOMETER_FA: Record<Exclude<MileageStatus, 'plausible'>, string> = {
+  unknown: 'کارکرد ثبت‌نشده',
+  suspicious: 'کارکرد مشکوک',
+  impossible: 'کارکرد ناممکن',
+};
+
+/* A listing whose record carries a number and no grade at all. Only an
+   artifact without the field can send one; the contract suite checks that
+   run11 does not. */
+export const ODOMETER_UNGRADED_FA = 'وضعیت کارکرد ثبت‌نشده';
+
+/** An odometer, drawn with the grade that travels with it. FIELD_PROVENANCE.md
+ *  says the status travels with the number or neither renders, so a number is
+ *  drawn only where its grade says it is a reading — `plausible` — or on an
+ *  appraisal row, which carries no grade: on a real corpus eligibility
+ *  required a plausible odometer before the row could be scored, and a
+ *  generated row has none to give. Any other grade is said in the number's
+ *  place. The number stays in the payload; the page does not draw what it
+ *  would not stand behind. */
+export function odometer(
+  n: number | null | undefined,
+  status: MileageStatus | null | undefined,
+  row: boolean,
+): string {
+  if (status === 'plausible' || (status == null && row)) return km(n);
+  if (status == null) return n == null ? ODOMETER_FA.unknown : ODOMETER_UNGRADED_FA;
+  return ODOMETER_FA[status];
+}
+
+/** Why a listing held apart could not be checked against an odometer cap:
+ *  which of the grades it carries. A plausible reading is judged, never held
+ *  apart on the odometer, so that branch is a fallback only. */
+export function odometerWhy(
+  n: number | null | undefined,
+  status: MileageStatus | null | undefined,
+): string {
+  if (status == null) return n == null ? ODOMETER_FA.unknown : ODOMETER_UNGRADED_FA;
+  if (status === 'plausible') return UNCHECKED_FA.mileage;
+  return ODOMETER_FA[status];
 }
 
 export function maybe(v: string | number | null | undefined): string {
