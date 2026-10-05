@@ -5,7 +5,7 @@ was recorded, and what comes first. An open item goes into code only after it
 has been measured; the measurement comes first and the decision is made on
 it, in its own commit.
 
-Last revised 2026-10-04.
+Last revised 2026-10-05.
 
 ## Where it stands against the brief
 
@@ -30,17 +30,23 @@ intent → explain the best choice**.
    decide where issues are written. If on `Tecso-Dev/caro`, turn Issues on
    there (Settings → General → Features), and only then move the link.
 
-2. **The buyer's own constraints fail open** (D60, still open in D61).
-   `keeps()` in `webapp/api/main.py` lets a listing whose price, year or
-   mileage is unknown through the budget, year and mileage it was asked for.
-   Seen on the deployed site: «پراید زیر ۳۰۰ میلیون» returned four rows of
-   evidence, and two of them had no price. First: count, on run11 and the
-   search page's example queries, how many rows pass only because a value is
-   missing. Then decide: leave them out, or show them apart and say what is
-   not known.
+2. **The intent panel contradicts itself on two of the five examples.**
+   Text the parser acted on is listed again under «بخش‌هایی که نفهمیدیم —
+   نادیده گرفته شدند»: «ماشین اول خانواده» and «تصادفی نباشه» on the family
+   example, «ماشین برای اسنپ» and «کم مصرف» on the Snapp one, because
+   `unparsed` in `RuleIntentParser` counts only the budget and year clauses
+   as consumed. The same two examples print a raw token among the
+   assumptions: «وزن‌ها از پیش‌فرض «ride_hailing» شروع شد». Both are also in
+   `demo/ranking_data.json` and the hand-kept `demo/index.html`, so fixing
+   the parser is a decision about the demo as well.
 
-3. **`/api/search/reweight` takes any `k`** (D60), where `/api/search` caps it
-   at 24.
+3. **The ranked path's red lines are not the evidence path's.** `_passes` in
+   `caro/ranking.py` has no rule for `manual` or `repaint` — no corpus sets
+   `has_manual` or `has_repaint` — and lets a listing whose condition or
+   documents are unknown through `accident` and `unclear_documents`. The
+   evidence path judges all four and holds an unknown apart
+   (`webapp/api/constraints.py`). Nothing is ranked on a real corpus yet
+   (D43); before anything is, the two should apply one rule.
 
 4. **`mileage_status` is not on the payload** (D61). FIELD_PROVENANCE.md
    marks it `card=yes`, but no rule states how an odometer's status travels
@@ -58,6 +64,11 @@ intent → explain the best choice**.
      point. `CARO_SELLER_SALT` must be set. Expect to be blocked; the adapter
      stops and says so, and that is the design.
    - Sheypoor and Khodro45: adapters, under the same rules.
+   - `gearbox` and `fuel` into the next corpus. Both are parsed on every
+     page and neither has been promoted (FIELD_PROVENANCE.md). Until one is,
+     «اتومات» cannot be answered: on run11 the Quik example under the search
+     box matches none and shows eight listings apart, one more left out
+     because its trim is the word `manual`.
    - Longitudinal collection. Time-dependent and unrecoverable: a day not
      collected is gone.
 
