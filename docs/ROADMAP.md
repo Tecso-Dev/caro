@@ -35,16 +35,16 @@ intent → explain the best choice**.
    shortlist, the relaxation ladder, and the comparison with price-sort. No
    commit makes the ranked path evidence-aware before then.
 
-2. **`mileage_status` is not on the payload** (D61). FIELD_PROVENANCE.md
-   marks it `card=yes` and says it "travels with the number or neither
-   renders", but the payload does not carry it, so a card draws the number
-   alone. Measured on 2026-10-05: run11 holds 73 plausible odometers and 3
-   unknown — all three without a number — and none suspicious or
-   impossible, so a rule changes nothing visible there today. Proposed, not
-   decided: send it; draw the number only where it is plausible and say
-   «مشکوک» or «ناممکن» where it is not, as the card does for a price; and
-   check the odometer constraint only against a plausible number, holding
-   the rest apart.
+2. **The car page draws a price without the rule search and compare use.**
+   `ListingFile` in `CarDetail.tsx` draws its heading and its «قیمت
+   پیشنهادی» cell with `toman()`; search and compare draw the same field
+   with `askingPrice()`, the rule FIELD_PROVENANCE.md states for a price,
+   and the car page is sent both fields that rule reads (`detail=yes`).
+   Measured on 2026-10-05: on run11 the two surfaces disagree on 2 of 75
+   cars — the two whose price is «توافقی» and carries no amount are drawn
+   «ثبت‌نشده» in both places on their car page, and «توافقی» in search and
+   compare. A financing total or an unusable extraction would be drawn on
+   the car page as the asking price; run11 carries neither. Not decided.
 
 ## Next — the product gaps
 
