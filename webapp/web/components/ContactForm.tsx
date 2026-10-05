@@ -173,6 +173,12 @@ function Kept() {
   );
 }
 
+/* What it takes to use the place the closed inbox names. Reading a public
+   repository's Issues needs no account; writing one does, and a visitor
+   should learn that here rather than at GitHub's sign-in page. */
+export const ACCOUNT_FA =
+  'خواندن Issues حساب نمی‌خواهد؛ برای نوشتن، حساب GitHub لازم است.';
+
 /* A deployment whose disk does not keep what is written (CARO_INBOX=off).
    No form: accepting a message here would mean losing it. The one place
    named instead is public, and the page says so before anyone writes. */
@@ -185,6 +191,9 @@ export function InboxClosed({ elsewhere }: { elsewhere: string }) {
         گم کنیم، فرم خاموش است. سؤال، ایراد یا اعتراض به یک عدد را در GitHub
         Issues همین مخزن بنویس. آنجا پیام می‌ماند، ولی عمومی است — چیزی
         خصوصی در آن ننویس.
+      </p>
+      <p className="m-0 mt-2 text-[13px] text-ink-3 max-w-[60ch]">
+        {ACCOUNT_FA}
       </p>
       <a href={elsewhere} className="btn mt-5 inline-block" dir="ltr"
          rel="noopener noreferrer">

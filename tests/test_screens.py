@@ -1,7 +1,7 @@
 """What a reader is shown: a listing that is not a car, the car page in each
 state its two requests can leave it in, a year that stays apart from the name
-it follows, and search's matches kept apart from listings that could not be
-checked.
+it follows, search's matches kept apart from listings that could not be
+checked, and where the closed inbox sends a reader.
 
 Run: PYTHONPATH=. python3 tests/test_screens.py
 
@@ -557,6 +557,33 @@ if _eout is not None and _fout is not None:
 for _case, _hit in _reach5.items():
     check(f"  the answers reach the case «{_case}»", _hit,
           "nothing drawn for it — said, not passed")
+
+
+# ---------------------------------------------------------------------------
+print("\n6 — the closed inbox: where to go, and what it takes")
+# ---------------------------------------------------------------------------
+# With CARO_INBOX=off the contact page draws no form, only the place to write
+# instead — GitHub Issues, from `contact.ELSEWHERE` by way of
+# /api/contact/status. Drawn with that constant: the link must be it, and the
+# page must say that writing there needs a GitHub account and reading does
+# not, before anyone arrives at a sign-in page.
+from webapp.api import contact as _contact                        # noqa: E402
+
+_iout, why = node({"component": "components/ContactForm.tsx",
+                   "export": "InboxClosed",
+                   "props": [{"elsewhere": _contact.ELSEWHERE}],
+                   "consts": {"module": "components/ContactForm.tsx",
+                              "names": ["ACCOUNT_FA"]}})
+check("InboxClosed could be drawn", _iout is not None, why)
+if _iout is not None:
+    _ihtml = _iout["markup"][0]
+    check(f"  its one link is {_contact.ELSEWHERE}",
+          re.findall(r'href="([^"]+)"', _ihtml) == [_contact.ELSEWHERE],
+          str(re.findall(r'href="([^"]+)"', _ihtml)))
+    check("  and it says what writing there takes",
+          bool(_iout["consts"]["ACCOUNT_FA"])
+          and _iout["consts"]["ACCOUNT_FA"] in _text(_ihtml),
+          "the sentence is not on the page")
 
 
 print()
