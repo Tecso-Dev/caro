@@ -3857,3 +3857,114 @@ ranks nothing real (D43).
    shortlist, the relaxation ladder, and the comparison with price-sort.
 
 Until then no commit makes the ranked path evidence-aware.
+
+## D67 — A number is an odometer reading only where its grade says so
+
+D61 left it open and D65 named it. FIELD_PROVENANCE.md marks
+`mileage_status` `card=yes` and says it "travels with the number or neither
+renders", and the payload did not carry it: a card drew the number alone,
+and the odometer constraint compared every number alike. Under that rule
+D21's own examples went both wrong ways — 1 km on a 1385 Pride met
+«کم‌کارکرد», and 999,990 km on a 1384 one broke it.
+
+**Measured first,** on run11: 73 odometers graded `plausible` and 3
+`unknown`, all three without a number; none `suspicious`, none
+`impossible`. No rule about the last two can change what run11 answers, so
+the contract was decided on what the grades mean, and it is reported below
+as that.
+
+**The decision.** Each grade of `caro.ingest.quality.Validity` (D21, D22)
+answers the odometer constraint so:
+
+    plausible    met or broken by the number
+    unknown      unknown
+    suspicious   unknown
+    impossible   unknown
+
+An unknown holds the listing apart, as D65 does with any constraint it
+cannot check — unless another constraint breaks it, which still leaves it
+out. Neither of D21's examples is a reading, so neither decides anything
+now: both are held apart. Two things were ruled out with it: deleting an
+impossible number, and reading a placeholder like 999,999 as a constraint
+broken.
+
+The status travels with its number (`f838cbd`): `EvidenceItem` carries
+`mileage_status` beside `mileage_km`, and the number stays on the payload
+whatever the grade. The constraint reads a number only where the grade is
+`plausible` (`1a5fb76`, `odometer()` in `webapp/api/constraints.py`). The
+page draws a number only where it is a reading, and says the grade where it
+is not (`11eb434`) — «کارکرد ثبت‌نشده», «کارکرد مشکوک», «کارکرد ناممکن» —
+in search's two tables, in compare, and in both places on the car page;
+beside a listing held apart, the reason names the grade. D22's three are
+never said as one.
+
+Two choices beyond the table, written down so that they can be disagreed
+with. A record that carries a number and no grade at all is not trusted: it
+is unknown to the constraint and drawn «وضعیت کارکرد ثبت‌نشده», because the
+number and its status are consumed together or not at all; run11 holds no
+such record. And an appraisal row carries no grade and is drawn as a
+number: on a real corpus eligibility admits only a plausible odometer before
+a row is scored, and a generated row has no grade to give. The ranked
+path's own odometer filter is not changed (D66).
+
+**On run11, before and after** — the trees of `94c7500` and `11eb434`.
+Search answered the same on all fifteen queries measured — the five examples
+under the search box, the three the screens suite adds, and seven chosen to
+reach the odometer, six of them with a cap — at k=8 and at k=24: 30 of 30
+identical in matches, listings apart, what each lacks, and both totals.
+What a reader sees changed only where the odometer is unknown. The cell
+said «ثبت‌نشده» and says «کارکرد ثبت‌نشده»: on the car pages of the two Quik
+listings that carry no odometer, in both places; in compare, for those two
+and the assignment; and in their rows in five of the fifteen search tables.
+The reason beside them was «کارکرد ثبت‌نشده» before and is now.
+
+**This is a semantic contract, not a measured numeric effect.** Of its four
+rows, run11 exercises two. `suspicious` and `impossible` are held by
+listings built for the purpose, not observed.
+
+**How it is held.** Contract §9: the payload carries the grade, and every
+odometer reading in run11 states one. §13: `odometer()` on each grade. §15:
+eight listings in a temporary artifact, searched with «۲۰۶ کم‌کارکرد» —
+100,000 km graded plausible matches and 200,000 is left out; no number,
+1 km on a 1385, 999,990, −5,000, 2,000,000, and 90,000 with no grade are
+each held apart, keeping their number and grade. §7 holds the grade's
+`Literal` to `Validity`, and the TypeScript union to the `Literal`. Screens
+§7 draws each grade in search, compare and the car file and reads the exact
+cell; the car file says «کیلومتر» nowhere for a grade that is not a
+reading. The corpus suite fails any surface that reads `mileage_km` without
+`mileage_status`.
+
+**Measured.** Eleven mutations, each count written down before its run:
+
+                                                    predicted        red
+                                                   ctr  scr  cor  ctr  scr  cor
+    as committed                                     0    0    0    0    0    0
+    the constraint ignores the grade — the old rule  9    1    0    9    1    0
+    suspicious read as plausible                     4    1    0    4    1    0
+    impossible read as plausible                     3    1    0    3    1    0
+    a number with no grade trusted                   2    1    0    2    1    0
+    the API stops sending the grade                  7   11    0    7   11    0
+    the page draws the number whatever the grade     0    6    0    0    6    0
+    the reason apart drops the grade                 0    5    0    0    5    0
+    compare draws the number without the grade       0    6    1    0    6    1
+    the TypeScript union drops `impossible`          1    0    0    1    0    0
+    the car file's heading draws the bare number     0    5    0    0    5    0
+
+All eleven exactly, and no other suite went red in any run. The run11
+comparison was predicted in writing too, and its predictions held; the
+count they were written over did not — they said seventeen queries, and
+there were fifteen — and «کوییک», which they did not name, changed on one
+row. Each commit is green on its own — 1847, 1868, 1888 and 1888 assertions
+across 15 suites — and the round was applied to a fresh clone before it was
+sent. It was applied from `0ae74ac` with the six commits of the D66 round
+ahead of it — 1888 across 15 suites, the web build green with its nine
+routes — and pushed as `0ae74ac..139a29c`.
+
+**Not measured.** The deployed site. Deploying is deferred — D65 records
+the refusal — and none of this is on it.
+
+**What this does not settle.** How many listings the contract moves on a
+real corpus, until one carries a suspicious or impossible odometer. And the
+car page draws a price with `toman()` where search and compare apply
+`askingPrice()`: on run11 the two disagree on the two «توافقی» cars. That is
+in docs/ROADMAP.md, measured and not decided.
