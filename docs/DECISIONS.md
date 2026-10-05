@@ -3791,3 +3791,69 @@ on two of the five examples. «اتومات» stays unanswerable until a corpus
 carries a gearbox. And how an odometer's status travels with the number is
 still D61's question: a suspicious odometer is checked like a plausible one.
 All four are in docs/ROADMAP.md.
+
+## D66 — The ranked path keeps its red lines until a real estimator is gated
+
+D65 gave the evidence path four red lines, each judged from the field that
+answers it, with an unknown held apart. The ranked path has its own:
+`_passes` in `caro/ranking.py` reads `has_accident` and
+`has_unclear_documents`, has nothing for `manual` or `repaint`, and lets an
+unknown through. Whether it should take the evidence path's rules was
+measured before anything was changed, on the one corpus where ranking is
+served today, SYNTHETIC: the five examples under the search box at k=8, and
+`tests/test_ranking.py`'s own win-rate benchmark, with the evidence rules
+swapped in for the run alone.
+
+**What SYNTHETIC can say.** Its rows carry none of the fields the four rules
+read — no body condition, no documents, no gearbox, no trim. A row is a
+model, a year, a mileage, a price and five features, so every rule answers
+unknown on all 552 rows of the pool, and whether the rules keep the right
+cars cannot be measured there. The one red-line signal the rows do carry is
+the generator's `has_accident`, set where `risk > 0.45` (26 rows), which
+today's rule reads and the evidence rule does not. Comparing the two like for
+like would mean giving the generator a body condition — a change to the
+benchmark's fixture made so that a measurement can run — and it was not
+done.
+
+**What it showed.** The three examples without a red line rank identically,
+row for row and rank for rank — one of them, «پراید زیر ۳۰۰ میلیون», ranks
+nothing either way, SYNTHETIC holding no Pride that cheap. The two with one,
+«تصادفی نباشه» and «اتومات»,
+rank nothing: every candidate is unknown — 329 and 28 under the constraints
+as stated — so the ladder relaxes the budget, and for the Quik example the
+odometer as well, for a shortfall neither caused, and the page says
+«قیدها شل شد» over an empty shortlist. That is the statement D65 took out of
+the evidence path. The 16 rows today's rule removes as accidents would not be
+removed: they would be unknown.
+
+The benchmark, as `test_ranking` calls it, k=3 over its twelve queries:
+
+                    queries  win-rate          CARO    price-sort        random   uplift
+    today                11      100%   −46,928,024   −60,165,712  −105,918,867   +22.0%
+    with the rules        8      100%   −37,720,603   −49,513,942   −88,932,532   +23.8%
+
+**The second uplift is not better than the first.** The eight queries both
+rows count give the same numbers in both; the denominator changed. Three
+queries drop out — the two that say «تصادفی نباشه», and «۲۰۷ اتومات», which is
+today's most negative at −136.6 million — and two means over different sets
+of queries are not a comparison. Eight is also the fewest queries
+`test_ranking` accepts.
+
+Measured, and not changed: «۲۰۷ اتومات» is counted in today's benchmark while
+no gearbox is checked at all.
+
+**The decision.** The ranked path is not changed. Swapping `_passes` alone
+sends an unknown into budget and odometer relaxation and an empty result,
+which is wrong in meaning, not only in number. What would make it right —
+rows that carry the fields, a branch that holds an unknown apart, a ladder
+that does not relax for an unknown red line — is not built for a corpus that
+ranks nothing real (D43).
+
+**What reopens it,** all three:
+
+1. an estimator clears the acceptance gate on a real corpus;
+2. the rows real ranking scores carry the evidence the four rules read;
+3. this measurement is run again then: met, broken and unknown, the
+   shortlist, the relaxation ladder, and the comparison with price-sort.
+
+Until then no commit makes the ranked path evidence-aware.
