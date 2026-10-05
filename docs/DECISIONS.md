@@ -3968,3 +3968,121 @@ real corpus, until one carries a suspicious or impossible odometer. And the
 car page draws a price with `toman()` where search and compare apply
 `askingPrice()`: on run11 the two disagree on the two «توافقی» cars. That is
 in docs/ROADMAP.md, measured and not decided.
+
+## D68 — Issues where the code lives; unparsed is only what was not mapped
+
+The D66 round carried four small changes the roadmap had listed, each
+decided by the owner before it was written. Its roadmap commit (`94c7500`)
+named them and nothing here did; this is their record, written after they
+were pushed with the odometer round as `0ae74ac..139a29c`.
+
+**Where to write.** With the inbox off (D64), the contact page sends a
+person to GitHub Issues: `ELSEWHERE` in `webapp/api/contact.py`, which the
+page, its 503s and `/api/contact/status` all read. It named the old
+repository, on purpose, while Issues was taken to be off at Tecso-Dev/caro:
+a fork starts with it off. The owner decided on 2026-10-05 that issues are
+written where the code lives, and `cec587f` points there.
+
+Seen signed out the same day, `https://github.com/Tecso-Dev/caro/issues`
+is the repository's Issues page — titled «Issues · Tecso-Dev/caro · GitHub»,
+searching `is:issue state:open`, with a sign-in link for writing one. The
+repository's front page, seen signed out that evening, still drew no Issues
+tab, and that was not explained. It is the sign the roadmap and `cec587f`
+took for Issues being off, so it is not one: the Issues page is the check
+that decides it.
+
+**What writing takes** (`6b3700b`). The page said Issues are public. It did
+not say that writing one needs a GitHub account, which a visitor would learn
+only at GitHub's sign-in page, and that reading needs none. One sentence now
+says both, `ACCOUNT_FA` in `ContactForm.tsx`. It is true only while any
+GitHub account may open an issue: since 2026-06-29 GitHub lets a repository
+restrict that to collaborators, and the setting cannot be read from outside.
+
+**The use case by its name** (`50b7634`). The assumption that the weights
+started from a use case's defaults printed the key — «وزن‌ها از پیش‌فرض
+«ride_hailing» شروع شد» — a few lines under the same use case drawn in
+Persian. `caro.ranking.USE_CASE_FA` carries the names the panel prints under
+«کاربرد», and the assumption uses them.
+
+**Only what was not understood** (`ac85c9b`). D14's `unparsed`, listed
+under «بخش‌هایی که نفهمیدیم», also held text the parser had acted on: only
+a budget clause and a year clause were taken out before the query was cut
+into clauses. So «تصادفی نباشه» sat under «خط قرمز» and under «نفهمیدیم»
+at once on the family example, and «ماشین برای اسنپ» and «کم مصرف» on the
+Snapp one. The parser now keeps the cues that changed the spec, and a clause
+holding one is understood whole, the way a clause naming a model always was.
+Measured against the parser before it, on the 25 queries the site, the
+benchmark and the suite parse: nothing but `unparsed` changed, and it
+changed on 13; the win-rate line did not move. The owner kept the rule at
+the clause rather than the word, for now, and its cost is pinned in the
+ranking suite so that it changes only on purpose: «ماشین برای اسنپ با قطعات
+ارزون» lists nothing.
+
+**On the five examples under the search box,** between `0ae74ac` and
+`139a29c`: three parse the same in every field. The Snapp and family
+examples change in two fields and no others. The assumption names
+«مسافرکشی (اسنپ/تپسی)» and «ماشین اول خانواده» instead of the key, and
+«نفهمیدیم» lists «قطعاتش ارزون باشه» alone on the first and nothing on the
+second, where it had listed three phrases and two.
+
+**The demo keeps the old text.** `demo/ranking_data.json` and
+`demo/index.html` still print the key, three times each. Neither can be
+regenerated here: `demo/export_ranking.py` stops with `CorpusUnavailable`
+for run3, which is not in the repository (D46). The roadmap had called
+fixing the parser a decision about the demo; that was wrong, and `94c7500`
+says so.
+
+**How it is held.** Contract §12 holds the status and the 503s to
+`ELSEWHERE`; screens §6 draws the closed inbox with it and checks its one
+link and the sentence. Contract §7 holds the panel's names to the parser's,
+name for name. The ranking suite checks that every use case the parser can
+choose has a name, that the two examples say it, and seven `unparsed` cases,
+the cost among them.
+
+**Measured.** Ten mutations against the pushed tree, each count written
+down before its run:
+
+                                                predicted           red
+                                              rnk ctr scr cor   rnk ctr scr cor
+    as committed                                0   0   0   0     0   0   0   0
+    ELSEWHERE back to the old repository        0   0   0   0     0   0   0   0
+    the closed inbox drops the sentence         0   0   1   0     0   0   1   0
+    the assumption prints the key again         2   0   0   0     2   -   -   -
+    one name differs from the panel's           0   1   0   0     0   1   0   0
+    a use case with no name                     1   1   0   0     1   -   -   -
+    the cues acted on are not read              6   0   0   0     6   -   -   -
+    a point between digits cuts a clause        0   0   0   0     0   0   0   0
+    the floor after a year left as text         1   0   0   0     1   -   -   -
+    a cue counts only inside one clause         1   0   0   0     1   -   -   -
+
+Every count that could be read was predicted exactly. A dash is not a
+zero. Each of the five mutations that turned a ranking check red also
+stopped the contract, screens and corpus suites before a verdict of their
+own: they reach SYNTHETIC through the API, and the API builds it by
+importing `tests/test_ranking.py` (`_synthetic` in `webapp/api/corpus.py`),
+which exits on a red check — traced in the contract suite, the SystemExit
+comes out of `search`. run_all failed each time, so nothing went green that
+should not have; but what those three suites would have said is unknown,
+and the one count predicted there, the contract's for a use case with no
+name, went unread.
+
+Two rows are gaps, not checks. Nothing holds `ELSEWHERE` to the repository:
+it is checked only against itself, so pointing it back at the old one turns
+nothing red. And no case needs the decimal rule any longer: in every query
+the suite parses, the point sits inside an amount the parser acted on, whose
+span covers both halves. It would matter for a decimal outside an amount,
+an engine size say, and nothing parses one.
+
+Each commit was green on its own — 1830, 1833, 1837 and 1844 assertions
+across 15 suites — and the round was applied to a fresh clone before it was
+sent, then on the owner's machine with the odometer round after it: 1888
+across 15 suites, the web build green with its nine routes.
+
+**Not measured.** The deployed site. Deploying is deferred (D65), and the
+site was last deployed at `a636ea6`, whose contact page names the old
+repository.
+
+**What this does not settle.** Whether issue creation is open to every
+account, which cannot be seen from outside. The two gaps above. And that a
+red ranking check hides three suites' verdicts, which is in
+docs/ROADMAP.md.
