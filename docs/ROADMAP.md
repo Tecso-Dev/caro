@@ -5,7 +5,7 @@ was recorded, and what comes first. An open item goes into code only after it
 has been measured; the measurement comes first and the decision is made on
 it, in its own commit.
 
-Last revised 2026-10-05.
+Last revised 2026-10-06.
 
 ## Where it stands against the brief
 
@@ -45,12 +45,6 @@ intent → explain the best choice**.
    The same import runs in the API process whenever it serves SYNTHETIC.
    Not decided.
 
-3. **Two rules nothing holds** (D68). `ELSEWHERE` is checked only against
-   itself, so pointing it at another repository turns nothing red; and no
-   query the suites parse needs `unparsed`'s decimal rule, because every
-   point in them sits inside an amount the parser acted on. Measured by
-   mutation on 2026-10-05. Not decided.
-
 ## Next — the product gaps
 
 1. **Data.**
@@ -89,9 +83,10 @@ intent → explain the best choice**.
    Vercel GitHub App has to be installed where the repository now lives,
    `Tecso-Dev`. By hand: refused on 2026-10-05, the CLI (62.2.0) answering
    «Error: Not authorized» in the deploy clone. Until one of them works the
-   site serves `a636ea6`: nothing D65 to D68 record is on it, and its
-   contact page still sends people to the old repository's Issues. Issues
-   is on at `Tecso-Dev/caro`, where the next deployment sends them (D68).
+   site serves `a636ea6`, which predates D65: nothing decided since is on
+   it, and its contact page still sends people to the old repository's
+   Issues. Issues is on at `Tecso-Dev/caro`, where the next deployment
+   sends them (D68).
 
 6. **Calibrate the confidence policy.** The bands are judgement. With real
    data they should be revisited against observed decision quality and
