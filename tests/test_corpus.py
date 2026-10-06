@@ -649,15 +649,21 @@ print("\nthe eligibility table and the document say the same thing")
 # ---------------------------------------------------------------------------
 #
 # `docs/FIELD_PROVENANCE.md` is where the judgement lives, measured against
-# run11. `webapp/api/eligibility.py` is where a renderer will read it. Two
-# declarations, compared here — parsing the document into the module instead
-# would give one declaration and a test that compares it with itself.
+# the corpus the site serves. `webapp/api/eligibility.py` is where a renderer
+# will read it. Two declarations, compared here — parsing the document into
+# the module instead would give one declaration and a test that compares it
+# with itself.
 #
 # The document is also checked against the artifact, so the chain is:
 #
-#     data/corpora/run11.json  →  FIELD_PROVENANCE.md  →  eligibility.FIELDS
+#     data/corpora/<DEFAULT_RUN>.json  →  FIELD_PROVENANCE.md  →  FIELDS
 #
-# and a break anywhere in it fails, naming the link.
+# and a break anywhere in it fails, naming the link. The artifact is the one
+# DEFAULT_RUN names, not a literal: spelled «run11.json», this chain would
+# have stayed green while describing a corpus the site no longer served —
+# which, with run13 as the default on a scratch copy, it did (2026-10-06).
+# And it is read in both directions: a key the artifact carries that the
+# document has no row for is a field nobody has judged.
 
 from webapp.api.eligibility import (                              # noqa: E402
     FIELDS as _ELIG, STATUSES as _STATUSES)
@@ -684,20 +690,25 @@ if _doc_rows:
 
     # ---- the document against the artifact ------------------------------
     _EMPTY = {None, "", "unknown", "none"}
-    _art = json.loads((ROOT / "data" / "corpora" / "run11.json")
+    _RUN_FP = _corpus_mod.DEFAULT_RUN
+    _art = json.loads((ROOT / "data" / "corpora" / f"{_RUN_FP}.json")
                       .read_text(encoding="utf-8"))["listings"]
     _keys = {k for r in _art for k in r}
     for _f, (_st, _c, _d, _g, _fa, _filled, _dist) in sorted(_doc.items()):
         if _filled == "—":
-            check(f"  {_f}: dashed in the document, and not a key in run11",
-                  _f not in _keys)
+            check(f"  {_f}: dashed in the document, and not a key in "
+                  f"{_RUN_FP}", _f not in _keys)
             continue
         _nn = [r.get(_f) for r in _art if r.get(_f) not in _EMPTY]
         _got = f"{len(_nn)}/{len(_art)}"
         _n_dist = len({json.dumps(x, ensure_ascii=False) for x in _nn})
-        check(f"  {_f}: run11 says {_got}, {_n_dist} distinct",
+        check(f"  {_f}: {_RUN_FP} says {_got}, {_n_dist} distinct",
               (_filled, _dist) == (_got, str(_n_dist)),
               f"the document says {_filled}, {_dist}")
+    _unjudged = sorted(_keys - set(_doc))
+    check(f"  every key {_RUN_FP} carries has a row in the document "
+          f"({len(_keys)})", not _unjudged,
+          f"no row for {_unjudged}")
 
     # ---- the document against the module --------------------------------
     check(f"every field in the document is in eligibility.FIELDS "
