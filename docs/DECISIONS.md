@@ -4306,3 +4306,111 @@ longer this code's question: nothing it imports can raise one.
 in any test: numpy does not promise its distributions stay the same across
 versions, and a pin could fail on an upgrade with nothing wrong. That it is
 the same corpus was measured for this round instead.
+
+## D72 — The site serves run13, and «اتومات» is checked against a field
+
+run11 carries no gearbox, so a buyer who says «اتومات» was answered with
+listings held apart: on the Quik example under the search box, nothing
+matched and eight stood apart, unchecked. The owner chose a second Bama
+run to change that, on 2026-10-06, measured first.
+
+**Before the run,** read and run on the code at `f39cec1`: a row made today
+carries exactly four keys run11 never has — `gearbox`, `fuel`, `province` and
+`price_currency_raw` — measured by one listing taken through the shipped path,
+from the parsed record to the reader. Four things were found on the way. The
+red line in `webapp/api/constraints.py` already decided «اتومات» from `gearbox`
+as soon as a corpus carried it: on a copy of run11 with the field written as
+automatic on nine of its Quiks, six matched and two stayed apart, and written
+as manual, none matched and none stayed apart — while the eligibility table
+still called the field `PENDING_LIVE_VALIDATION`, gate and facet `no`. The
+chain that holds that table to an artifact read `run11.json` by name.
+`price_currency_raw` had no row in it. And nothing in Bama's fetch path reads
+robots.txt, as recorded on 2026-09-11. Two hashes in the documents are not
+commits of this repository: 2ddbc72, which FIELD_PROVENANCE.md cited where
+`72c2573` is meant and which its rewrite below no longer cites, and 4d95b7d in
+D36's freeze note, which stays as it was frozen. Two predictions were wrong:
+six and two, not eight and none, because two of those Quiks were unchecked on
+mileage as well; and every REAL answer carries the ESTIMATOR_NOT_GATED fault,
+which is the state of a real corpus (D43), not an error.
+
+**The run.** robots.txt was read by hand first: the same directives as on
+2026-09-11, nothing disallowing `/car/`. Then run11's pin — pride, quick,
+tiba · seed 0 · limit 90, digest `a07d10`: 90 links, 74 unique listings,
+every page answered, the structured block on all 74. The target counts
+links before they are de-duplicated, which is how 90 became 74 and how
+run11 was drawn too, so it is left as it is. `gearbox` and `fuel` are on
+74 of 74 at parse, snapshot and corpus, nothing lost;
+`price_currency_raw` on 72. The run's report called two prices an
+unexplained disagreement; both are instalment totals, which `price_kind`
+had already named. Its last line says the corpus is ready to benchmark
+on Saipa Pride. D55 says one snapshot is UNJUDGEABLE, and the same
+function prints the same line on run11: the two have disagreed since
+D55. Recorded, not changed.
+
+**Read after the run,** on the owner's machine. The snapshot compared
+with is the one run11 was promoted from, byte for byte. On the same pin 26
+days apart, 3 of run11's 76 listings were drawn again, and none had
+changed. `province` is on 34 of 74 — fifteen provinces, Tehran on five.
+Ten pages were read once each: every miss was empty and none wrong, and
+the misses are lines the rule cannot read — city and district, 5 of the
+8; city, province and district, 2; a page with no odometer line, 1. The
+Quik example found nothing at all: run13's three automatic Quiks ask
+1.65, 1.68 and 1.75 billion. Three predictions were wrong: province on at
+least 67, the Quik example matching at least one, and every example
+finding something. A fourth claim was mine and false — that one Quik's
+trim said manual while its field said automatic. The probe printed eleven
+characters of «manualrplus at»; the page's structured block and its
+displayed «گیربکس» line both say automatic.
+
+**The decision.** The owner's: run13 is published, for the reason D57
+published run11 — the site is to serve it — and served by default; the
+Quik example asks up to 1.8 billion. On that, FIELD_PROVENANCE.md is
+measured on run13 by its own procedure: `gearbox` and `fuel` are
+`SOURCE_BACKED` on 74 of 74, and `gearbox` is a facet, because the search
+checks «اتومات» against it; `province` is `SOURCE_BACKED` on 34 of 74 with
+every flag `no`. The plan said it would stay pending, but the file moves a
+field out of `PENDING_LIVE_VALIDATION` when a real run records a number,
+and the flags, not the status, keep it off every screen.
+`price_currency_raw` has a row of its own, diagnostic only. The sections
+that follow a non-vehicle read run11's assignment by name, run13 holding
+none; the §16 probe and the provenance chain read DEFAULT_RUN.
+
+Nine commits: `f028dcc`, `38db406`, `b475ef9`, `db310e3`, `be9b871`,
+`51ee6fa`, `868bad3`, `449b4d9` and `e4a32f6`. Two were not in the plan
+the owner approved, `51ee6fa` and `868bad3`: making run13 the default
+turned screens §5 red twice. A row held apart on a 4,200 km 1401, graded
+suspicious, says «کارکرد مشکوک» (D67), and the check wanted
+«کارکرد ثبت‌نشده»; and its case with nothing matched and nothing apart was
+reached only while no Tiba lacked a price. Each is its own commit.
+
+**Measured.** With run13 beside run11 and the default unchanged: 1918,
+green. With run13 the default before the round: seven checks red in two
+suites — the Quik example, a non-vehicle to follow in contract §11 and to
+draw in screens §0, and the four of §16 — all predicted but the screens
+one. With run13 served against run11's document, the new chain fails 25
+checks: 24 rows' numbers, and no row for `price_currency_raw`. After the
+round, matched and held apart:
+
+                                         run11      run13
+    «پراید»                              56, 0      54, 0
+    «پراید زیر ۳۰۰ میلیون»                2, 2       2, 2
+    the Snapp example                    51, 2      47, 4
+    the family example                   67, 2      53, 11
+    the Quik example, 1.8 billion         0, 8       1, 2
+
+The one Quik match is a 1403 at 18,500 km for 1.68 billion; the two held
+apart are held for their odometers. Each commit is green on its own —
+1918, 1918, 1918, 1918, 1919, 1919, 1924, 1929 and 1929 assertions across
+15 suites, 1490 to 1495 across 12 without the extras — and the round was
+applied to a fresh clone before it was sent, then on the owner's machine:
+1929 across 15 suites, the web build green with its nine routes, pushed as
+`f39cec1..e4a32f6`.
+
+**Not measured.** The deployed site, where deploying is deferred (D65): it
+serves `a636ea6`, and run13 reaches it with the next deployment.
+
+**What this does not settle.** run13 is one snapshot: an estimator is as
+unjudgeable on it as on run11 (D55), and a second discovery run on the
+same pin is a new sample, not a series. `province` waits for a rule that
+reads the lines it misses now. robots.txt is read by hand for Bama, and
+must be checked in code before any recurring collection.
