@@ -145,7 +145,7 @@ export const ODOMETER_FA: Record<Exclude<MileageStatus, 'plausible'>, string> = 
 
 /* A listing whose record carries a number and no grade at all. Only an
    artifact without the field can send one; the contract suite checks that
-   run11 does not. */
+   the corpus the site serves does not. */
 export const ODOMETER_UNGRADED_FA = 'وضعیت کارکرد ثبت‌نشده';
 
 /** An odometer, drawn with the grade that travels with it. FIELD_PROVENANCE.md

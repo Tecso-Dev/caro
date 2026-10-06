@@ -1,7 +1,7 @@
 """What a screen may draw, declared once, in code.
 
 `docs/FIELD_PROVENANCE.md` states the same table in prose, measured against
-`data/corpora/run11.json`. This module states it as data, and
+the corpus the site serves by default. This module states it as data, and
 `tests/test_corpus.py` asserts the two agree. Neither is derived from the
 other, which is the point: a value written in one place and read in the other
 is one declaration, and one declaration cannot disagree with itself.
@@ -28,8 +28,8 @@ into one flag is how a gate becomes a checkbox.
 NONE OF THESE FOLLOW FROM COVERAGE
 
 A field can be filled on every row and still be `facet=False`: `make` has one
-distinct value on run11, so a filter over it offers one choice. Coverage and
-variety are inputs to the judgement, not the judgement.
+distinct value on the served corpus, so a filter over it offers one choice.
+Coverage and variety are inputs to the judgement, not the judgement.
 """
 
 from __future__ import annotations
@@ -80,6 +80,9 @@ FIELDS: dict[str, Eligibility] = {
     "price_status": Eligibility("SOURCE_BACKED", card=True, detail=True),
     "price_kind": Eligibility("SOURCE_BACKED", card=True, detail=True),
     "price_kind_source": Eligibility("SOURCE_BACKED", detail=True),
+    # Diagnostic only: quality.DIAGNOSTIC_ONLY_FIELDS, and assert_not_features
+    # refuses it as a predictor. Carried because a consumer reads it.
+    "price_currency_raw": Eligibility("SOURCE_BACKED"),
     "mileage_km": Eligibility("SOURCE_BACKED", card=True, detail=True,
                               facet=True),
     "mileage_status": Eligibility("SOURCE_BACKED", card=True, detail=True),
@@ -95,16 +98,21 @@ FIELDS: dict[str, Eligibility] = {
     "dealer_badge": Eligibility("SOURCE_BACKED"),
     "document_issue": Eligibility("DERIVED"),
     "seller_type": Eligibility("PENDING_LIVE_VALIDATION"),
-    "province": Eligibility("PENDING_LIVE_VALIDATION"),
-    "gearbox": Eligibility("PENDING_LIVE_VALIDATION"),
-    "fuel": Eligibility("PENDING_LIVE_VALIDATION"),
+    # On 34 of 74 rows, and the misses are not random — big-city lines the
+    # rule cannot read (FIELD_PROVENANCE.md) — so nothing may draw or choose
+    # it.
+    "province": Eligibility("SOURCE_BACKED"),
+    # A facet: «اتومات» is a red line a buyer states, and the search checks it
+    # against this field (webapp/api/constraints.py).
+    "gearbox": Eligibility("SOURCE_BACKED", facet=True),
+    "fuel": Eligibility("SOURCE_BACKED"),
     # The key the payload carries, `make|model|trim`, rendered through
     # `modelLabel`. `card` was `no` while nothing had judged the card
     # surface; the guard in `tests/test_corpus.py` now reads that surface
     # out of its renderers, and all three of them draw this field. The
     # alternative the table had in mind for a card heading, `derived_title`,
-    # is not a key in run11 and is not on the payload, so it could not be
-    # drawn instead.
+    # is not a key in any published corpus and is not on the payload, so it
+    # could not be drawn instead.
     "model_key": Eligibility("DERIVED", card=True, detail=True),
     "derived_title": Eligibility("DERIVED", card=True, detail=True),
     "observed_at": Eligibility("DERIVED", card=True, detail=True),
