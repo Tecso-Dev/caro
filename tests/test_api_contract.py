@@ -78,6 +78,12 @@ def check(name, cond, detail=""):
 
 
 RUN = corpus_mod.DEFAULT_RUN     # read, never spelled out — see below
+# Sections 9 to 11 follow a listing that is not a car through every path. The
+# one real non-vehicle any published corpus holds is run11's assignment, so
+# those sections read run11 by name, served as the configured run, whatever
+# the default is; a default with no non-vehicle would leave them nothing to
+# follow and nothing to catch.
+NV_RUN = "run11"
 
 
 @contextlib.contextmanager
@@ -688,13 +694,19 @@ print("    lib/api.ts follows from section 7, which compares EvidenceItem "
       "in both directions")
 
 _art_path = ROOT / "data" / "corpora" / f"{RUN}.json"
-if not _art_path.exists():
-    check("  the default corpus is present to check against", False,
-          str(_art_path))
+_nv_path = ROOT / "data" / "corpora" / f"{NV_RUN}.json"
+if not (_art_path.exists() and _nv_path.exists()):
+    check("  the default corpus, and run11, are present to check against",
+          False, f"{_art_path} · {_nv_path}")
 else:
     _art = {r["listing_id"]: r for r in json.loads(
         _art_path.read_text(encoding="utf-8"))["listings"]}
-    _pc = {i: r.get("product_class") for i, r in _art.items()}
+    _nv = {r["listing_id"]: r for r in json.loads(
+        _nv_path.read_text(encoding="utf-8"))["listings"]}
+    print(f"    the default corpus ({RUN}) holds "
+          f"{sum(r.get('product_class') != 'vehicle' for r in _art.values())}"
+          f" non-vehicle(s); sections 9 to 11 follow {NV_RUN}'s")
+    _pc = {i: r.get("product_class") for i, r in _nv.items()}
     _vehicle = next((i for i, c in sorted(_pc.items()) if c == "vehicle"),
                     None)
     _others = sorted(i for i, c in _pc.items() if c and c != "vehicle")
@@ -713,8 +725,8 @@ else:
           not _bare, f"a number with no status: {_bare}")
 
     _was, _was_run = corpus_reader.CORPORA, os.environ.get(corpus_mod.RUN_ENV)
-    corpus_reader.CORPORA = _art_path.parent
-    os.environ.pop(corpus_mod.RUN_ENV, None)
+    corpus_reader.CORPORA = _nv_path.parent
+    os.environ[corpus_mod.RUN_ENV] = NV_RUN
     corpus_mod.active.cache_clear()
     try:
         with contextlib.redirect_stdout(io.StringIO()):
@@ -735,8 +747,8 @@ else:
             # client applies to None. Both paths build a row through
             # `_listing_evidence`, so this follows the value from the
             # artifact to the payload rather than testing one endpoint.
-            _want = {k: _art[_id].get(k) for k in ("price_status", "price_kind",
-                                                    "mileage_status")}
+            _want = {k: _nv[_id].get(k) for k in ("price_status", "price_kind",
+                                                   "mileage_status")}
             _sent = {k: getattr(_resp.listing, k, None) for k in _want}
             check(f"  and the fields the card's rules read for {_id} "
                   f"({_want['price_status']} / {_want['price_kind']} / "
@@ -791,10 +803,9 @@ check(f"the declaration's gates are exactly {_gates}",
       _gates == ["product_class"],
       "a new gate needs its own pass rule in this section before it is covered")
 
-_art10 = ROOT / "data" / "corpora" / f"{RUN}.json"
+_art10 = ROOT / "data" / "corpora" / f"{NV_RUN}.json"
 if not _art10.exists():
-    check("  the default corpus is present to check against", False,
-          str(_art10))
+    check(f"  {NV_RUN} is present to check against", False, str(_art10))
 else:
     _rows10 = json.loads(_art10.read_text(encoding="utf-8"))["listings"]
     _cls10 = {x["listing_id"]: x.get("product_class") for x in _rows10}
@@ -808,7 +819,7 @@ else:
 
     _was, _was_run = corpus_reader.CORPORA, os.environ.get(corpus_mod.RUN_ENV)
     corpus_reader.CORPORA = _art10.parent
-    os.environ.pop(corpus_mod.RUN_ENV, None)
+    os.environ[corpus_mod.RUN_ENV] = NV_RUN
     corpus_mod.active.cache_clear()
     try:
         with contextlib.redirect_stdout(io.StringIO()):
@@ -870,16 +881,16 @@ print("\n11 — every non-vehicle reaches the screen, with its class")
 # class-less fixture. run11 carries a class on every record, so without the
 # fixture `unknown` would never be asked about here at all.
 
-_art11 = ROOT / "data" / "corpora" / f"{RUN}.json"
+_art11 = ROOT / "data" / "corpora" / f"{NV_RUN}.json"
 _cls11 = {x["listing_id"]: x.get("product_class") for x in json.loads(
     _art11.read_text(encoding="utf-8"))["listings"]}
 _nvs = sorted(i for i, c in _cls11.items() if c != "vehicle")
-check(f"the shipped corpus holds {len(_nvs)} non-vehicle(s) to follow",
+check(f"{NV_RUN} holds {len(_nvs)} non-vehicle(s) to follow",
       len(_nvs) > 0, "nothing to run on — said, not passed")
 
 _was, _was_run = corpus_reader.CORPORA, os.environ.get(corpus_mod.RUN_ENV)
 corpus_reader.CORPORA = _art11.parent
-os.environ.pop(corpus_mod.RUN_ENV, None)
+os.environ[corpus_mod.RUN_ENV] = NV_RUN
 corpus_mod.active.cache_clear()
 try:
     with contextlib.redirect_stdout(io.StringIO()):

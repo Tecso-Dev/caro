@@ -92,11 +92,15 @@ CAR_CLAIMS = ("پرونده‌ی خودرو", "برای این خودرو", "ق�
 
 
 @contextlib.contextmanager
-def serving(directory: Path):
-    """Point the reader at `directory` for the block, and put it back."""
+def serving(directory: Path, run: str | None = None):
+    """Point the reader at `directory` for the block, and put it back. With
+    `run`, that run is served as the configured one; without, the default."""
     was, was_run = corpus_reader.CORPORA, os.environ.get(corpus_mod.RUN_ENV)
     corpus_reader.CORPORA = directory
-    os.environ.pop(corpus_mod.RUN_ENV, None)
+    if run:
+        os.environ[corpus_mod.RUN_ENV] = run
+    else:
+        os.environ.pop(corpus_mod.RUN_ENV, None)
     corpus_mod.active.cache_clear()
     try:
         with contextlib.redirect_stdout(io.StringIO()):
@@ -168,14 +172,24 @@ check("node, and the web app's own node_modules",
       "run_all skips this suite when they are absent; reaching here without "
       "them means it was run by hand — `cd webapp/web && npm install`")
 
+# Sections 0 to 3 draw a listing that is not a car beside one that is. The
+# one real non-vehicle any published corpus holds is run11's assignment, so
+# they read run11 by name, served as the configured run, whatever the default
+# is. Every other section draws what the default serves.
 ART = ROOT / "data" / "corpora" / f"{RUN}.json"
+NV_RUN = "run11"
+NV_ART = ROOT / "data" / "corpora" / f"{NV_RUN}.json"
 CLS = {x["listing_id"]: x.get("product_class")
-       for x in json.loads(ART.read_text(encoding="utf-8"))["listings"]}
+       for x in json.loads(NV_ART.read_text(encoding="utf-8"))["listings"]}
 NVS = sorted(i for i, c in CLS.items() if c != "vehicle")
-check(f"  the shipped corpus holds {len(NVS)} non-vehicle(s)", len(NVS) > 0,
+_served0 = json.loads(ART.read_text(encoding="utf-8"))["listings"]
+print(f"    the default corpus ({RUN}) holds "
+      f"{sum(x.get('product_class') != 'vehicle' for x in _served0)}"
+      f" non-vehicle(s); sections 0 to 3 draw {NV_RUN}'s")
+check(f"  {NV_RUN} holds {len(NVS)} non-vehicle(s)", len(NVS) > 0,
       "nothing to draw — said, not passed")
 
-with serving(ART.parent):
+with serving(NV_ART.parent, NV_RUN):
     VEH = next(r.listing_id for r in corpus_mod.active().rows)
     refusal = api.compare(schemas.CompareRequest(ids=[VEH], q="خودرو"))
     files = [(i, CLS[i], api.listing(i)) for i in [VEH] + NVS]
@@ -260,7 +274,7 @@ GONE = "bama:not-in-any-corpus"
 car = files[0][2]                            # VEH, first entry of §0's files
 nv_id, nv_cls, nv = files[1]                 # a listing that is not a car
 b0 = files[-1][2]                            # the classless fixture's row
-with serving(ART.parent):
+with serving(NV_ART.parent, NV_RUN):
     missing = api.listing(GONE)
     none_of = api.compare(schemas.CompareRequest(ids=[GONE], q="خودرو"))
     # A configured run that is not on disk: nothing is read, so the page may
@@ -428,14 +442,16 @@ def isolated_year(html: str, tag: str, year) -> bool:
     return bool(m and re.search(rf"<bdi[^>]*>\s*{y}\s*</bdi>", m.group(1)))
 
 
+_CLS4 = {x["listing_id"]: x.get("product_class")
+         for x in json.loads(ART.read_text(encoding="utf-8"))["listings"]}
 with serving(ART.parent):
     _cars = [(x.listing_id, api.listing(x.listing_id))
              for x in corpus_mod.active().listings
-             if CLS.get(x.listing_id) == "vehicle"]
+             if _CLS4.get(x.listing_id) == "vehicle"]
 _cout, why = render("components/CarDetail.tsx", "ListingFile", [
     {"id": i, "listing": as_json(d.listing), "corpus": as_json(d.corpus),
      "scored": None, "refused": REFUSED} for i, d in _cars])
-check(f"every vehicle in run11 drawn as its car file ({len(_cars)})",
+check(f"every vehicle in {RUN} drawn as its car file ({len(_cars)})",
       _cout is not None and len(_cars) > 0, why or "no vehicles to draw")
 if _cout is not None:
     _run = [i for (i, d), html in zip(_cars, _cout["markup"])
@@ -758,7 +774,7 @@ check("the API sends each built listing's price fields as the artifact "
       str([(r.listing.price_kind, r.listing.price_status,
             r.listing.asking_price_toman) if r.listing else None
            for _, r in _built8]))
-check("run11 holds «توافقی» listings to draw, and a cash one",
+check(f"{RUN} holds «توافقی» listings to draw, and a cash one",
       len(_neg11) > 0, "nothing to draw — said, not passed")
 
 _row8 = {"id": "p_row", "url": "", "model_key": "peugeot 206 TU5",
