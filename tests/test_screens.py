@@ -501,7 +501,7 @@ _eout, why = node({"component": "components/SearchEvidence.tsx",
                    "consts": {"module": "components/SearchEvidence.tsx",
                               "names": ["MATCHED_FA", "APART_FA", "NONE_FA"]}})
 _fout, why2 = node({"consts": {"module": "lib/format.ts",
-                               "names": ["UNCHECKED_FA"]}})
+                               "names": ["UNCHECKED_FA", "ODOMETER_FA"]}})
 check(f"SearchEvidence could be drawn for {len(_found5)} answers",
       _eout is not None and _fout is not None, why or why2)
 
@@ -528,6 +528,18 @@ if _eout is not None and _fout is not None:
     MATCHED, APART, NONE = (_eout["consts"][n]
                             for n in ("MATCHED_FA", "APART_FA", "NONE_FA"))
     PHRASE = _fout["consts"]["UNCHECKED_FA"]
+    ODO = _fout["consts"]["ODOMETER_FA"]
+
+    def _why5(item, key: str) -> str:
+        """What a row apart must say for `key`. On the odometer, the grade
+        the reading carries (D67): a number that is there and not believed is
+        «کارکرد مشکوک», not unrecorded. run11 held no row apart on such a
+        number, so this section said one phrase for every reason until run13
+        held one apart, a 4,200 km 1401 Quik."""
+        if key == "mileage" and item.mileage_status in ODO:
+            return ODO[item.mileage_status]
+        return PHRASE[key]
+
     for (q, r), html in zip(_found5, _eout["markup"]):
         sec = _sections(html)
         got_m = _rows(sec.get("matched", ""))
@@ -539,8 +551,10 @@ if _eout is not None and _fout is not None:
               list(got_m) == want_m and set(got_a) == set(want_a)
               and not set(got_m) & set(want_a),
               f"matches drawn {list(got_m)} · apart drawn {list(got_a)}")
+        _items = {x.id: x for x in r.evidence_unchecked}
         _named = [i for i, keys in want_a.items()
-                  if not all(PHRASE[k] in got_a.get(i, "") for k in keys)]
+                  if not all(_why5(_items[i], k) in got_a.get(i, "")
+                             for k in keys)]
         check("    each row apart says what is missing",
               not _named, f"not said for {_named}")
         _quiet = [i for i, row in got_m.items()
