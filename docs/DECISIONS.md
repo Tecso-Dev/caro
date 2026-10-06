@@ -4172,3 +4172,56 @@ site was last deployed at `a636ea6`.
 
 **What this does not settle.** Whether a figure that is not an asking price
 should still be shown on the car page under its own label.
+
+## D70 — Two rules nothing held are held, and the decimal rule stays
+
+D68's mutations found two rules that no check held. `ELSEWHERE` was checked
+only against itself: the status and the 503s must name it, whatever it
+names, so pointing it back at the old repository turned nothing red. And
+no query the suites parsed needed `unparsed`'s decimal rule — a point
+between two digits is not a separator — because every point in them sat
+inside an amount the parser acted on, whose span covers both halves.
+
+**Where to write** (`7d5264e`). Contract §12 holds `ELSEWHERE` to the one
+address D68 decided, `https://github.com/Tecso-Dev/caro/issues`: equal to
+it, not merely a URL or anything naming GitHub. Issues is on there and
+open to every account (D68, result).
+
+**The decimal rule, measured first,** on the 25 queries the repository
+parses — the examples under the search box, the benchmark's, every literal
+the suites hand the parser, those of `scripts/rank_run5.py` — and a fixture
+with a decimal outside an amount, «پراید، موتور ۱.۶، تا ۵۰۰ میلیون». With
+the rule taken out, one of the 26 changes, the fixture, in one field,
+`unparsed`: «موتور ۱.۶» is cut at the point to «موتور ۱». Ten others hold a
+point between digits, each inside an amount, and parse the same; nothing
+else changes on any of them.
+
+**The decision.** The owner decided on 2026-10-06 that the rule stays. It
+is narrow and it is needed: it changes nothing else the parser does, and
+without it the panel would list a fragment as what was not understood —
+evidence cut short and misleading. The ranking suite now holds the fixture
+whole (`2d7d28b`), so the rule is a contract: changing it means changing
+that check, on purpose. The parser itself was not changed.
+
+**Measured.** Four mutations, each count written down before its run:
+
+                                                 predicted          red
+                                           rnk ctr scr cor    rnk ctr scr cor
+    as committed                             0   0   0   0      0   0   0   0
+    ELSEWHERE back to the old repository     0   1   0   0      0   1   0   0
+    ELSEWHERE without /issues                0   1   0   0      0   1   0   0
+    the decimal rule taken out               1   -   -   -      1   -   -   -
+
+All four exactly, and the 26-query measurement, predicted in writing too,
+held. With the rule taken out, the check reports `['موتور 1']`.
+Its dashes were predicted as dashes: a red ranking check stops the contract,
+screens and corpus suites before a verdict of their own (D68), which this
+does not touch. Each commit is green on its own — 1908 and 1909 assertions
+across 15 suites, 1489 and 1490 across 12 without the extras — and touches
+only tests and the published counts. The round was applied to a fresh clone
+before it was sent, then on the owner's machine: 1909 across 15 suites, the
+web build green with its nine routes, pushed as `43d2720..2d7d28b`.
+
+**What this does not settle.** That a red ranking check hides three suites'
+verdicts, an architecture question of its own, to be measured before
+anything changes.
