@@ -1414,6 +1414,12 @@ _s16 = _states16.get("absent", {})
 check("  SYNTHETIC is built by caro.synthetic, and its source says so",
       _s16.get("synthetic") is True
       and _s16.get("source") == "caro/synthetic.py", str(_s16))
+# REAL and the two UNUSABLE states rank nothing, and a request on them runs
+# the parser alone. They build no synthetic corpus to borrow one from.
+for _mode in ("run99", "invalid", "real"):
+    check(f"  {_mode}: no synthetic corpus is built for it",
+          _states16.get(_mode, {}).get("synthetic") is False,
+          str(_states16.get(_mode)))
 
 print()
 if FAILS:

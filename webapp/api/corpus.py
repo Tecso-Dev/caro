@@ -185,6 +185,31 @@ def _synthetic(sought: str | None = None) -> Corpus:
     )
 
 
+def _ungated_pipeline():
+    """The pipeline of a corpus nothing may be ranked on: REAL (D43) and both
+    UNUSABLE states. Only its parser runs there — measured on 2026-10-06, a
+    request on any of the three calls `RuleIntentParser.parse` and nothing in
+    `Ranker` — and the two UNUSABLE states used to build the whole SYNTHETIC
+    corpus, estimator and gate included, to borrow a parser from it.
+
+    The estimator has never been benchmarked. `MarketEstimator.predict`
+    raises `NotBenchmarked` until `benchmark()` approves it, so `Ranker` can
+    physically not produce a number — which is the refusal the product shows,
+    arrived at through the shipped mechanism rather than through a flag that
+    says "pretend it refused". `PartialPoolingQuantiles` is named rather than
+    left abstract because it is the candidate that would be fitted the day a
+    corpus can judge one. It is constructed but never fitted and never called.
+    """
+    from caro.appraisal import MarketEstimator      # noqa: PLC0415
+    from caro.hierarchical import PartialPoolingQuantiles  # noqa: PLC0415
+    from caro.ranking import (                      # noqa: PLC0415
+        RankingPipeline, Ranker, RuleIntentParser,
+    )
+    return RankingPipeline(
+        parser=RuleIntentParser(),
+        ranker=Ranker(estimator=MarketEstimator(PartialPoolingQuantiles())))
+
+
 def _unusable(run_id: str, fault: BaseException) -> Corpus:
     """An artifact exists and will not load. D49: this is not a fallback.
 
@@ -195,7 +220,7 @@ def _unusable(run_id: str, fault: BaseException) -> Corpus:
     return Corpus(
         kind="UNUSABLE",
         label_fa="پیکره‌ی معیوب",
-        rows=[], listings=[], pipeline=_synthetic().pipeline,
+        rows=[], listings=[], pipeline=_ungated_pipeline(),
         gated=False,
         source=f"data/corpora/{run_id}.json",
         note_fa="یک پیکره‌ی واقعی روی دیسک هست و خوانده نمی‌شود. تا وقتی این "
@@ -225,7 +250,7 @@ def _missing(run_id: str) -> Corpus:
     return Corpus(
         kind="UNUSABLE",
         label_fa="پیکره‌ی انتخاب‌شده پیدا نشد",
-        rows=[], listings=[], pipeline=_synthetic().pipeline,
+        rows=[], listings=[], pipeline=_ungated_pipeline(),
         gated=False,
         source=f"data/corpora/{run_id}.json",
         note_fa=f"متغیر {RUN_ENV} روی «{run_id}» تنظیم شده و فایل آن روی دیسک "
@@ -263,20 +288,6 @@ def _real(run_id: str) -> Corpus | None:
         # of `active()` and 500 the site instead of reporting the fault.
         return _unusable(run_id, e)
 
-    # An estimator that has never been benchmarked. `MarketEstimator.predict`
-    # raises `NotBenchmarked` until `benchmark()` approves it, so `Ranker` can
-    # physically not produce a number here — which is the refusal the product
-    # shows, arrived at through the shipped mechanism rather than through a
-    # flag that says "pretend it refused".
-    #
-    # `PartialPoolingQuantiles` is named rather than left abstract because it
-    # is the candidate that would be fitted the day a corpus can judge one.
-    # It is constructed but never fitted and never called.
-    from caro.appraisal import MarketEstimator      # noqa: PLC0415
-    from caro.hierarchical import PartialPoolingQuantiles  # noqa: PLC0415
-    from caro.ranking import (                      # noqa: PLC0415
-        RankingPipeline, Ranker, RuleIntentParser,
-    )
     return Corpus(
         kind="REAL",
         label_fa="داده‌ی واقعی",
@@ -285,10 +296,7 @@ def _real(run_id: str) -> Corpus | None:
         # No estimator has ever cleared the acceptance gate on a real corpus
         # (D43), so `Ranker.score` raises and no shortlist exists. The product
         # shows evidence and refuses the ranking rather than inventing one.
-        pipeline=RankingPipeline(
-            parser=RuleIntentParser(),
-            ranker=Ranker(estimator=MarketEstimator(
-                PartialPoolingQuantiles()))),
+        pipeline=_ungated_pipeline(),
         gated=False,
         source=f"data/corpora/{run_id}.json",
         note_fa="آگهی‌های واقعی. هیچ برآوردگری روی پیکره‌ی واقعی از دروازه‌ی "
