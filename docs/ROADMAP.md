@@ -14,9 +14,9 @@ intent → explain the best choice**.
 
 | Requirement | State |
 |---|---|
-| crawl offers | ⚠️ **one source run.** `BamaAdapter` has run, and its output is the published corpus `data/corpora/run11.json`: 76 listings, 71 of them appraisable. `DivarCarAdapter` is built and tested offline, and its live path has never run. Sheypoor and Khodro45 have no adapter. |
+| crawl offers | ⚠️ **one source.** Two `BamaAdapter` runs on one pin are published, and the site serves the second, `data/corpora/run13.json` (2026-10-06): 74 listings, 64 of them appraisable. The first, run11 (2026-09-10), stays published. `DivarCarAdapter` is built and tested offline, and its live path has never run. Sheypoor and Khodro45 have no adapter. |
 | normalize messy data | ✅ **built.** Persian numerals and amount words, toman and rial, mileage, Jalali and Gregorian years, make/model aliases, trim, gearbox, fuel, colour, and body condition from free text. |
-| rank by user intent | ⚠️ **built, not served on real data.** `caro/ranking.py` parses Persian intent, filters, relaxes and scores. No estimator has cleared the acceptance gate on a real corpus (D43), so on run11 the site shows evidence, not a ranking. |
+| rank by user intent | ⚠️ **built, not served on real data.** `caro/ranking.py` parses Persian intent, filters, relaxes and scores. No estimator has cleared the acceptance gate on a real corpus (D43), so the site shows evidence, not a ranking. |
 | explain the best choice | ✅ **built.** |
 | deployed | ⚠️ **behind `main`.** https://caro-rho.vercel.app — one Vercel project of two services (D64) — serves `a636ea6`. The deploy after it was refused; see «Deploying» below. |
 
@@ -44,13 +44,16 @@ intent → explain the best choice**.
      point. `CARO_SELLER_SALT` must be set. Expect to be blocked; the adapter
      stops and says so, and that is the design.
    - Sheypoor and Khodro45: adapters, under the same rules.
-   - `gearbox` and `fuel` into the next corpus. Both are parsed on every
-     page and neither has been promoted (FIELD_PROVENANCE.md). Until one is,
-     «اتومات» cannot be answered: on run11 the Quik example under the search
-     box matches none and shows eight listings apart, one more left out
-     because its trim is the word `manual`.
+   - `province` where the market is. It is read on 34 of run13's 74 rows,
+     and the misses are the lines the rule cannot read — city and district,
+     or city, province and district — so what it reads leans to small towns
+     (FIELD_PROVENANCE.md). Nothing draws it until that changes.
+   - A robots.txt check in code before any recurring collection. For Bama
+     it is read by hand today — 2026-10-06, the same as 2026-09-11.
    - Longitudinal collection. Time-dependent and unrecoverable: a day not
-     collected is gone.
+     collected is gone. A second discovery run is a new sample, not a
+     series: on run11's pin, 26 days later, 3 of its 76 listings were drawn
+     again (TEMPORAL_CONTRACT.md §10).
 
 2. **An estimator that clears the gate on real data** (D43). Run the ladder
    in `caro/appraisal.py` — `GlobalQuantiles`, `ComparableQuantiles`,
