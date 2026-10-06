@@ -4095,3 +4095,80 @@ is on at Tecso-Dev/caro, and «Issue permissions» reads «Creation allowed by:
 All users». So `ACCOUNT_FA` is true as written: reading needs no account,
 and writing needs a GitHub account and nothing more. Why the front page,
 seen signed out, drew no Issues tab is still not known.
+
+## D69 — The car page says a price by the rule search and compare use
+
+FIELD_PROVENANCE.md states one rule for a price: a figure whose
+`price_kind` is not `cash`, or whose `price_status` is unusable, is not an
+asking price, and the page says what it is instead (D52). Search and compare
+drew with it, `askingPrice()` in `lib/format.ts`, and the budget is checked
+against the same figure (D65). The car page drew `toman()`, in its heading
+and under «قیمت پیشنهادی», though it is sent both fields the rule reads
+(`detail=yes`). It was found while drawing the odometer (D67) and recorded
+in the roadmap, measured.
+
+**Measured first,** on run11: the two surfaces disagreed on 2 of 75 cars.
+The two whose price is «توافقی», with no amount, were «ثبت‌نشده» in both
+places on their car page and «توافقی» in search and compare. run11 holds no
+financing total and no unusable figure with an amount, so the rest of what
+the rule decides was measured on listings built for it.
+
+**The decision.** The car page uses `askingPrice()` in both places
+(`8c47920`), and FIELD_PROVENANCE.md names the car page beside the card. A
+figure that is not an asking price is said as what it is, and its amount is
+drawn nowhere on the page; it stays on the payload, as an odometer's does
+under D67. Drawing the amount under its own label — «قیمت کل اقساط: …» —
+would be a second decision, and it was not taken. Two draws of the amount
+stay as they were: a listing that is not a car shows its declared amount as
+just that, and the scored panel's rows passed eligibility, which applies
+the same two gates (D52).
+
+**What the heading and «قیمت پیشنهادی» say,** before and after, on
+listings built for each kind of price and served through the API:
+
+- a cash price with a usable status — `display_confirmed`,
+  `structured_only` — and an appraisal row, which carries neither field:
+  the amount, as before;
+- `negotiable`, with no amount: «ثبت‌نشده», now «توافقی»;
+- `absent`: «ثبت‌نشده», now «قیمت اعلام‌نشده»;
+- a financing total of 900,000,000: the amount, drawn as the asking price,
+  now «قیمت کل اقساط»;
+- a cash figure graded `ambiguous`: the amount, now «قیمت مبهم».
+
+**On run11, before and after** — the trees of `3a52bc5` and `8c47920`: 2 of
+76 car pages changed, the two «توافقی» listings, in both places. The
+assignment's «مبلغ اعلام‌شده» is drawn as before. Search and compare were not
+touched.
+
+**How it is held.** Screens §8 draws the car file for six listings served
+from a temporary artifact, one per kind of price, for an appraisal row, and
+for run11's two «توافقی» listings beside a cash one, and reads the heading
+and the cell; for the financing total and the ambiguous figure it checks
+that the amount is nowhere on the page. The corpus suite fails a surface
+that reads the amount without both of the rule's fields, the car page
+included, and the car page's own derivation now holds both fields to
+FIELD_PROVENANCE.md's `detail=yes`.
+
+**Measured.** Six mutations, each count written down before its run:
+
+                                                    predicted     red
+                                                     scr  cor   scr  cor
+    as committed                                       0    0     0    0
+    the heading draws toman() again                    6    0     6    0
+    the cell draws toman() again                       6    0     6    0
+    both draw toman() — the code before                6    1     6    1
+    an extra cell draws every amount                   2    0     2    0
+    kind and status passed to askingPrice() swapped    8    0     8    0
+
+All six exactly, and the ranking and contract suites stayed green in every
+run. Each commit is green on its own — 1907 and 1907 assertions across 15
+suites, 1489 across 12 without the extras — and the round was applied to a
+fresh clone before it was sent, then on the owner's machine: 1907 across 15
+suites, the web build green with its nine routes, pushed as
+`3a52bc5..ed84d72`.
+
+**Not measured.** The deployed site. Deploying is deferred (D65), and the
+site was last deployed at `a636ea6`.
+
+**What this does not settle.** Whether a figure that is not an asking price
+should still be shown on the car page under its own label.
