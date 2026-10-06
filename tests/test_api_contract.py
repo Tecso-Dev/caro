@@ -1356,7 +1356,9 @@ print("\n16 — every corpus is built without the test suite")
 # 2026-10-06). It is built by caro.synthetic now. Two checks keep the suite
 # out: read, no module under webapp/ imports from tests/; run, each state is
 # built in a fresh process, where nothing else has loaded a test module, and
-# that process says what it imported.
+# that process says what it imported. The artifact the invalid and real states
+# are handed is named after DEFAULT_RUN, as everywhere else in this suite:
+# spelled «run11.json», the probe could only pass while run11 was the default.
 import ast as _ast                                                 # noqa: E402
 import subprocess as _sp                                           # noqa: E402
 
@@ -1377,7 +1379,7 @@ check(f"none of the {len(_py16)} modules under webapp/ imports from tests/",
 _PROBE16 = r"""
 import json, os, shutil, sys, tempfile
 from pathlib import Path
-root, mode = Path(sys.argv[1]), sys.argv[2]
+root, mode, run = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
 sys.path.insert(0, str(root))
 os.environ.pop("CARO_RUN", None)
 import caro.corpus_reader as cr
@@ -1385,9 +1387,9 @@ tmp = Path(tempfile.mkdtemp())
 if mode == "run99":
     os.environ["CARO_RUN"] = "run99"
 elif mode == "invalid":
-    (tmp / "run11.json").write_text("{ not a corpus", encoding="utf-8")
+    (tmp / f"{run}.json").write_text("{ not a corpus", encoding="utf-8")
 elif mode == "real":
-    shutil.copy(root / "data" / "corpora" / "run11.json", tmp / "run11.json")
+    shutil.copy(root / "data" / "corpora" / f"{run}.json", tmp / f"{run}.json")
 cr.CORPORA = tmp
 import webapp.api.corpus as C
 c = C.active()
@@ -1399,7 +1401,7 @@ print(json.dumps({"kind": c.kind, "fault": c.fault_code, "source": c.source,
 _states16 = {}
 for _mode, _want in (("absent", "SYNTHETIC"), ("run99", "UNUSABLE"),
                      ("invalid", "UNUSABLE"), ("real", "REAL")):
-    _r = _sp.run([sys.executable, "-c", _PROBE16, str(ROOT), _mode],
+    _r = _sp.run([sys.executable, "-c", _PROBE16, str(ROOT), _mode, RUN],
                  capture_output=True, text=True, timeout=300,
                  env={**os.environ, "PYTHONPATH": str(ROOT)})
     try:
