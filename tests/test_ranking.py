@@ -179,6 +179,15 @@ for q, want, why in [
     check(f"«{q[:34]}» → not understood: {want or 'nothing'}",
           _left(q) == want, f"got {_left(q)} — {why}")
 
+# A point between two digits is a decimal, not a separator. In every query the
+# suites parse, the point sits inside an amount the parser acted on, whose
+# span covers both halves, so taking that rule out turned nothing red (D68).
+# An engine size is not an amount. Its clause is not understood and is listed,
+# and it is listed whole: «موتور ۱.۶», never cut at the point to «موتور ۱».
+_dec = "پراید، موتور ۱.۶، تا ۵۰۰ میلیون"
+check("«موتور ۱.۶» is listed whole as not understood, not cut to «موتور ۱»",
+      _left(_dec) == ["موتور 1.6"], f"got {_left(_dec)}")
+
 s4 = P.parse("مدل ۹۸ به بالا، کارکرد زیر ۹۰ هزار")
 check("2-digit year expands to 1398", s4.year_min == 1398, str(s4.year_min))
 check("explicit mileage cap", s4.max_mileage_km == 90_000, str(s4.max_mileage_km))
