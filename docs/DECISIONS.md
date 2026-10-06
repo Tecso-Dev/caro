@@ -4225,3 +4225,84 @@ web build green with its nine routes, pushed as `43d2720..2d7d28b`.
 **What this does not settle.** That a red ranking check hides three suites'
 verdicts, an architecture question of its own, to be measured before
 anything changes.
+
+## D71 — The site builds every corpus without the test suite
+
+D68 found it while measuring something else: a red ranking check stopped
+three other suites before a verdict of their own. Measured on 2026-10-06,
+before anything was changed, it was more than a test harness problem. The
+site built SYNTHETIC by importing `tests/test_ranking.py`, which ran every
+check in that file and ended in `SystemExit` when one was red. Under
+uvicorn the process lived, `/api/health` kept answering 200, and every
+request that needed a corpus answered a bare 500, re-running the whole
+suite each time. Not only in SYNTHETIC: both UNUSABLE states built the
+synthetic corpus to borrow its pipeline, so the envelope that says
+RUN_NOT_FOUND or CORPUS_INVALID — what those states exist to say — never
+reached the client. REAL never touched the file. In the suites, one red
+ranking check left 624 assertions unrun: all 238 of the contract suite's,
+270 of corpus's 333, 116 of screens's 130.
+
+Three predictions of that measurement were wrong, and are recorded: the
+import was expected to cost seconds and costs 0.2–0.3 s; the 625
+assertions run_all reported missing include the red check itself, so the
+three suites lost 624, not 625; and RUN_NOT_FOUND was expected to be clear
+of the suite, and was not.
+
+**What the site used from the file,** measured next: three names, POOL,
+PIPE and OK, all built by its first hundred lines. The other 483 lines
+changed none of them, no line of the file ran at request time, and the two
+UNUSABLE states used only the pipeline's parser.
+
+**The decision.** The owner put it as two rules: production code does not
+import and run the test suite to build a corpus, and a red ranking check
+does not stop the suites that do not depend on it. The hundred lines moved,
+unchanged, to `caro/synthetic.py` (`e5a34fa`), which the ranking suite now
+imports. SYNTHETIC is built from it (`cb145fb`), and its `source` says
+`caro/synthetic.py` — the one change a reader can see. REAL and both
+UNUSABLE states share the pipeline REAL already built without any corpus
+behind it, a parser and an estimator never benchmarked (`53afc1f`). Two
+alternatives were weighed and set aside: a fixture file under `tests/`,
+which leaves production importing from `tests/`, and catching `SystemExit`
+in the site, which leaves it running the suite on requests.
+
+**On the same measurements, after:** the corpus, the estimator and the
+gate's verdict have the fingerprints they had; six calls in each of the
+four states answer as before, but for SYNTHETIC's `source`; with one
+ranking check red on purpose, run_all failed the ranking suite alone and
+every other assertion ran and passed, 1917 of 1918; and under uvicorn
+SYNTHETIC, RUN_NOT_FOUND and CORPUS_INVALID answered 200 with their
+envelopes, with no `SystemExit` and the suite never imported. An UNUSABLE
+state's first request now takes about 0.01 s, where building the synthetic
+corpus made it 0.14–0.19 s. The win-rate line is unchanged.
+
+**How it is held.** Contract §16 reads the eight modules under `webapp/`
+for any import from `tests/`; builds each of the four states in a fresh
+process, which reports that no test module was loaded; checks that
+SYNTHETIC came from `caro.synthetic` and says so; and that REAL and the
+UNUSABLE states build no synthetic corpus.
+
+**Measured.** Five mutations, each count written down before its run:
+
+                                                predicted           red
+                                              rnk ctr scr cor   rnk ctr scr cor
+    as committed                                0   0   0   0     0   0   0   0
+    the site imports the ranking suite again    0   2   0   0     0   2   0   0
+    RUN_NOT_FOUND borrows the synthetic one     0   1   0   0     0   1   0   0
+    CORPUS_INVALID borrows the synthetic one    0   1   0   0     0   1   0   0
+    one ranking check red                       1   0   0   0     1   0   0   0
+
+All five exactly; the last row is the one that read 1 - - - before. Each
+commit is green on its own — 1909, 1915, 1918 and 1918 assertions across
+15 suites, 1490 across 12 without the extras — and the round was applied
+to a fresh clone before it was sent, then on the owner's machine: 1918
+across 15 suites, the web build green with its nine routes, pushed as
+`9628920..84d293a`.
+
+**Not measured.** The deployed site, where deploying is deferred (D65).
+What Vercel's runtime does with a `SystemExit` inside a request is no
+longer this code's question: nothing it imports can raise one.
+
+**What this does not settle.** The corpus is not pinned by a fingerprint
+in any test: numpy does not promise its distributions stay the same across
+versions, and a pin could fail on an upgrade with nothing wrong. That it is
+the same corpus was measured for this round instead.
