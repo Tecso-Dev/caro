@@ -930,6 +930,15 @@ print("\n12 — the contact inbox keeps a message, or refuses it and says where"
 # never on data/inbox/.
 from webapp.api import contact as contact_mod                      # noqa: E402
 
+# Where it sends people is the address the owner decided (D68): the Issues
+# of Tecso-Dev/caro, the repository the code lives in, where Issues is on and
+# open to every account (D68, result). Every other check here holds the
+# status and the 503s to ELSEWHERE, which is to say to itself, so pointing it
+# at another repository turned nothing red. This holds it to that address.
+check("ELSEWHERE is Tecso-Dev/caro's Issues, the address D68 decided",
+      contact_mod.ELSEWHERE == "https://github.com/Tecso-Dev/caro/issues",
+      contact_mod.ELSEWHERE)
+
 _kept = (contact_mod.INBOX, contact_mod.MESSAGES, os.environ.get("CARO_INBOX"))
 _MSG = {"name": "آزمون", "email": "test@example.com",
         "subject": "آزمون", "body": "یک پیام آزمایشی برای صندوق."}
