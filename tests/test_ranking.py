@@ -8,20 +8,17 @@ Run: PYTHONPATH=. python3 tests/test_ranking.py
 
 import numpy as np
 
-from caro.appraisal import (
-    ComparableQuantiles, GlobalQuantiles, LogLinearQuantiles, MarketEstimator,
-    Row, cluster_temporal_split, run_benchmark,
-)
+from caro.appraisal import GlobalQuantiles, MarketEstimator, Row
 from caro.ranking import (
-    IntentSpec, RankingPipeline, Ranker, RuleIntentParser, Weights,
+    IntentSpec, Ranker, RuleIntentParser, Weights,
     diversify, normalize_fa, parse_amount, retrieve, winrate_vs_price_sort,
     LEDGER_INPUTS, CONDITION_RISK, IMPUTED_MARK, decision_ledger,
     features_from_listing, risk_from_condition, _passes,
     USE_CASE_CUES, USE_CASE_FA,
 )
+from caro.synthetic import build, true_utility
 
 FAILS: list[str] = []
-rng = np.random.default_rng(11)
 
 
 def check(name, cond, detail=""):
@@ -33,71 +30,16 @@ def check(name, cond, detail=""):
 
 
 # ---------------------------------------------------------------------------
-# A corpus where the thesis is TRUE by construction:
-# some cars are cheap because they are damaged. If ranking cannot separate
-# "cheap and sound" from "cheap and wrecked", it deserves to lose.
+# The corpus is the one the site serves as SYNTHETIC, built by caro.synthetic:
+# a corpus where the thesis is TRUE by construction — some cars are cheap
+# because they are damaged. It used to be built here, and the site imported
+# this file to get it, every check included. The names are the ones the
+# checks below read.
 # ---------------------------------------------------------------------------
 
-MODELS = {"pride": 20.4, "206": 21.0, "tiba": 20.6, "pars": 21.2,
-          "207": 21.35, "quik": 20.75}
-SIGMA = 0.16
-
-
-def true_mu(m, year, km):
-    return MODELS[m] + 0.06 * (year - 1395) - 0.0000012 * km
-
-
-def make_corpus(n=1800):
-    rows = []
-    for i in range(n):
-        m = list(MODELS)[i % len(MODELS)]
-        year = int(rng.integers(1392, 1403))
-        km = float(rng.integers(15_000, 280_000))
-        clean = float(np.exp(rng.normal(true_mu(m, year, km), SIGMA)))
-
-        # 30% of cars carry damage. A damaged car is discounted in the ASKING
-        # price by less than the damage actually costs the buyer — which is
-        # exactly why the cheapest listing is usually the worst buy.
-        risk = float(rng.beta(1.4, 6.0))
-        damaged = risk > 0.25
-        asking = clean * (1 - 0.55 * risk) if damaged else clean * float(
-            rng.normal(1.0, 0.03))
-
-        rows.append(Row(
-            listing_id=f"l{i}", cluster_id=f"c{i}",
-            first_seen_ordinal=int(rng.integers(0, 100)),
-            model_key=m, year_jalali=year, mileage_km=km,
-            asking_price_toman=float(asking),
-            features={
-                "risk": risk,
-                "ownership_risk": float(rng.beta(2, 5)),
-                "liquidity": 0.8 if m in ("pride", "206") else 0.4,
-                "has_accident": 1.0 if risk > 0.45 else 0.0,
-                "_clean_value": clean,
-            }))
-    return rows
-
-
-def true_utility(r: Row) -> float:
-    """What the buyer actually gains: the car's real worth, minus what they
-    pay, minus what the damage will cost them. The ranker never sees this."""
-    clean = r.features["_clean_value"]
-    damage_cost = clean * 0.85 * r.features["risk"]
-    return clean - r.asking_price_toman - damage_cost
-
-
-ROWS = make_corpus()
-SPLIT = cluster_temporal_split(ROWS, test_fraction=0.30)
-BASE = {
-    "global-quantiles": run_benchmark(GlobalQuantiles(), SPLIT,
-                                      name="global-quantiles"),
-    "comparable-quantiles": run_benchmark(ComparableQuantiles(), SPLIT,
-                                          name="comparable-quantiles"),
-}
-EST = MarketEstimator(LogLinearQuantiles())
-OK, WHY = EST.benchmark(SPLIT, BASE, name="log-linear-ridge")
-PIPE = RankingPipeline(RuleIntentParser(), Ranker(EST))
-POOL = SPLIT.test
+_S = build()
+ROWS, SPLIT, BASE, EST = _S.rows, _S.split, _S.baselines, _S.estimator
+OK, WHY, PIPE, POOL = _S.ok, _S.why, _S.pipeline, _S.pool
 
 
 # ---------------------------------------------------------------------------
