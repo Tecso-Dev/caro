@@ -22,9 +22,10 @@ Three states, and which one you are in is chosen here:
                 estimator has cleared the gate on a real corpus — so what is
                 served is evidence, never a ranking.
 
-    SYNTHETIC   the corpus tests/test_ranking.py generates. Real code, real
-                ranking, known true prices — which is why the gate passes on
-                it and a shortlist can actually be served.
+    SYNTHETIC   the corpus caro/synthetic.py generates, the one the ranking
+                suite measures ranking on. Real code, real ranking, known true
+                prices — which is why the gate passes on it and a shortlist
+                can actually be served.
 
     UNUSABLE    nothing may be served and this is not the documented absence.
                 Two ways in, kept apart by `fault`: an artifact that EXISTS
@@ -76,8 +77,6 @@ nothing about what it had looked for. It says so now.
 
 from __future__ import annotations
 
-import contextlib
-import io
 import os
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -158,10 +157,13 @@ def _synthetic(sought: str | None = None) -> Corpus:
     """The generated corpus. `sought` is the run that was looked for and was
     not there — named in the note, because a fallback that does not say what
     it fell back FROM is the silent substitution one level down."""
-    # Importing the suite builds the corpus and gates the estimator. It prints
-    # its own check lines, which must not land in the server log.
-    with contextlib.redirect_stdout(io.StringIO()):
-        import tests.test_ranking as T          # noqa: PLC0415
+    # Built by the package, not by the ranking suite. The site used to import
+    # tests/test_ranking.py for this, which ran every check in it and ended in
+    # SystemExit when one was red: under uvicorn every request that needed a
+    # corpus then answered a bare 500 (measured on 2026-10-06). Nothing here
+    # imports from tests/, and the contract suite holds it to that.
+    from caro.synthetic import build            # noqa: PLC0415
+    S = build()
 
     note = ("این نتایج روی پیکره‌ای اجرا می‌شوند که خود پروژه تولید کرده و "
             "قیمت‌های واقعی‌اش معلوم است. رفتار سامانه را نشان می‌دهد، نه "
@@ -174,10 +176,10 @@ def _synthetic(sought: str | None = None) -> Corpus:
     return Corpus(
         kind="SYNTHETIC",
         label_fa="پیکره‌ی ساختگی",
-        rows=list(T.POOL),
-        pipeline=T.PIPE,
-        gated=bool(T.OK),
-        source="tests/test_ranking.py",
+        rows=list(S.pool),
+        pipeline=S.pipeline,
+        gated=bool(S.ok),
+        source="caro/synthetic.py",
         note_fa=note,
         identity=None,      # generated, not collected: there is no artifact
     )

@@ -60,11 +60,12 @@ python3 -m venv .venv                      # apt install python3.X-venv if this 
 
 `vercel.json` at the repository root makes one Vercel project of two
 services on one domain: the site from `webapp/web`, and the API from the
-repository root, so that its function carries `caro/`, `data/corpora/` and
-`tests/` — the corpus fallback imports `tests/test_ranking.py`. `/api/*` goes
-to the API and everything else to the site. The API sees the original path,
-so its routes are the ones above, and the site's own `/api` rewrite is never
-reached: `CARO_API` is not needed there.
+repository root, so that its function carries `caro/` and `data/corpora/`.
+It needs nothing under `tests/`: the SYNTHETIC fallback is built by
+`caro/synthetic.py`. `/api/*` goes to the API and everything else to the
+site. The API sees the original path, so its routes are the ones above, and
+the site's own `/api` rewrite is never reached: `CARO_API` is not needed
+there.
 
 Services is in beta on Vercel and may need enabling for the account. Then:
 
@@ -116,7 +117,7 @@ framework can be imported from inside the package.
 | | |
 | --- | --- |
 | **REAL** | the artifact loaded. `caro.corpus_reader` fails closed on missing provenance, so how much of it reaches W1 is a property of the artifact — a listing whose price or mileage arrives without provenance is counted and not appraised. Either way no estimator has cleared the gate on a real corpus (D43), so the site refuses to rank and shows evidence. |
-| **SYNTHETIC** | no artifact, and no run was named. The corpus `tests/test_ranking.py` generates: real code, real ranking, known true prices, which is why the gate passes on it and a shortlist can actually be served. The note says which artifact was looked for. |
+| **SYNTHETIC** | no artifact, and no run was named. The corpus `caro/synthetic.py` generates, the one `tests/test_ranking.py` measures ranking on: real code, real ranking, known true prices, which is why the gate passes on it and a shortlist can actually be served. The note says which artifact was looked for. |
 | **UNUSABLE** | nothing may be served. Two causes, kept apart by `fault.code`: `CORPUS_INVALID` — a file that exists and will not load; `RUN_NOT_FOUND` — `CARO_RUN` named a run with no artifact. |
 
 The third row is the rule that took two goes to get right. D49 says absence is

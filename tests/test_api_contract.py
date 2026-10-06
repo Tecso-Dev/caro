@@ -1346,6 +1346,75 @@ for _i, _km, _ms, _y, _want, _was in _ODO:
               and _x.mileage_status == _ms,
               f"{_x.unchecked} {_x.mileage_km} {_x.mileage_status}")
 
+
+# ---------------------------------------------------------------------------
+print("\n16 — every corpus is built without the test suite")
+# ---------------------------------------------------------------------------
+# The site built SYNTHETIC by importing tests/test_ranking.py, which ran every
+# check in it and ended in SystemExit when one was red; under uvicorn every
+# request that needed a corpus then answered a bare 500 (measured on
+# 2026-10-06). It is built by caro.synthetic now. Two checks keep the suite
+# out: read, no module under webapp/ imports from tests/; run, each state is
+# built in a fresh process, where nothing else has loaded a test module, and
+# that process says what it imported.
+import ast as _ast                                                 # noqa: E402
+import subprocess as _sp                                           # noqa: E402
+
+_py16 = sorted(set((ROOT / "webapp").glob("*.py"))
+               | set((ROOT / "webapp" / "api").rglob("*.py")))
+_from_tests = []
+for _p in _py16:
+    for _n in _ast.walk(_ast.parse(_p.read_text(encoding="utf-8"))):
+        _mods = ([a.name for a in _n.names] if isinstance(_n, _ast.Import)
+                 else [_n.module or ""] if isinstance(_n, _ast.ImportFrom)
+                 else [])
+        if any(m == "tests" or m.startswith("tests.") for m in _mods):
+            _from_tests.append(f"{_p.relative_to(ROOT)}:{_n.lineno}")
+check(f"none of the {len(_py16)} modules under webapp/ imports from tests/",
+      len(_py16) > 0 and not _from_tests,
+      str(_from_tests) if _from_tests else "found no module to read")
+
+_PROBE16 = r"""
+import json, os, shutil, sys, tempfile
+from pathlib import Path
+root, mode = Path(sys.argv[1]), sys.argv[2]
+sys.path.insert(0, str(root))
+os.environ.pop("CARO_RUN", None)
+import caro.corpus_reader as cr
+tmp = Path(tempfile.mkdtemp())
+if mode == "run99":
+    os.environ["CARO_RUN"] = "run99"
+elif mode == "invalid":
+    (tmp / "run11.json").write_text("{ not a corpus", encoding="utf-8")
+elif mode == "real":
+    shutil.copy(root / "data" / "corpora" / "run11.json", tmp / "run11.json")
+cr.CORPORA = tmp
+import webapp.api.corpus as C
+c = C.active()
+print(json.dumps({"kind": c.kind, "fault": c.fault_code, "source": c.source,
+                  "tests": sorted(m for m in sys.modules
+                                  if m == "tests" or m.startswith("tests.")),
+                  "synthetic": "caro.synthetic" in sys.modules}))
+"""
+_states16 = {}
+for _mode, _want in (("absent", "SYNTHETIC"), ("run99", "UNUSABLE"),
+                     ("invalid", "UNUSABLE"), ("real", "REAL")):
+    _r = _sp.run([sys.executable, "-c", _PROBE16, str(ROOT), _mode],
+                 capture_output=True, text=True, timeout=300,
+                 env={**os.environ, "PYTHONPATH": str(ROOT)})
+    try:
+        _states16[_mode] = json.loads(_r.stdout.strip().splitlines()[-1])
+    except (IndexError, ValueError):
+        _states16[_mode] = {"error": (_r.stderr.strip().splitlines()
+                                      or ["no output"])[-1][:160]}
+    check(f"{_mode}: built as {_want}, with no test module loaded",
+          _states16[_mode].get("kind") == _want
+          and _states16[_mode].get("tests") == [], str(_states16[_mode]))
+_s16 = _states16.get("absent", {})
+check("  SYNTHETIC is built by caro.synthetic, and its source says so",
+      _s16.get("synthetic") is True
+      and _s16.get("source") == "caro/synthetic.py", str(_s16))
+
 print()
 if FAILS:
     print(f"FAILED ({len(FAILS)}): " + ", ".join(FAILS))
