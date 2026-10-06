@@ -35,16 +35,6 @@ intent → explain the best choice**.
    shortlist, the relaxation ladder, and the comparison with price-sort. No
    commit makes the ranked path evidence-aware before then.
 
-2. **A red ranking check hides three suites' verdicts** (D68). The API
-   builds SYNTHETIC by importing `tests/test_ranking.py` (`_synthetic` in
-   `webapp/api/corpus.py`), and that suite raises SystemExit when a check
-   is red. So a red ranking check also stops the contract, screens and
-   corpus suites before a verdict of their own: measured on 2026-10-05,
-   five of ten mutations did that. run_all still fails, so nothing goes
-   green that should not; what is lost is what the three would have said.
-   The same import runs in the API process whenever it serves SYNTHETIC.
-   Not decided.
-
 ## Next — the product gaps
 
 1. **Data.**
