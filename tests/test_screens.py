@@ -484,14 +484,21 @@ print("\n5 — search: a match is drawn as one only where it was checked")
 # could not be checked against some (`webapp/api/constraints.py`). The
 # second kind is not a match, and the reader must not be told it is one. So
 # `SearchEvidence` is drawn with what search really returns for every example
-# chip on run11, at the k=8 the results page asks for; for two queries that
-# match nothing — one with listings apart, one without; and for one whose
-# listings apart are more than a table holds. The checks read the markup:
-# which table each row is in, and what it says is missing.
+# chip on the default corpus, at the k=8 the results page asks for; for
+# queries that match nothing — with listings apart, and without; and for one
+# whose listings apart are more than a table holds. The checks read the
+# markup: which table each row is in, and what it says is missing.
+#
+# The case with nothing matched and nothing apart was reached by
+# «تیبا زیر ۱۰ میلیون» while no Tiba lacked a price. run13 has one, held apart
+# on the budget, and the case went unreached (2026-10-06). «پژو ۲۰۶» names a
+# model no published corpus holds, so it reaches the case whatever lacks a
+# price.
 _BOX5 = (WEB / "components" / "SearchBox.tsx").read_text(encoding="utf-8")
 _m5 = re.search(r"const EXAMPLES = \[(.*?)\];", _BOX5, re.S)
 _Q5 = (re.findall(r"'([^']+)'", _m5.group(1)) if _m5 else []) \
-    + ["پراید زیر ۱۰ میلیون", "تیبا زیر ۱۰ میلیون", "پراید سند آزاد"]
+    + ["پراید زیر ۱۰ میلیون", "تیبا زیر ۱۰ میلیون", "پراید سند آزاد",
+       "پژو ۲۰۶"]
 with serving(ART.parent):
     _found5 = [(q, api.search(q=q, k=8)) for q in _Q5]
 
