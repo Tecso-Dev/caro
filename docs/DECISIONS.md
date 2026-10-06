@@ -4086,3 +4086,12 @@ repository.
 account, which cannot be seen from outside. The two gaps above. And that a
 red ranking check hides three suites' verdicts, which is in
 docs/ROADMAP.md.
+
+## D68 (result) — issue creation is open to every account
+
+D68 left one thing unsettled because it cannot be seen from outside. The
+repository's own settings, as the owner showed them on 2026-10-06: Issues
+is on at Tecso-Dev/caro, and «Issue permissions» reads «Creation allowed by:
+All users». So `ACCOUNT_FA` is true as written: reading needs no account,
+and writing needs a GitHub account and nothing more. Why the front page,
+seen signed out, drew no Issues tab is still not known.
