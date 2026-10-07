@@ -366,7 +366,7 @@ And the specific gaps behind those rows:
 | Adversarial review, evidence ledger | ✅ built, tested |
 | Demo page, fed from pipeline output | ✅ built |
 | Source adapter contract + CSV adapter | ✅ built |
-| Divar + Bama adapters, robots-verified | ✅ built, tested offline |
+| Divar + Bama adapters; robots.txt read in code (RFC 9309) | ✅ built, tested offline |
 | Cross-source identity and supply correction | ✅ built, tested |
 | **Real Bama corpus** | ✅ 5 live runs; Run 5 = 403 parsed, 228 appraisal-eligible |
 | **A shortlist over real listings** | ❌ does not exist — no estimator clears the gate on any real corpus, so `Ranker.score` raises and every shortlist refuses |
@@ -412,6 +412,12 @@ Three offer sources, each with a role — not ten sites for volume.
 | **Bama** | `primary_offers` — richest structured fields, sets the canonical schema | Publishes a **car sitemap**; nothing relevant disallowed. So discovery is sitemap-first: coverage is knowable rather than estimated, and it needs far fewer requests than crawling search pages. |
 | **Divar** | `breadth` — largest volume, private sellers the specialist sites never see | Category browsing and listing pages allowed; **search urls (`?q=`) disallowed**. `assert_allowed()` raises on a violating url rather than trusting a comment. |
 | **Sheypoor** | `corroboration` — its value is the cross-source clusters it creates, not the listings it adds | Not yet verified. |
+
+Both adapters read robots.txt before their first request and ask it before
+every request after (`caro/ingest/robots.py`, RFC 9309, a matcher of our
+own): a url it disallows is not requested, and a robots.txt that gives no
+policy stops the run. Divar keeps its 2026-09-07 transcription beside the
+live file, and a url either one refuses is refused.
 
 Specs and price-guide sites are `taxonomy_only`: useful for normalising model
 names, never ingested as offers. A price-guide page is not a price anyone is
