@@ -26,6 +26,11 @@ re-reads the file it just wrote, promotes it, and prints the same fill rate
 at all three stages. A field whose rate falls between two columns is a
 boundary dropping it, not the source withholding it, and the run says which.
 
+Before the first page, robots.txt is read by the adapter's gate
+(caro/ingest/robots.py). DISCOVERY prints what was read — when, which bytes,
+what it allowed — the snapshot keeps the same line in its notes, and a
+robots.txt that gives no policy halts the run with nothing written.
+
 Structured snapshot records are written to data/snapshots/ — one FetchOutcome
 per listing, not the raw HTTP response. That directory is operational and
 never published; the publishable artifact is produced separately by
@@ -60,6 +65,7 @@ from caro.ingest.divar_car import (                                     # noqa: 
     DivarCarAdapter, SourceBlocked, parse_listing, playwright_fetcher,
 )
 from caro.ingest import coverage as cov_mod                           # noqa: E402
+from caro.ingest.robots import RobotsViolation, describe              # noqa: E402
 from caro.ingest.quality import (                                     # noqa: E402
     classify_mileage, classify_price_value, eligibility,
 )
@@ -529,6 +535,13 @@ def main() -> int:
         print()
         try:
             listings, snapshot_path = collect(args, traces)
+        except RobotsViolation as e:
+            # Not a block and not an outage to wait out by retrying: the
+            # source's own policy, or our failure to read one.
+            print(f"\nHALTED by robots.txt: {e}\n"
+                  "Nothing was requested past it and no snapshot was "
+                  "written.", file=sys.stderr)
+            return 1
         except DiscoveryUnavailable as e:
             # We could not look. That is emphatically not "there is nothing".
             print(f"\nDISCOVERY UNAVAILABLE: {e}\n"
@@ -615,13 +628,16 @@ def sampling_spec(args) -> str:
     return "\n".join(L)
 
 
-def collect(args, traces: list | None = None) -> tuple[list, object]:
+def collect(args, traces: list | None = None,
+            fetcher=None) -> tuple[list, object]:
     """Live collection. Returns (listings, snapshot path or None).
 
     The path comes back because the survival report re-reads what was
     written rather than trusting the objects still in memory. Reading
     the in-memory copy would report that nothing was lost no matter
-    what the serialiser did with it."""
+    what the serialiser did with it.
+
+    `fetcher` replaces the HTTP fetcher, for tests; None is the network."""
     out: list = []
 
     if args.source == "divar":
@@ -634,6 +650,7 @@ def collect(args, traces: list | None = None) -> tuple[list, object]:
         ad = DivarCarAdapter(city=args.city, max_pages=args.pages,
                              page_fetcher=playwright_fetcher(),
                              parse_page=parse_page,
+                             robots_fetcher=fetcher or http_fetcher(),
                              salt=os.environ["CARO_SELLER_SALT"])
         list(ad.fetch_all(date.today()))
         return out, None       # divar writes no snapshot yet
@@ -641,7 +658,8 @@ def collect(args, traces: list | None = None) -> tuple[list, object]:
     # The sitemap and Bama's pages are server-rendered, so plain HTTP is
     # correct here. Driving a browser to download static XML costs seconds and
     # a Chromium process per request for nothing.
-    ad = BamaAdapter(fetcher=http_fetcher(), max_listings=args.limit,
+    ad = BamaAdapter(fetcher=fetcher or http_fetcher(),
+                     max_listings=args.limit,
                      max_categories=args.categories or args.limit,
                      only_makes=make_list(args),
                      sample_seed=None if make_list(args) else args.seed,
@@ -654,10 +672,14 @@ def collect(args, traces: list | None = None) -> tuple[list, object]:
     print(ad.stats.report())
     print()
     SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
-    snap = assess_integrity(Snapshot(snapshot_id(args), date.today(), records))
+    # Which robots.txt this run obeyed, kept with what the run collected.
+    snap = assess_integrity(Snapshot(
+        snapshot_id(args), date.today(), records,
+        notes=[f"robots.txt {describe(ad.robots.record)}"]))
     path = write_snapshot(SNAPSHOT_DIR, snap)
+    shown = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
     print(f"{len(out)} listings parsed · snapshot "
-          f"{path.relative_to(ROOT)} (integrity: {snap.integrity.value})\n")
+          f"{shown} (integrity: {snap.integrity.value})\n")
     return out, path
 
 

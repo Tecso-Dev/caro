@@ -2090,6 +2090,58 @@ check("the adapter still records no seller_raw",
                            ld_page()).seller_raw is None)
 
 
+# ---------------------------------------------------------------------------
+print("\nwhat a run writes says which robots.txt it obeyed")
+import argparse as _argparse                                          # noqa: E402
+import contextlib as _contextlib                                      # noqa: E402
+import io as _io                                                      # noqa: E402
+import re as _re                                                      # noqa: E402
+import tempfile as _tempfile                                          # noqa: E402
+from pathlib import Path as _Path                                     # noqa: E402
+from scripts import first_run as _first_run                           # noqa: E402
+
+_ROBOTS_SHA = _hashlib.sha256(BAMA_ROBOTS.encode("utf-8")).hexdigest()
+_UTC_STAMP = _re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+00:00")
+
+
+def _first_run_into(tmp, fetcher):
+    """first_run.collect against a fake bama, its snapshots in `tmp`."""
+    args = _argparse.Namespace(source="bama", limit=10, categories=None,
+                               makes="", seed=0, city="tehran", pages=1)
+    old, _first_run.SNAPSHOT_DIR = _first_run.SNAPSHOT_DIR, _Path(tmp)
+    out = _io.StringIO()
+    try:
+        with _contextlib.redirect_stdout(out):
+            _, path = _first_run.collect(args, [], fetcher=fetcher)
+        return json.loads(path.read_text(encoding="utf-8")), out.getvalue()
+    finally:
+        _first_run.SNAPSHOT_DIR = old
+
+
+with _tempfile.TemporaryDirectory() as _tmp:
+    try:
+        _snap, _printed = _first_run_into(_tmp, bama_world()[0])
+    except RobotsViolation as e:
+        _snap, _printed = {"notes": [f"raised: {e}"]}, ""
+_notes = [n for n in _snap["notes"] if n.startswith("robots.txt ")]
+check("first_run: the snapshot names the robots.txt the run obeyed",
+      len(_notes) == 1 and _ROBOTS_SHA in _notes[0], str(_snap["notes"]))
+check("  and when it was read", bool(_notes) and bool(_UTC_STAMP.search(_notes[0])),
+      str(_notes))
+check("  and DISCOVERY printed the same", _ROBOTS_SHA in _printed)
+_f, _asked = bama_world((503, ""))
+with _tempfile.TemporaryDirectory() as _tmp:
+    try:
+        _first_run_into(_tmp, _f)
+        _how = "ran"
+    except RobotsViolation as e:
+        _how = "everything" if e.everything else "one url"
+    _left = list(_Path(_tmp).rglob("*"))
+check("first_run: no policy, no request past robots.txt and nothing written",
+      _how == "everything" and _asked == ["https://bama.ir/robots.txt"]
+      and _left == [], f"{_how} {_asked} {_left}")
+
+
 print()
 if FAILS:
     print(f"FAILED ({len(FAILS)}): " + ", ".join(FAILS))
