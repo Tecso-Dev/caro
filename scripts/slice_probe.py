@@ -4,10 +4,11 @@
     python3 scripts/slice_probe.py
     python3 scripts/slice_probe.py --url https://bama.ir/car/pride-131
 
-ONE request. It fetches a single category page and reports what the page
-says about ITS OWN SIZE — nothing else. No detail pages, no snapshot, no
-corpus, no second page. Run it, paste the output, and the collector for
-step 5 gets designed from that instead of from an assumption.
+TWO requests: robots.txt, which the adapter's gate reads before anything
+else, and a single category page, reported for what it says about ITS OWN
+SIZE — nothing else. No detail pages, no snapshot, no corpus, no second
+page. Run it, paste the output, and the collector for step 5 gets designed
+from that instead of from an assumption.
 
 WHY THIS QUESTION GATES EVERYTHING ELSE
 
@@ -64,6 +65,7 @@ os.environ.setdefault("CARO_SELLER_SALT", "slice-probe-collects-nothing")
 from caro.ingest.bama import (                                    # noqa: E402
     BASE, BamaAdapter, extract_listing_links, http_fetcher,
 )
+from caro.ingest.robots import DENY_ALL, describe                 # noqa: E402
 from caro.tracking import FetchStatus, classify_http              # noqa: E402
 
 DEFAULT = "https://bama.ir/car/pride-131"
@@ -85,10 +87,17 @@ def main() -> int:
     a = ap.parse_args()
 
     ad = BamaAdapter(fetcher=http_fetcher(), max_listings=1, max_categories=1)
+    print("SLICE PROBE — one page, structure only")
+    print("=" * 62)
+    rec = ad.robots.ensure()
+    print(f"  robots.txt  {describe(rec)}")
+    print()
+    if rec["verdict"] == DENY_ALL:
+        print("robots.txt gave no policy, so nothing is requested.",
+              file=sys.stderr)
+        return 1
     status, html = ad._get(a.url)
 
-    print("SLICE PROBE — one request, structure only")
-    print("=" * 62)
     print(f"  url                  {a.url}")
     print(f"  http                 {status}  -> "
           f"{classify_http(status).value}")
@@ -150,7 +159,7 @@ def main() -> int:
     print()
     print("  Those need a second request each, and each is a separate")
     print("  decision about how much to ask of the source. This file asks")
-    print("  once, on purpose.")
+    print("  for one page, on purpose.")
     return 0
 
 

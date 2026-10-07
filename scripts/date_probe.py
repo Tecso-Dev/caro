@@ -42,8 +42,9 @@ those pages is seller-authored or beside the point.
 
 POLITENESS
 
-One request per sampled listing, through the same adapter and the same sleep
-the collector uses. `--sample` defaults to 20 because twenty is enough to see
+robots.txt first, read by the adapter's gate and printed, then one request
+per sampled listing, through the same adapter and the same sleep the
+collector uses. `--sample` defaults to 20 because twenty is enough to see
 a pattern and a hundred is not twenty times more informative.
 """
 
@@ -69,6 +70,7 @@ from caro.corpus_reader import CorpusUnavailable, load_corpus     # noqa: E402
 from caro.ingest.bama import (                                    # noqa: E402
     BamaAdapter, _text, http_fetcher,
 )
+from caro.ingest.robots import DENY_ALL, describe                 # noqa: E402
 from caro.tracking import FetchStatus, classify_http              # noqa: E402
 
 # `… - 1405/6/19 | باما` in the document title.
@@ -205,6 +207,13 @@ def main() -> int:
     print()
 
     ad = BamaAdapter(fetcher=http_fetcher(), max_listings=1, max_categories=1)
+    rec = ad.robots.ensure()
+    print(f"  robots.txt  {describe(rec)}")
+    print()
+    if rec["verdict"] == DENY_ALL:
+        print("robots.txt gave no policy, so nothing is requested.",
+              file=sys.stderr)
+        return 1
 
     where = Counter()
     rel_forms = Counter()

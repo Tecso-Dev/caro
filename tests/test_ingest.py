@@ -2191,6 +2191,42 @@ check("date_watch: no policy, no request past robots.txt and nothing written",
       _done is None and not _wrote
       and _asked == ["https://bama.ir/robots.txt"], f"{_done} {_asked}")
 
+# "Once per execution" holds because an execution is a process and a process
+# builds one adapter. A script that built one inside a loop would read
+# robots.txt once per turn of it, and nothing above would notice, so the
+# scripts are read for that shape. A heuristic, not a proof: a construction
+# hidden in a function that a loop calls is not seen.
+import ast as _ast                                                    # noqa: E402
+
+_ADAPTERS = ("BamaAdapter", "DivarCarAdapter")
+_LOOPS = (_ast.For, _ast.AsyncFor, _ast.While, _ast.ListComp, _ast.SetComp,
+          _ast.DictComp, _ast.GeneratorExp)
+
+
+def _builds(node):
+    f = node.func if isinstance(node, _ast.Call) else None
+    name = (f.id if isinstance(f, _ast.Name)
+            else f.attr if isinstance(f, _ast.Attribute) else "")
+    return name in _ADAPTERS
+
+
+_in_loop, _found, _written = {}, 0, 0
+for _p in sorted((_Path(__file__).resolve().parent.parent
+                  / "scripts").glob("*.py")):
+    _src = _p.read_text(encoding="utf-8")
+    _tree = _ast.parse(_src)
+    _found += sum(_builds(n) for n in _ast.walk(_tree))
+    _written += sum(_src.count(f"{a}(") for a in _ADAPTERS)
+    _hits = sorted({n.lineno for loop in _ast.walk(_tree)
+                    if isinstance(loop, _LOOPS)
+                    for n in _ast.walk(loop) if _builds(n)})
+    if _hits:
+        _in_loop[_p.name] = _hits
+check("no script builds an adapter inside a loop: one execution, one "
+      "adapter, one robots.txt", not _in_loop, str(_in_loop))
+check("  and the scan saw every adapter the scripts build",
+      _found == _written and _found > 0, f"{_found} of {_written}")
+
 
 print()
 if FAILS:

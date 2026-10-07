@@ -37,10 +37,10 @@ WHAT IT PRINTS
      block, because the name list in (2) is itself an assumption and a page
      may state the location in a form it does not contain
 
-POLITENESS. One request per sampled listing, through the same adapter, the
-same robots check and the same sleep as a collection run. Default sample is
-three: one page shows the shape, three show whether the shape is the page's
-or that listing's.
+POLITENESS. robots.txt first, read by the adapter's gate as in a collection
+run and printed, then one request per sampled listing through the same
+adapter and the same sleep. Default sample is three: one page shows the
+shape, three show whether the shape is the page's or that listing's.
 
 NO PHONE NUMBER LEAVES THIS SCRIPT — AND THE FIRST DRAFT SAID SO WRONGLY
 
@@ -81,6 +81,7 @@ from caro.ingest.bama import (                                    # noqa: E402
     BamaAdapter, _labelled, _text, http_fetcher,
 )
 from caro.ingest.persian import normalize                         # noqa: E402
+from caro.ingest.robots import DENY_ALL, describe                 # noqa: E402
 from caro.tracking import FetchStatus, classify_http              # noqa: E402
 
 # Iran's provinces plus the larger cities a listing is likely to name. This
@@ -181,6 +182,13 @@ def main() -> int:
     print()
 
     ad = BamaAdapter(fetcher=http_fetcher(), max_listings=1, max_categories=1)
+    rec = ad.robots.ensure()
+    print(f"  robots.txt  {describe(rec)}")
+    print()
+    if rec["verdict"] == DENY_ALL:
+        print("robots.txt gave no policy, so nothing is requested.",
+              file=sys.stderr)
+        return 1
 
     label_hits: Counter = Counter()
     pages: list[tuple[str, list[str]]] = []

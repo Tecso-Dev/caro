@@ -3,7 +3,8 @@
 
     python3 scripts/slice_probe2.py
 
-TWO requests: the category page, and robots.txt.
+TWO requests: robots.txt, which the adapter's gate reads before anything
+else, and the category page.
 
 The first probe found 897,877 bytes of HTML holding ten detail links, no
 pagination controls and no result count. That is an application shell: the
@@ -19,13 +20,14 @@ collector.
        the bytes already fetched, not guessed.
 
     2. Is it allowed?
-       `caro/ingest/base.py` says "respect the source's terms of use and
-       robots directives" — in a docstring. Nothing in the fetch path reads
-       robots.txt. That was survivable while the collector made a hundred
-       requests a day against pages a browser also requests. Step 5 is a
-       daily re-fetch of a cohort plus enumeration of a slice, which is a
-       different order of load, and the constraint has to become a mechanism
-       before the load goes up rather than after.
+       `caro/ingest/base.py` said "respect the source's terms of use and
+       robots directives" in a docstring while nothing in the fetch path
+       read robots.txt. Step 5 is a daily re-fetch of a cohort plus
+       enumeration of a slice, a different order of load, and the
+       constraint had to become a mechanism before the load went up. It is
+       one now: the adapter's gate (caro/ingest/robots.py). This file
+       prints what that gate read and asks it about every path the page
+       names — it has no request and no parser of its own for robots.txt.
 
 WHAT IT WILL NOT PRINT
 
@@ -47,7 +49,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urljoin
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -55,6 +57,7 @@ sys.path.insert(0, str(ROOT))
 os.environ.setdefault("CARO_SELLER_SALT", "slice-probe-collects-nothing")
 
 from caro.ingest.bama import BamaAdapter, http_fetcher            # noqa: E402
+from caro.ingest.robots import DENY_ALL, describe                 # noqa: E402
 from caro.tracking import FetchStatus, classify_http              # noqa: E402
 
 DEFAULT = "https://bama.ir/car/pride-131"
@@ -106,6 +109,12 @@ def main() -> int:
 
     print("SLICE PROBE 2 — how the list is served, and what is permitted")
     print("=" * 64)
+    rec = ad.robots.ensure()
+    if rec["verdict"] == DENY_ALL:
+        print(f"  robots.txt  {describe(rec)}")
+        print("robots.txt gave no policy, so nothing is requested.",
+              file=sys.stderr)
+        return 1
 
     status, html = ad._get(a.url)
     print(f"  url                  {a.url}")
@@ -159,45 +168,31 @@ def main() -> int:
     print()
 
     # ---- 3. what robots.txt says -----------------------------------------
-    host = f"{urlparse(a.url).scheme}://{urlparse(a.url).netloc}"
-    rstatus, robots = ad._get(f"{host}/robots.txt")
-    print(f"ROBOTS.TXT   {host}/robots.txt   http {rstatus}")
+    # The copy the gate read before the page above was requested. Not asked
+    # for again, and not read here: the gate's reading is the one that
+    # decides what this adapter may request.
+    print(f"ROBOTS.TXT   {describe(rec)}")
     print("-" * 64)
-    if classify_http(rstatus) is not FetchStatus.OK or not robots:
-        print("  could not be read. Until it can be, the conservative reading")
-        print("  is that nothing new may be requested — an unreadable policy")
-        print("  is not an absent one.")
-        return 1
-    for line in robots.strip().splitlines()[:60]:
+    for line in (ad.robots.text or "").strip().splitlines()[:60]:
         print(f"  {line}")
+    if not ad.robots.text:
+        print(f"  no text: {rec['why']}")
     print()
 
-    # Disallow rules, matched literally against what we found. Deliberately
-    # NOT a robots parser: a half-written one that gets a wildcard wrong
-    # gives permission it was never given. This prints the overlap and a
-    # person decides.
-    dis = [l.split(":", 1)[1].strip()
-           for l in robots.splitlines()
-           if l.lower().startswith("disallow:") and ":" in l]
-    print("DISALLOW RULES vs THE PATHS ABOVE")
+    print("THE PATHS ABOVE, AS THE GATE READS THEM")
     print("-" * 64)
-    if not dis:
-        print("  no Disallow lines.")
-    flagged = [(p, d) for p in paths for d in dis
-               if d and (p.startswith(d) or d.rstrip("*") and
-                         p.startswith(d.rstrip("*")))]
-    if flagged:
-        for p, d in flagged[:20]:
-            print(f"  ✗ {p}   covered by  Disallow: {d}")
-    else:
-        print("  no literal prefix match between a discovered path and a")
-        print("  Disallow rule.")
+    refused = [p for p in paths
+               if not ad.robots.allows(urljoin(ad.robots.origin + "/", p))]
+    if not paths:
+        print("  no path to ask about.")
+    for p in refused[:20]:
+        print(f"  ✗ {p}   disallowed for {ad.robots.token}")
+    if paths and not refused:
+        print(f"  all {len(paths)} allowed for {ad.robots.token}.")
     print()
-    print("  This is a PREFIX COMPARISON, not a robots evaluation. Wildcards,")
-    print("  Allow precedence and user-agent grouping are not implemented")
-    print("  here on purpose: a parser that is almost right hands out")
-    print("  permission nobody gave. Read the rules above yourself before")
-    print("  anything calls anything.")
+    print("  Allowed means robots.txt does not forbid asking. It does not")
+    print("  mean anything should be called: that is still the next")
+    print("  decision, and it is yours.")
     return 0
 
 
