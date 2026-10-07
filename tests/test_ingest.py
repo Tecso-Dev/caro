@@ -624,8 +624,16 @@ _MANY = ('<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/'
          + "</urlset>")
 
 
+def _sitemap_world(u):
+    """robots.txt answered as bama answers it, and the sitemap for the rest.
+    No sleeper of its own: the gate pauses after robots.txt, as after any
+    request, and these adapters would otherwise sleep for real."""
+    return (200, BAMA_ROBOTS) if u.endswith("/robots.txt") else (200, _MANY)
+
+
 def _cats(**kw):
-    ad = BamaAdapter(fetcher=lambda u: (200, _MANY), max_categories=3, **kw)
+    ad = BamaAdapter(fetcher=_sitemap_world, max_categories=3,
+                     sleeper=lambda s: None, **kw)
     return [u.rsplit("/", 1)[-1] for u in ad.discover_categories()]
 
 
@@ -646,8 +654,8 @@ check("a pinned make list is NOT shuffled — the pin is the registration",
       == ["dena", "peugeot", "pride"],
       "sitemap order within a deliberate slice")
 
-_ad = BamaAdapter(fetcher=lambda u: (200, _MANY), max_categories=3,
-                  sample_seed=0)
+_ad = BamaAdapter(fetcher=_sitemap_world, max_categories=3,
+                  sample_seed=0, sleeper=lambda s: None)
 _ad.discover_categories()
 check("the run records which rule chose the categories",
       "seed" in _ad.stats.category_rule, _ad.stats.category_rule)
@@ -1301,7 +1309,8 @@ check("a genuine vehicle feature still passes",
       ok_row.features["body_condition_score"] == 0.8,
       "the guard must not become a reason to have no features at all")
 
-pages = {"https://bama.ir/sitemap/car": (200, SITEMAP),
+pages = {"https://bama.ir/robots.txt": (200, BAMA_ROBOTS),
+         "https://bama.ir/sitemap/car": (200, SITEMAP),
          "https://bama.ir/car/peugeot": (200, CATEGORY),
          "https://bama.ir/car/saipa": (200, "")}
 
@@ -1371,6 +1380,97 @@ check("detail outcomes tallied by status", bool(st.detail_status),
       str(st.detail_status))
 check("the report renders", "DISCOVERY" in st.stats_report()
       if hasattr(st, "stats_report") else "DISCOVERY" in st.report())
+
+
+print("\nbama asks robots.txt before every request, and stops where it says")
+from urllib.parse import urlsplit as _urlsplit                        # noqa: E402
+
+
+def bama_world(robots=(200, BAMA_ROBOTS)):
+    """bama_fetch with robots.txt answered as given, and every url asked."""
+    asked = []
+
+    def f(u):
+        asked.append(u)
+        return robots if _urlsplit(u).path == "/robots.txt" else bama_fetch(u)
+    return f, asked
+
+
+def _robots_asks(asked):
+    return sum(_urlsplit(u).path == "/robots.txt" for u in asked)
+
+
+def _drain(adapter):
+    """Every outcome of a run, and what stopped it: everything / one url /
+    ran. Anything else is the suite's to see, and is not caught."""
+    out = []
+    try:
+        for o in adapter.fetch_all(date(2026, 10, 7)):
+            out.append(o)
+        return out, "ran"
+    except RobotsViolation as e:
+        return out, "everything" if e.everything else "one url"
+
+
+_f, _asked = bama_world()
+_r1 = BamaAdapter(fetcher=_f, salt="test-salt", max_listings=10,
+                  sleeper=lambda s: None)
+_drain(_r1)
+check("robots.txt is read once for a whole run: sitemap, categories, "
+      "listings", _robots_asks(_asked) == 1 and len(_asked) == 6, str(_asked))
+check("  and before anything else",
+      _asked[:1] == ["https://bama.ir/robots.txt"], str(_asked[:2]))
+_r2 = BamaAdapter(fetcher=_f, salt="test-salt", max_listings=10,
+                  sleeper=lambda s: None)
+_drain(_r2)
+check("a second adapter is a second execution, and reads it again",
+      _robots_asks(_asked) == 2, str(_robots_asks(_asked)))
+_rep1 = _r1.stats.report()
+check("DISCOVERY names the robots.txt it obeyed, and what it refused",
+      bool(_r1.robots.record)
+      and isinstance(_r1.robots.record["sha256"], str)
+      and _r1.robots.record["sha256"] in _rep1
+      and "refused by it         0 url(s)" in _rep1, _rep1[:400])
+
+_DETAIL_B = "https://bama.ir/car/detail-ffdrszax-peugeot-206ir-type5-1396"
+_f, _asked = bama_world((200, "User-agent: *\nDisallow: /car/detail-ffdrszax\n"))
+_got = []
+_r3 = BamaAdapter(fetcher=_f, salt="test-salt", max_listings=10,
+                  sleeper=lambda s: None, on_listing=_got.append)
+_out3, _ = _drain(_r3)
+check("a listing robots.txt disallows is never requested",
+      _DETAIL_B not in _asked, str(_asked))
+check("  gets no outcome at all — not ABSENT, not UNKNOWN",
+      not any("ffdrszax" in o.listing_id for o in _out3) and _got == [],
+      str([o.listing_id for o in _out3]))
+check("  and is counted", _r3.stats.robots_refused == 1,
+      str(_r3.stats.robots_refused))
+check("the listing it allows is requested as before",
+      any("6xphr0fb" in u for u in _asked)
+      and any(o.status is FetchStatus.ABSENT for o in _out3), str(_asked))
+_f, _asked = bama_world((200, "User-agent: *\nDisallow: /car/saipa\n"))
+_r4 = BamaAdapter(fetcher=_f, salt="test-salt", max_listings=10,
+                  sleeper=lambda s: None)
+_drain(_r4)
+check("a category it disallows is not requested, not tried, and counted",
+      "https://bama.ir/car/saipa" not in _asked
+      and _r4.stats.robots_refused == 1 and _r4.stats.categories_tried == 1
+      and "https://bama.ir/car/saipa" not in _r4.stats.listings_per_category,
+      str(_asked))
+_f, _asked = bama_world((503, ""))
+_r5 = BamaAdapter(fetcher=_f, salt="test-salt", max_listings=10,
+                  sleeper=lambda s: None)
+_, _halt = _drain(_r5)
+check("a robots.txt that cannot be read halts the run before its first page",
+      _halt == "everything" and _asked == ["https://bama.ir/robots.txt"],
+      f"{_halt} {_asked}")
+_f, _asked = bama_world((200, "User-agent: CARO-research\nDisallow: /sitemap/\n"))
+_r6 = BamaAdapter(fetcher=_f, salt="test-salt", max_listings=10,
+                  sleeper=lambda s: None)
+_, _halt = _drain(_r6)
+check("a sitemap disallowed to us stops discovery: nothing to enumerate from",
+      _halt == "one url" and _asked == ["https://bama.ir/robots.txt"],
+      f"{_halt} {_asked}")
 
 
 print("\ncross-source identity — a different problem from same-source reposts")

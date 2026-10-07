@@ -90,6 +90,7 @@ from caro.ingest.persian import (
 from caro.ingest.quality import (
     PriceStatus, classify_mileage, classify_price_kind, classify_product,
 )
+from caro.ingest.robots import RobotsGate, RobotsViolation, describe
 from caro.tracking import FetchOutcome, FetchStatus, classify_http
 
 # Phrases a page shows when the offer is gone but the server still answers
@@ -946,10 +947,19 @@ class DiscoveryStats:
     sample_seed: int | None = None
     category_budget: int = 0
     category_rule: str = "sitemap order (a prefix — i.e. the alphabet)"
+    # Urls robots.txt did not allow. Never requested, so they have no
+    # outcome — not ABSENT, not UNKNOWN — and this count is the only trace.
+    robots_refused: int = 0
+    # The adapter's RobotsGate, read when the report is printed.
+    robots: object = field(default=None, repr=False, compare=False)
 
     def report(self) -> str:
-        L = ["DISCOVERY", "-" * 62,
-             f"  sitemap urls          {self.sitemap_urls}",
+        L = ["DISCOVERY", "-" * 62]
+        if self.robots is not None and self.robots.record:
+            L += [f"  robots.txt            {describe(self.robots.record)}",
+                  f"  refused by it         {self.robots_refused} url(s), "
+                  "none of them requested"]
+        L += [f"  sitemap urls          {self.sitemap_urls}",
              f"  category pages found  {self.categories_found}",
              f"  category selection    {self.category_rule}",
              f"  category budget       {self.category_budget}",
@@ -1014,10 +1024,25 @@ class BamaAdapter:
     on_listing: Callable[[CarListing], None] | None = None
     stats: DiscoveryStats = field(default_factory=DiscoveryStats)
     traces: list = field(default_factory=list)
+    # robots.txt for bama.ir, read through this adapter's own fetcher the
+    # first time a request is about to be made. One adapter is one
+    # execution, so it is read once per run (caro/ingest/robots.py).
+    robots: RobotsGate = field(init=False, repr=False, compare=False)
+
+    def __post_init__(self):
+        self.robots = RobotsGate(
+            BASE, self.fetcher, source=self.name,
+            pause=lambda: self.sleeper(self.policy.sleep()))
+        self.stats.robots = self.robots
 
     def _get(self, url: str) -> tuple[int, str]:
         if self.fetcher is None:
             raise RuntimeError("BamaAdapter needs a fetcher. Refusing to guess.")
+        # Every request is asked about first — the sitemap, a category, a
+        # listing, and anything a script fetches through here — and outside
+        # the try below, because a refusal is not a failed fetch to absorb
+        # as a 0: it is a request that is not made.
+        self.robots.check(url)
         try:
             return self.fetcher(url)
         except Exception:
@@ -1053,8 +1078,14 @@ class BamaAdapter:
     def discover_listings(self) -> list[str]:
         urls: list[str] = []
         for cat in self.discover_categories():
+            try:
+                status, html = self._get(cat)
+            except RobotsViolation as e:
+                if e.everything:
+                    raise
+                self.stats.robots_refused += 1
+                continue
             self.stats.categories_tried += 1
-            status, html = self._get(cat)
             if classify_http(status) is FetchStatus.OK and html:
                 found = extract_listing_links(html)
                 self.stats.categories_ok += 1
@@ -1077,7 +1108,15 @@ class BamaAdapter:
     def fetch_all(self, on: date) -> Iterator[FetchOutcome]:
         consecutive = 0
         for url in self.discover_listings():
-            status, html = self._get(url)
+            try:
+                status, html = self._get(url)
+            except RobotsViolation as e:
+                if e.everything:
+                    raise
+                # Not requested, so nothing is known about the listing and
+                # nothing is recorded for it. Counted, and printed.
+                self.stats.robots_refused += 1
+                continue
             fs = classify_detail_page(status, html)
             key = f"{status} -> {fs.value}"
             self.stats.detail_status[key] = self.stats.detail_status.get(key, 0) + 1
