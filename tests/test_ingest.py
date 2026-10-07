@@ -290,6 +290,176 @@ check("the adapter's own urls satisfy robots",
       blocked_search.search_url(3).endswith("?page=3"))
 
 
+# ---------------------------------------------------------------------------
+print("\nrobots.txt read by RFC 9309 — a matcher of our own")
+from caro.ingest.divar_car import USER_AGENT                         # noqa: E402
+from caro.ingest.robots import PRODUCT_TOKEN, allowed, rules_for     # noqa: E402
+
+
+def robots_says(text, token, path):
+    return allowed(rules_for(text, token)[0], "https://example.com" + path)
+
+
+# RFC 9309 §5.1 and §5.2, and the cases of §2.2.2 and §2.2.3, transcribed by
+# hand rather than fetched — the round that wrote them sent no request
+# anywhere. What is asserted is the RFC's semantics; compare the example
+# text with the RFC before quoting it as the RFC's.
+RFC_5_1 = """User-Agent: *
+Disallow: *.gif$
+Disallow: /example/
+Allow: /publications/
+
+User-Agent: foobot
+Disallow:/
+Allow:/example/page.html
+Allow:/example/allowed.gif
+
+User-Agent: barbot
+User-Agent: bazbot
+Disallow: /example/page.html
+
+User-Agent: quxbot
+"""
+RFC_5_2 = """User-Agent: foobot
+Allow: /example/page/
+Disallow: /example/page/disallowed.gif
+"""
+
+for _tok, _path, _want in [
+    ("foobot", "/example/page.html", True),      # an allow inside Disallow: /
+    ("foobot", "/example/allowed.gif", True),
+    ("foobot", "/example/other.html", False),
+    ("foobot", "/publications/a.html", False),   # the * group is not foobot's
+    ("foobot", "/robots.txt", True),             # always, even under Disallow: /
+    ("barbot", "/example/page.html", False),     # two tokens, one group
+    ("bazbot", "/example/page.html", False),
+    ("barbot", "/example/other.html", True),
+    ("bazbot", "/picture.gif", True),
+    ("quxbot", "/example/page.html", True),      # an empty group of its own
+    ("otherbot", "/picture.gif", False),         # everyone else: the * group
+    ("otherbot", "/picture.gif?size=2", True),   # $ is the end of the url
+    ("otherbot", "/example/x", False),
+    ("otherbot", "/publications/a.gif", True),   # the longer allow wins
+    ("otherbot", "/elsewhere", True),
+]:
+    check(f"RFC 9309 §5.1  {_tok:<8} {_path:<22} "
+          f"{'allowed' if _want else 'refused'}",
+          robots_says(RFC_5_1, _tok, _path) is _want)
+for _path, _want in [("/example/page/", True),
+                     ("/example/page/disallowed.gif", False),
+                     ("/example/page/other.gif", True)]:
+    check(f"RFC 9309 §5.2  the longest match decides: {_path} "
+          f"{'allowed' if _want else 'refused'}",
+          robots_says(RFC_5_2, "foobot", _path) is _want)
+check("an allow and a disallow of one length: allow wins",
+      robots_says("User-agent: *\nDisallow: /p\nAllow: /p\n", "x", "/p"))
+check("  whichever is written first",
+      robots_says("User-agent: *\nAllow: /p\nDisallow: /p\n", "x", "/p"))
+
+for _rule, _path, _want, _why in [
+    ("/this/path/exactly$", "/this/path/exactly", False, "$ ends the pattern"),
+    ("/this/path/exactly$", "/this/path/exactly/more", True,
+     "  and nothing longer matches it"),
+    ("/this/*/exactly", "/this/a/b/exactly", False, "* runs across slashes"),
+    ("/path/file-with-a-%2A.html", "/path/file-with-a-*.html", False,
+     "%2A matches a literal *"),
+    ("/path/foo-%24", "/path/foo-$", False, "%24 matches a literal $"),
+    ("/foo/bar/%E3%83%84", "/foo/bar/ツ", False,
+     "non-ASCII is compared percent-encoded"),
+    ("/foo/bar/ツ", "/foo/bar/%E3%83%84", False, "  from either side"),
+    ("/foo/bar/baz", "/foo/bar/%62%61%7A", False,
+     "an escaped unreserved octet is decoded"),
+    ("/Example", "/example", True, "the match is case-sensitive"),
+]:
+    check(f"{_why}: Disallow {_rule} · {_path}",
+          robots_says(f"User-agent: *\nDisallow: {_rule}\n", "x", _path)
+          is _want)
+
+# Divar's file as the comment in divar_car.py transcribes it. The matcher
+# and assert_allowed are two readings of one text, and they must agree.
+DIVAR_ROBOTS_2026_09_07 = """User-agent: *
+Disallow: /my-divar/*
+Disallow: /new
+Disallow: /s/*/*?*q=*
+Disallow: /adminbot
+"""
+_divar_rules, _divar_group = rules_for(DIVAR_ROBOTS_2026_09_07)
+check("divar: no group names us, so the * group is ours", _divar_group == "*")
+for _u, _want in [("https://divar.ir/s/tehran/light", True),
+                  ("https://divar.ir/s/tehran/light?page=4", True),
+                  ("https://divar.ir/v/pzhw-206/gYx1", True),
+                  ("https://divar.ir/s/tehran/light?q=206", False),
+                  ("https://divar.ir/s/tehran/light?page=2&q=pride", False),
+                  ("https://divar.ir/my-divar/bookmarks", False),
+                  ("https://divar.ir/new", False),
+                  ("https://divar.ir/adminbot", False)]:
+    try:
+        assert_allowed(_u)
+        _static = True
+    except RobotsViolation:
+        _static = False
+    check(f"divar 2026-09-07  {_u.split('divar.ir')[1]:<31}"
+          f"{'allowed' if _want else 'refused'}, as assert_allowed says",
+          allowed(_divar_rules, _u) is _want and _static is _want,
+          f"matcher {allowed(_divar_rules, _u)}, assert_allowed {_static}")
+
+# Bama's directives, as docs/NETWORK_OBSERVATION_2026-09-11.md §1 records
+# them and as they were read again on 2026-10-06 (D72), with the one of the
+# eleven Sitemap lines this project uses. The other ten are not rules.
+BAMA_ROBOTS = """User-agent: *
+Disallow: /uploads/Bamalmages/CampaignBanner/
+Disallow: temp.bama.ir/robots.txt
+
+Sitemap: https://bama.ir/sitemap/car
+"""
+_bama_rules, _ = rules_for(BAMA_ROBOTS)
+for _u, _want, _why in [
+    ("https://bama.ir/sitemap/car", True, "the sitemap"),
+    ("https://bama.ir/car/pride", True, "a category page"),
+    ("https://bama.ir/car/peugeot?mileage=0", True, "  with a filter"),
+    ("https://bama.ir/car/detail-ffdrszax-peugeot-206ir-type5-1396", True,
+     "a listing"),
+    ("https://bama.ir/uploads/Bamalmages/CampaignBanner/a.jpg", False,
+     "a campaign banner"),
+    ("https://bama.ir/temp.bama.ir/robots.txt", True,
+     "the malformed line names a host, not a path, and matches nothing"),
+]:
+    check(f"bama: {_why} — {'allowed' if _want else 'refused'}",
+          allowed(_bama_rules, _u) is _want)
+
+check("our product token is in the User-Agent we send (RFC 9309 §2.2.1)",
+      PRODUCT_TOKEN in USER_AGENT, f"{PRODUCT_TOKEN!r} / {USER_AGENT!r}")
+_G = """User-agent: *
+Disallow: /
+
+User-agent: caro-RESEARCH/0.3
+Allow: /
+Disallow: /private
+"""
+check("a group naming us is ours, and * is not",
+      robots_says(_G, PRODUCT_TOKEN, "/x"))
+check("  named case-insensitively, the version after the token ignored",
+      rules_for(_G)[1] == PRODUCT_TOKEN, str(rules_for(_G)[1]))
+check("  and its own rules still bind",
+      robots_says(_G, PRODUCT_TOKEN, "/private") is False)
+_TWO = "User-agent: CARO-research\nDisallow: /a\n\nUser-agent: CARO-research\nDisallow: /b\n"
+check("two groups naming us are combined",
+      not robots_says(_TWO, PRODUCT_TOKEN, "/a")
+      and not robots_says(_TWO, PRODUCT_TOKEN, "/b"))
+check("a token that only begins like ours is someone else's",
+      robots_says("User-agent: CARO\nDisallow: /\n", PRODUCT_TOKEN, "/x"))
+check("no group for us and no *: no rule applies",
+      rules_for("User-agent: otherbot\nDisallow: /\n") == ([], None))
+check("rules before the first user-agent line are ignored",
+      robots_says("Disallow: /\nUser-agent: *\nDisallow: /x\n",
+                  PRODUCT_TOKEN, "/y"))
+check("an empty Disallow is no rule",
+      robots_says("User-agent: *\nDisallow:\n", PRODUCT_TOKEN, "/y"))
+check("comments, and the case of a field's name, change nothing",
+      robots_says("user-AGENT: * # everyone\nDISALLOW: /x # not this\n",
+                  PRODUCT_TOKEN, "/x") is False)
+
+
 print("\nbama — parsed against the real page structure, observed 2026-09-07")
 from caro.ingest.bama import (
     BamaAdapter, DiscoveryUnavailable, classify_detail_page,
