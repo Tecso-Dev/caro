@@ -29,13 +29,38 @@ RFC 9309 §2.2, the part a crawler needs to decide one url:
                 literal `*` or `$` in a url is encoded, so only a pattern's
                 own `%2A` or `%24` matches one (§2.2.2, §2.2.3).
 
-Fetching robots.txt, and what a failed fetch means, is not this part.
+And the gate
+------------
+`RobotsGate` fetches one origin's robots.txt the first time it is asked,
+judges it once, keeps the judgement and a record of what was read, and is
+asked before every request to that origin. An adapter owns one gate, and an
+execution — one process: a collection run, a round of date_watch, a probe —
+builds one adapter, so robots.txt is read once per execution and kept in
+memory only. RFC 9309 §2.4 allows a cached copy for a day; a run takes
+minutes, and nothing is carried from one run to the next.
+
+What a fetch that did not return a policy means (§2.3.1):
+
+    2xx                      the rules it states; an empty file states none
+    2xx that is markup, or   deny_all. A page served where robots.txt
+      not UTF-8              should be — a challenge, an application shell
+                             — is not a policy, and reading it as an empty
+                             one would allow everything. The RFC would parse
+                             it; this does not, on purpose.
+    429                      deny_all: the source asked us to slow down
+    any other 4xx            allow_all: robots.txt is unavailable (§2.3.1.3)
+    5xx, no response, a      deny_all: unreachable (§2.3.1.4)
+      fetcher that raises,
+      no fetcher at all,
+      any other status
 """
 
 from __future__ import annotations
 
+import hashlib
 import re
-from typing import NamedTuple
+from datetime import datetime, timezone
+from typing import Callable, NamedTuple
 from urllib.parse import quote, urlsplit
 
 # The product token robots.txt groups are matched against. RFC 9309 §2.2.1
@@ -139,3 +164,146 @@ def allowed(rules: list[Rule], url: str) -> bool:
                 or (len(r.path) == len(best.path) and r.allow)):
             best = r
     return best is None or best.allow
+
+
+# ---------------------------------------------------------------------------
+# The gate
+# ---------------------------------------------------------------------------
+
+class RobotsViolation(RuntimeError):
+    """Raised before a request robots.txt does not allow.
+
+    `everything` is set when no request at all may be made, because
+    robots.txt could not be read as a policy — as opposed to this one url
+    being disallowed. A caller may skip a refused url and go on; nothing
+    goes on past `everything`.
+    """
+
+    def __init__(self, message: str, *, everything: bool = False):
+        super().__init__(message)
+        self.everything = everything
+
+
+RULES, ALLOW_ALL, DENY_ALL = "rules", "allow_all", "deny_all"
+
+_MARKUP = re.compile(r"<html|<!doctype", re.I)
+
+
+def _judge(status: int | None, body: str) -> tuple[str, str]:
+    if not status:
+        return DENY_ALL, ("no response: unreachable, so nothing may be "
+                          "requested (RFC 9309 §2.3.1.4)")
+    if 200 <= status < 300:
+        if (body.lstrip("\ufeff \t\r\n").startswith("<")
+                or _MARKUP.search(body[:1024])):
+            return DENY_ALL, (f"http {status}, but the body is a page, not a "
+                              "robots.txt")
+        if "\ufffd" in body:
+            return DENY_ALL, f"http {status}, but the body is not UTF-8"
+        return RULES, f"http {status}: read"
+    if status == 429:
+        return DENY_ALL, "http 429: asked to slow down, read as unreachable"
+    if 400 <= status < 500:
+        return ALLOW_ALL, (f"http {status}: unavailable, so no rule applies "
+                           "(RFC 9309 §2.3.1.3)")
+    if 500 <= status < 600:
+        return DENY_ALL, (f"http {status}: unreachable, so nothing may be "
+                          "requested (RFC 9309 §2.3.1.4)")
+    return DENY_ALL, f"http {status}: not a status this reads"
+
+
+def _origin(url: str) -> str:
+    p = urlsplit(url)
+    return f"{p.scheme}://{p.netloc}".lower()
+
+
+class RobotsGate:
+    """One origin's robots.txt: fetched once, judged, recorded, and asked
+    before every request to that origin."""
+
+    def __init__(self, origin: str,
+                 fetch: Callable[[str], tuple[int, str]] | None, *,
+                 source: str, token: str = PRODUCT_TOKEN,
+                 pause: Callable[[], None] | None = None):
+        self.origin = _origin(origin)
+        self.url = self.origin + "/robots.txt"
+        self.source = source
+        self.token = token
+        self._fetch = fetch
+        self._pause = pause
+        self._rules: list[Rule] = []
+        self.record: dict | None = None     # what was read, once read
+        self.text: str | None = None        # the body, when it was a 2xx
+
+    def ensure(self) -> dict:
+        """Read robots.txt if it has not been read. Returns the record."""
+        if self.record is not None:
+            return self.record
+        at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        status, body = None, ""
+        if self._fetch is None:
+            verdict, why = DENY_ALL, ("no robots fetcher was given: nothing "
+                                      "was asked, so nothing is allowed")
+        else:
+            try:
+                status, body = self._fetch(self.url)
+            except Exception:
+                status, body = 0, ""
+            body = body if isinstance(body, str) else ""
+            verdict, why = _judge(status, body)
+        group = n = None
+        if verdict == RULES:
+            self._rules, group = rules_for(body, self.token)
+            n = len(self._rules)
+        raw = body.encode("utf-8") if status and 200 <= status < 300 else None
+        self.text = body if raw is not None else None
+        self.record = {
+            "source": self.source, "url": self.url, "token": self.token,
+            "fetched_at": at, "http_status": status,
+            "bytes": None if raw is None else len(raw),
+            "sha256": None if raw is None else hashlib.sha256(raw).hexdigest(),
+            "verdict": verdict, "group": group, "rules": n, "why": why,
+        }
+        # A request like any other, so the same pause follows it.
+        if self._fetch is not None and self._pause is not None:
+            self._pause()
+        return self.record
+
+    def allows(self, url: str) -> bool:
+        """The gate's answer for `url`, without raising."""
+        if _origin(url) != self.origin:
+            return False
+        verdict = self.ensure()["verdict"]
+        if verdict == DENY_ALL:
+            return False
+        return verdict == ALLOW_ALL or allowed(self._rules, url)
+
+    def check(self, url: str) -> None:
+        """Raise RobotsViolation unless `url` may be requested."""
+        if _origin(url) != self.origin:
+            raise RobotsViolation(
+                f"{url} is not on {self.origin}, the one origin whose "
+                "robots.txt this gate reads")
+        rec = self.ensure()
+        if rec["verdict"] == DENY_ALL:
+            raise RobotsViolation(
+                f"{self.source}: robots.txt at {self.url} gave no policy "
+                f"({rec['why']}); nothing is requested", everything=True)
+        if rec["verdict"] == RULES and not allowed(self._rules, url):
+            raise RobotsViolation(
+                f"{self.source} robots.txt disallows {_target(url)} for "
+                f"{self.token}: {url}")
+
+
+def describe(record: dict | None) -> str:
+    """The record on one line: which file, when, which bytes, what it means."""
+    if not record:
+        return "robots.txt not read"
+    s = (f"{record['url']}  {record['fetched_at']}  "
+         f"http {record['http_status']}")
+    if record["sha256"]:
+        s += f"  {record['bytes']} bytes  sha256 {record['sha256']}"
+    if record["verdict"] == RULES:
+        return s + (f"  -> {record['rules']} rule(s) from group "
+                    f"{record['group'] or 'none'}")
+    return s + f"  -> {record['verdict']}: {record['why']}"

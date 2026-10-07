@@ -460,6 +460,127 @@ check("comments, and the case of a field's name, change nothing",
                   PRODUCT_TOKEN, "/x") is False)
 
 
+# ---------------------------------------------------------------------------
+print("\nthe robots gate — read once, judged, recorded, asked every time")
+import hashlib as _hashlib                                            # noqa: E402
+from datetime import datetime as _datetime                            # noqa: E402
+from caro.ingest.robots import RobotsGate, describe                   # noqa: E402
+
+
+def _utc(stamp):
+    """Whether `stamp` is an ISO time in UTC — False for anything else,
+    so a record that lost its time fails a check instead of the suite."""
+    try:
+        return _datetime.fromisoformat(stamp).utcoffset().total_seconds() == 0
+    except (TypeError, ValueError, AttributeError):
+        return False
+
+
+def _asks(gate, *urls):
+    """gate.check on each url; the first refusal, or None."""
+    for u in urls:
+        try:
+            gate.check(u)
+        except RobotsViolation as e:
+            return e
+    return None
+
+
+def gate_for(status, body="", *, fetch=True, pause=None):
+    """A gate over a fake origin that answers robots.txt with (status, body),
+    and the list of urls it was asked for."""
+    asked = []
+
+    def f(u):
+        asked.append(u)
+        if isinstance(status, Exception):
+            raise status
+        return status, body
+    return (RobotsGate("https://bama.ir", f if fetch else None,
+                       source="test", pause=pause), asked)
+
+
+for _status, _body, _want, _why in [
+    (200, BAMA_ROBOTS, "rules", "200, a robots.txt: its rules"),
+    (200, "", "rules", "200, empty: no rule, so everything is allowed"),
+    (200, "<!DOCTYPE html><html><body>لطفا صبر کنید</body></html>",
+     "deny_all", "200, a page: not a policy"),
+    (200, '<?xml version="1.0"?><urlset></urlset>', "deny_all",
+     "200, any other markup: not a policy either"),
+    (200, "User-agent: *\nDisallow: /�\n", "deny_all",
+     "200, not UTF-8"),
+    (404, "", "allow_all", "404: unavailable, so no rule applies"),
+    (403, "", "allow_all", "403: any other 4xx, the same"),
+    (429, "", "deny_all", "429: asked to slow down"),
+    (500, "", "deny_all", "500: unreachable"),
+    (503, "", "deny_all", "503: any 5xx, the same"),
+    (0, "", "deny_all", "no response"),
+    (TimeoutError("network"), "", "deny_all", "a fetcher that raises"),
+    (301, "", "deny_all", "a redirect nobody followed"),
+]:
+    _g, _ = gate_for(_status, _body)
+    check(f"robots.txt {_why} -> {_want}", _g.ensure()["verdict"] == _want,
+          _g.ensure()["verdict"])
+_g, _asked = gate_for(200, "", fetch=False)
+check("no robots fetcher -> deny_all, and nothing was asked",
+      _g.ensure()["verdict"] == "deny_all" and _asked == [])
+
+_g, _asked = gate_for(200, BAMA_ROBOTS)
+check("nothing is fetched before the gate is first asked", _asked == [])
+_refused = _asks(_g, "https://bama.ir/sitemap/car", "https://bama.ir/car/pride",
+                 "https://bama.ir/car/detail-ffdrszax-peugeot-206ir-type5-1396")
+check("robots.txt is fetched once, however often the gate is asked",
+      _asked == ["https://bama.ir/robots.txt"] and _refused is None,
+      f"{_asked} {_refused}")
+_rec = _g.record
+_raw = BAMA_ROBOTS.encode("utf-8")
+check("the record says which file and which bytes",
+      _rec["url"] == "https://bama.ir/robots.txt" and _rec["http_status"] == 200
+      and _rec["bytes"] == len(_raw)
+      and _rec["sha256"] == _hashlib.sha256(_raw).hexdigest(), str(_rec))
+check("  when, in UTC", _utc(_rec["fetched_at"]), str(_rec["fetched_at"]))
+check("  and what it meant: the verdict, the group, the rule count",
+      (_rec["verdict"], _rec["group"], _rec["rules"]) == ("rules", "*", 2),
+      str(_rec))
+check("  with the text it judged kept beside it", _g.text == BAMA_ROBOTS)
+check("  on one line when printed",
+      "\n" not in describe(_rec) and isinstance(_rec["sha256"], str)
+      and _rec["sha256"] in describe(_rec), describe(_rec))
+_g5, _ = gate_for(503)
+_r5 = _g5.ensure()
+check("a 5xx has no bytes to keep, and the record says so",
+      _r5["http_status"] == 503 and _r5["sha256"] is None
+      and _g5.text is None, str(_r5))
+
+try:
+    _g.check("https://bama.ir/uploads/Bamalmages/CampaignBanner/a.jpg")
+    check("a disallowed url raises before it is requested", False, "allowed")
+except RobotsViolation as e:
+    check("a disallowed url raises before it is requested",
+          not e.everything, str(e))
+try:
+    _g5.check("https://bama.ir/car/pride")
+    check("deny_all raises for any url, as everything", False, "allowed")
+except RobotsViolation as e:
+    check("deny_all raises for any url, as everything", e.everything, str(e))
+_go, _asked_o = gate_for(200, BAMA_ROBOTS)
+try:
+    _go.check("https://divar.ir/s/tehran/light")
+    check("another origin is refused without a fetch", False, "allowed")
+except RobotsViolation:
+    check("another origin is refused without a fetch", _asked_o == [],
+          str(_asked_o))
+check("allows() gives the same answer without raising",
+      _g.allows("https://bama.ir/car/pride")
+      and not _g.allows("https://bama.ir/uploads/Bamalmages/CampaignBanner/a")
+      and not _g5.allows("https://bama.ir/car/pride"))
+_paused = []
+_gp, _ = gate_for(200, BAMA_ROBOTS, pause=lambda: _paused.append(1))
+_refused = _asks(_gp, "https://bama.ir/car/pride", "https://bama.ir/car/tiba")
+check("reading robots.txt is a request, so one pause follows it",
+      _paused == [1] and _refused is None, f"{_paused} {_refused}")
+
+
 print("\nbama — parsed against the real page structure, observed 2026-09-07")
 from caro.ingest.bama import (
     BamaAdapter, DiscoveryUnavailable, classify_detail_page,

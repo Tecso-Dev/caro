@@ -53,6 +53,9 @@ from caro.ingest.persian import (
     normalize, parse_mileage_km, parse_price, parse_year_jalali,
 )
 from caro.ingest.quality import classify_price_kind, classify_product
+# Defined beside the gate that raises it, and imported here so that every
+# `from caro.ingest.divar_car import RobotsViolation` goes on working.
+from caro.ingest.robots import RobotsViolation
 from caro.tracking import FetchOutcome, FetchStatus, classify_http
 
 # Divar's car categories. Kept as data so a new one is a line, not a patch.
@@ -486,10 +489,6 @@ def playwright_fetcher(policy: PolitenessPolicy | None = None):
 
 DIVAR_ROBOTS_CHECKED = "2026-09-07"
 DIVAR_DISALLOWED = ("/my-divar/", "/new", "/adminbot")
-
-
-class RobotsViolation(RuntimeError):
-    """Raised before a request that robots.txt forbids."""
 
 
 def assert_allowed(url: str) -> None:
