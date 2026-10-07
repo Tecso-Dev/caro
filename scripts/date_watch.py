@@ -38,6 +38,17 @@ WHAT IS RECORDED PER LISTING PER ROUND
     matched_substring            what the pattern actually matched
     extractor_version            so a rule change is visible in the series
     line_before / line_after     the province neighbourhood, EVERY page
+    robots                       the robots.txt the round obeyed: when it
+                                 was read, which bytes, what it allowed —
+                                 the same record on every row of a round
+
+A ROUND BEGINS WITH robots.txt
+
+It is read once per round, by the adapter's gate (caro/ingest/robots.py),
+before the first listing. A listing it disallows is not requested and not
+written, and the round says how many there were. A robots.txt that gives no
+policy — unreachable, or a page where the file should be — ends the round
+before anything is requested past it or written.
 
 EXTRACTION STATUS IS A VOCABULARY, NOT A BOOLEAN
 
@@ -104,6 +115,7 @@ from caro.corpus_reader import CorpusUnavailable, load_corpus     # noqa: E402
 from caro.ingest.bama import (                                    # noqa: E402
     BamaAdapter, _text, http_fetcher,
 )
+from caro.ingest.robots import DENY_ALL, RobotsViolation, describe  # noqa: E402
 from caro.tracking import FetchStatus, classify_http              # noqa: E402
 
 OUT = ROOT / "data" / "observations" / "date_watch.jsonl"
@@ -924,6 +936,29 @@ def report(by_id: dict[str, list[dict]]) -> int:
     return 0
 
 
+def run_round(rows: list[dict], ad, out: Path) -> tuple[int, int] | None:
+    """One round, appended to `out`. Returns (written, refused), or None
+    when robots.txt gives no policy and nothing was requested or written."""
+    record = ad.robots.ensure()
+    if record["verdict"] == DENY_ALL:
+        return None
+    written = refused = 0
+    with out.open("a", encoding="utf-8") as fh:
+        for r in rows:
+            try:
+                rec = observe(ad, r["source_url"], str(r.get("listing_id", "")))
+            except RobotsViolation as e:
+                if e.everything:
+                    raise
+                refused += 1
+                continue
+            rec["robots"] = record
+            fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            written += 1
+            ad.sleeper(ad.policy.sleep())
+    return written, refused
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--from-corpus", default="run11")
@@ -966,14 +1001,16 @@ def main() -> int:
 
     print(f"observing {len(rows)} listing(s) from {a.from_corpus}, seed "
           f"{a.seed} — the same set every round")
-    written = 0
-    with OUT.open("a", encoding="utf-8") as fh:
-        for r in rows:
-            rec = observe(ad, r["source_url"], str(r.get("listing_id", "")))
-            fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
-            written += 1
-            ad.sleeper(ad.policy.sleep())
-    print(f"appended {written} observation(s) to {OUT}")
+    done = run_round(rows, ad, OUT)
+    print(f"robots.txt  {describe(ad.robots.record)}")
+    if done is None:
+        print("HALTED: robots.txt gave no policy. Nothing was requested past "
+              "it and nothing was written.", file=sys.stderr)
+        return 1
+    written, refused = done
+    print(f"appended {written} observation(s) to {OUT}"
+          + (f"; {refused} disallowed by robots.txt, not requested"
+             if refused else ""))
     print()
     return report(load_rounds())
 

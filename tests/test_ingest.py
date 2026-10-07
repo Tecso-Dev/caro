@@ -2141,6 +2141,56 @@ check("first_run: no policy, no request past robots.txt and nothing written",
       _how == "everything" and _asked == ["https://bama.ir/robots.txt"]
       and _left == [], f"{_how} {_asked} {_left}")
 
+from scripts import date_watch as _date_watch                         # noqa: E402
+
+_WATCH_ROWS = [
+    {"listing_id": "bama:ffdrszax",
+     "source_url": "https://bama.ir/car/detail-ffdrszax-peugeot-206ir-type5-1396"},
+    {"listing_id": "bama:6xphr0fb",
+     "source_url": "https://bama.ir/car/detail-6xphr0fb-peugeot-206ir-type2-1401"},
+    {"listing_id": "bama:zzzz9999",
+     "source_url": "https://bama.ir/car/detail-zzzz9999-pride-131-se-1398"},
+]
+_WATCH_ROBOTS = "User-agent: *\nDisallow: /car/detail-zzzz9999\n"
+_f, _asked = bama_world((200, _WATCH_ROBOTS))
+_wad = BamaAdapter(fetcher=_f, max_listings=1, max_categories=1,
+                   sleeper=lambda s: None)
+def _one_round(wad):
+    """date_watch.run_round into a temporary file: its result, its rows."""
+    with _tempfile.TemporaryDirectory() as tmp:
+        w = _Path(tmp) / "w.jsonl"
+        try:
+            done = _date_watch.run_round(_WATCH_ROWS, wad, w)
+        except RobotsViolation as e:
+            done = f"raised: {e}"
+        rows = ([json.loads(ln) for ln in
+                 w.read_text(encoding="utf-8").splitlines()]
+                if w.exists() else None)
+    return done, rows
+
+
+_done, _lines = _one_round(_wad)
+_lines = _lines or []
+_wsha = _hashlib.sha256(_WATCH_ROBOTS.encode("utf-8")).hexdigest()
+check("date_watch: every row of a round carries the robots.txt it obeyed",
+      len(_lines) == 2 and all((ln.get("robots") or {}).get("sha256") == _wsha
+                               and _utc(ln["robots"].get("fetched_at"))
+                               for ln in _lines), str(_lines)[:300])
+check("  read once for the round, not once a row",
+      _robots_asks(_asked) == 1, str(_asked))
+check("  and a listing it disallows is neither requested nor written",
+      _done == (2, 1) and not any("zzzz9999" in u for u in _asked)
+      and not any(ln["listing_id"] == "bama:zzzz9999" for ln in _lines),
+      f"{_done} {_asked}")
+_f, _asked = bama_world((503, ""))
+_wad = BamaAdapter(fetcher=_f, max_listings=1, max_categories=1,
+                   sleeper=lambda s: None)
+_done, _rows = _one_round(_wad)
+_wrote = _rows is not None
+check("date_watch: no policy, no request past robots.txt and nothing written",
+      _done is None and not _wrote
+      and _asked == ["https://bama.ir/robots.txt"], f"{_done} {_asked}")
+
 
 print()
 if FAILS:
