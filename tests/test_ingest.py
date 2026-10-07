@@ -172,14 +172,59 @@ def parse_two(_html):
     ]
 
 
+# Divar's file as the comment in divar_car.py transcribes it, served to the
+# adapters below as their robots.txt.
+DIVAR_ROBOTS_2026_09_07 = """User-agent: *
+Disallow: /my-divar/*
+Disallow: /new
+Disallow: /s/*/*?*q=*
+Disallow: /adminbot
+"""
+
+
+def divar_robots(_url):
+    return 200, DIVAR_ROBOTS_2026_09_07
+
+
 slept: list[float] = []
-ad = DivarCarAdapter(max_pages=3, page_fetcher=fixture_page,
+events: list[str] = []
+page_urls: list[str] = []
+
+
+def _page(u):
+    events.append("page")
+    page_urls.append(u)
+    return fixture_page(u)
+
+
+def _robots(u):
+    events.append("robots")
+    return divar_robots(u)
+
+
+def _sleep(s):
+    events.append("sleep")
+    slept.append(s)
+
+
+ad = DivarCarAdapter(max_pages=3, page_fetcher=_page,
                      parse_page=parse_two, salt="test-salt",
-                     sleeper=slept.append)
-out = list(ad.fetch_all(date(2026, 9, 7)))
+                     sleeper=_sleep, robots_fetcher=_robots)
+out = []
+try:
+    for _o in ad.fetch_all(date(2026, 9, 7)):
+        out.append(_o)
+except RuntimeError as e:          # a refusal here shows as missing pages
+    events.append(f"raised {type(e).__name__}")
 check("collects across pages", len(out) == 6, str(len(out)))
 check("every outcome is OK", all(o.status is FetchStatus.OK for o in out))
-check("waits between pages", len(slept) == 2, str(len(slept)))
+_at = [i for i, e in enumerate(events) if e == "page"]
+_pages_span = events[_at[0]:_at[-1] + 1] if _at else []
+check("waits between pages", _pages_span.count("sleep") == 2, str(events))
+check("robots.txt is read first, and a wait follows it",
+      events[:3] == ["robots", "sleep", "page"], str(events))
+check("  through robots_fetcher, never the browser",
+      not any(u.endswith("/robots.txt") for u in page_urls), str(page_urls))
 check("delays respect the floor", all(s >= PolitenessPolicy().delay_min_s
                                       for s in slept), str(slept))
 check("search url is category- and city-shaped",
@@ -194,7 +239,8 @@ def blocking_page(_url):
 
 
 ad2 = DivarCarAdapter(max_pages=10, page_fetcher=blocking_page,
-                      parse_page=parse_two, sleeper=lambda s: None)
+                      parse_page=parse_two, sleeper=lambda s: None,
+                      robots_fetcher=divar_robots)
 got, raised = [], False
 try:
     for o in ad2.fetch_all(date(2026, 9, 7)):
@@ -210,7 +256,7 @@ check("  and stops promptly", blocked_calls["n"] == 3, str(blocked_calls["n"]))
 timeouts = DivarCarAdapter(max_pages=10, parse_page=parse_two,
                            page_fetcher=lambda u: (_ for _ in ()).throw(
                                TimeoutError("network")),
-                           sleeper=lambda s: None)
+                           sleeper=lambda s: None, robots_fetcher=divar_robots)
 tgot, traised = [], False
 try:
     for o in timeouts.fetch_all(date(2026, 9, 7)):
@@ -285,9 +331,58 @@ for u, why in (("https://divar.ir/s/tehran/light?q=206", "search urls"),
         check(f"refused ({why})", True)
 
 blocked_search = DivarCarAdapter(city="tehran", page_fetcher=fixture_page,
-                                 parse_page=parse_two, sleeper=lambda s: None)
+                                 parse_page=parse_two, sleeper=lambda s: None,
+                                 robots_fetcher=divar_robots)
 check("the adapter's own urls satisfy robots",
       blocked_search.search_url(3).endswith("?page=3"))
+
+print("\ndivar asks robots.txt as well, and keeps the transcription beside it")
+_pcalls: list[str] = []
+
+
+def _counted_page(u):
+    _pcalls.append(u)
+    return fixture_page(u)
+
+
+def _divar_run(**kw):
+    """What fetch_all raised, if anything, as everything / one url / ran."""
+    try:
+        list(DivarCarAdapter(max_pages=2, page_fetcher=_counted_page,
+                             parse_page=parse_two, sleeper=lambda s: None,
+                             **kw).fetch_all(date(2026, 10, 7)))
+        return "ran"
+    except RobotsViolation as e:
+        return "everything" if e.everything else "one url"
+
+
+_how = _divar_run(robots_fetcher=lambda u: (200, "User-agent: *\nDisallow: /s/\n"))
+check("a page robots.txt disallows raises before it is requested",
+      _how == "one url" and _pcalls == [], f"{_how} {_pcalls}")
+_pcalls.clear()
+_how = _divar_run()
+check("with no robots fetcher, nothing is requested at all",
+      _how == "everything" and _pcalls == [], f"{_how} {_pcalls}")
+
+from caro.ingest import divar_car as _divar_mod                      # noqa: E402
+_rcalls: list[str] = []
+_divar_mod.CATEGORIES["search"] = "https://divar.ir/s/{city}/light?q=206"
+try:
+    _t11 = DivarCarAdapter(
+        category="search", sleeper=lambda s: None,
+        robots_fetcher=lambda u: (_rcalls.append(u)
+                                  or (200, "User-agent: *\nAllow: /\n")))
+    try:
+        _t11.search_url(1)
+        _why = "allowed"
+    except RobotsViolation as e:
+        _why = str(e)
+finally:
+    del _divar_mod.CATEGORIES["search"]
+check("a q= url is refused by the 2026-09-07 transcription, even when "
+      "today's robots.txt allows everything", "search urls" in _why, _why)
+check("  and refused before robots.txt is asked", _rcalls == [],
+      str(_rcalls))
 
 
 # ---------------------------------------------------------------------------
@@ -375,14 +470,8 @@ for _rule, _path, _want, _why in [
           robots_says(f"User-agent: *\nDisallow: {_rule}\n", "x", _path)
           is _want)
 
-# Divar's file as the comment in divar_car.py transcribes it. The matcher
-# and assert_allowed are two readings of one text, and they must agree.
-DIVAR_ROBOTS_2026_09_07 = """User-agent: *
-Disallow: /my-divar/*
-Disallow: /new
-Disallow: /s/*/*?*q=*
-Disallow: /adminbot
-"""
+# The matcher and assert_allowed are two readings of one text, the file
+# DIVAR_ROBOTS_2026_09_07 above, and they must agree.
 _divar_rules, _divar_group = rules_for(DIVAR_ROBOTS_2026_09_07)
 check("divar: no group names us, so the * group is ours", _divar_group == "*")
 for _u, _want in [("https://divar.ir/s/tehran/light", True),

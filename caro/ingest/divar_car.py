@@ -55,8 +55,11 @@ from caro.ingest.persian import (
 from caro.ingest.quality import classify_price_kind, classify_product
 # Defined beside the gate that raises it, and imported here so that every
 # `from caro.ingest.divar_car import RobotsViolation` goes on working.
-from caro.ingest.robots import RobotsViolation
+from caro.ingest.robots import RobotsGate, RobotsViolation
 from caro.tracking import FetchOutcome, FetchStatus, classify_http
+
+# The one origin every url below is on, and whose robots.txt the adapter reads.
+DIVAR_ORIGIN = "https://divar.ir"
 
 # Divar's car categories. Kept as data so a new one is a line, not a patch.
 CATEGORIES = {
@@ -379,6 +382,11 @@ class DivarCarAdapter:
     and without the network: pass a callable returning (status_code, html).
     The Playwright implementation lives in `playwright_fetcher` and is only
     imported when actually used.
+
+    `robots_fetcher` reads robots.txt, and it is plain HTTP, never the
+    browser: a browser renders a text file as a page, and a page is not a
+    policy (caro/ingest/robots.py). Without one, robots.txt cannot be read,
+    so nothing is requested.
     """
     city: str = "tehran"
     category: str = "light"
@@ -389,11 +397,23 @@ class DivarCarAdapter:
     page_fetcher: Callable[[str], tuple[int, str]] | None = None
     parse_page: Callable[[str], list[CarListing]] | None = None
     sleeper: Callable[[float], None] = time.sleep
+    robots_fetcher: Callable[[str], tuple[int, str]] | None = None
+    robots: RobotsGate = field(init=False, repr=False, compare=False)
+
+    def __post_init__(self):
+        self.robots = RobotsGate(
+            DIVAR_ORIGIN, self.robots_fetcher, source=self.name,
+            pause=lambda: self.sleeper(self.policy.sleep()))
 
     def search_url(self, page: int = 1) -> str:
         base = CATEGORIES[self.category].format(city=self.city)
         url = base if page <= 1 else f"{base}?page={page}"
+        # Two readings, both required. The 2026-09-07 transcription below
+        # is kept beside the live file: a url it refuses is refused even if
+        # robots.txt today would allow it, and it is asked first, so such a
+        # url never costs a request for robots.txt either.
         assert_allowed(url)
+        self.robots.check(url)
         return url
 
     def fetch_all(self, on: date) -> Iterator[FetchOutcome]:
