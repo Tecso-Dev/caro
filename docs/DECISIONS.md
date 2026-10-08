@@ -4414,3 +4414,126 @@ unjudgeable on it as on run11 (D55), and a second discovery run on the
 same pin is a new sample, not a series. `province` waits for a rule that
 reads the lines it misses now. robots.txt is read by hand for Bama, and
 must be checked in code before any recurring collection.
+
+## D73 — robots.txt is read in code, by a matcher of our own
+
+D72 ended on it: robots.txt was read by hand for Bama, and had to be checked
+in code before any recurring collection. The owner asked for the measurement
+first, and chose on it.
+
+**Before any code,** on `cafb893`. Divar's check is `assert_allowed`, which
+`search_url` calls before every page: a transcription of robots.txt dated
+2026-09-07, which nothing fetches, parses or keeps. Bama had none. Every
+request it makes — the sitemap, a category, a listing, and every request of
+the six scripts that build an adapter — goes through `BamaAdapter._get` to
+the fetcher, and only `slice_probe2` asked for robots.txt, to print it.
+Three mutations: `assert_allowed` returning at once turned the four refused
+urls red; `search_url` no longer calling it turned nothing red; and a fake
+Bama whose robots.txt disallowed `/car/` was asked for robots.txt zero
+times, sent four of its five requests under `/car/`, and turned nothing red.
+Two documents said more than the code did: `location_probe.py` promised "the
+same robots check and the same sleep as a collection run", and RUN5_SPEC §9
+says robots.txt is "checked and enforced in code (`assert_allowed`)" — both
+true for Divar only. Measured afterwards, not predicted, and the reason for
+what follows: Python's `urllib.robotparser`, on 3.11, given Divar's rules as
+transcribed, allows three of the four urls they disallow —
+`/s/tehran/light?q=206`, `?page=2&q=pride` and `/my-divar/bookmarks` —
+because it reads `*` in a path as a character.
+
+**The decision.** The owner's: a matcher of our own, not the standard
+library's, reading RFC 9309 §2.2 and nothing more. Groups are found by
+product token — `CARO-research`, which the User-Agent we send begins with —
+groups naming it are combined, and `*` applies only when none does. The
+longest pattern decides and an allow wins a tie; `*` and a final `$` are the
+special characters; percent-encoding is compared in one spelling on both
+sides. One gate per adapter (`RobotsGate`, in `caro/ingest/robots.py`) is
+asked before every request. An execution is a process and a process builds
+one adapter, so robots.txt is read at most once per execution, and kept in
+memory only. A 2xx states rules; a 4xx other than 429 means the file is
+unavailable, so no rule applies; a 5xx, no response, a fetcher that raises,
+no fetcher at all and any other status mean nothing is requested. Five more
+were decided before the first line was written: 429 is read as unreachable;
+Divar keeps its 2026-09-07 transcription beside the gate, and a url either
+refuses is refused; a refused url is neither requested nor given an outcome,
+only counted in DISCOVERY; date_watch puts the record of what was read on
+every row of a round; the probes print it, with nothing stored and nothing
+tested. One change to what was approved is mine, and was said when the round
+was delivered: a 2xx is a page, not a policy, when its body begins with «<»,
+and not only when it carries `<html` or `<!doctype` — an XML document served
+with 200 would otherwise be read as an empty policy, which allows
+everything. Twice this is stricter than the RFC, on purpose: a 2xx that is a
+page or is not UTF-8, and 429.
+
+What was read is recorded — the url, when in UTC, the status, the bytes, the
+sha256 of a 2xx body, the verdict, the group, the rule count and why —
+printed in DISCOVERY, kept in a snapshot's notes, and carried on every row
+date_watch writes. A robots.txt that gives no policy, or that disallows the
+sitemap, stops a run before its first page, with nothing written.
+`slice_probe2` no longer asks for robots.txt itself: it prints the gate's
+copy, and the gate's answer for each path it finds.
+
+Eight commits: `8aadb31`, `523db6c`, `03d3081`, `3cdcc85`, `be4f3c3`,
+`55d5838`, `9e4df00` and `1199e7d`.
+
+**Measured.** No request went to any source at any stage. Every suite, every
+mutation and the web build ran in a network namespace with no interface up,
+and a hook logging every connection a Python process attempted logged none;
+neither the collector nor any probe was run. Two things were measured on the
+way: the Bama commit's code without its fixture edits stops test_ingest at
+the first test that reads a sitemap, whose fixture answered robots.txt with
+the sitemap's XML — a page, so nothing was allowed — and the Divar commit's
+code without its edits stops at the first Divar adapter, which had no robots
+fetcher. Fourteen mutations were predicted with the exact number of checks
+each would turn red, after the tests existed and before any mutation ran,
+and all fourteen held:
+
+                                                        red   green of 2037
+    Bama's _get no longer asks the gate                  16       2021
+    Divar's search_url no longer asks it                  3       2034
+    the gate stops keeping what it read                   6       2031
+    a 5xx read as allowing everything                     7       2030
+    no response read as allowing everything               2       2035
+    the record loses its time and its hash                8       2029
+    the first matching rule decides, not the longest      6       2031
+    `*` read as a character                               5       2032
+    429 read as allowing everything                       1       2036
+    a page served with 200 read as a policy               2       2035
+    search_url no longer calls assert_allowed             2       2035
+    our product token ignored                            11       2026
+    a tie goes to the disallow                            2       2035
+    date_watch builds an adapter for every row            2       2035
+
+Every red check is in test_ingest; no other suite moved. With the gate gone
+from Bama's `_get`, the disallowed listing and the disallowed category were
+requested, the listing got an outcome, nothing was counted, and neither a
+503 on robots.txt nor a disallowed sitemap stopped the run. robots.txt was
+then fetched zero times in the adapter's own run and in first_run's, and
+once in a round of date_watch, which asks the gate itself: the check that a
+round reads it once stayed green, while the disallowed url was requested in
+all three. With `assert_allowed` gone from `search_url`, a `q=` url was
+allowed whenever the live file allows everything — the same removal that on
+`cafb893` turned nothing red. `*` read as a character turned red, among
+others, the three urls the standard library allowed. Not predicted: five of
+the new checks raised, instead of failing, when a value was wrong — `None`
+where a string was expected — found while the predictions were written,
+before any mutation ran, and fixed in the commits that added them. Each
+commit is green on its own — 1983, 2010, 2021, 2027, 2031, 2035, 2037 and
+2037 assertions across 15 suites, 1549 to 1603 across 12 without the extras
+— and the web build is green with its nine routes, built inside the same
+namespace. The round was applied to fresh clones before it was sent, and on
+the owner's machine on 2026-10-07 as `8aadb31` to `1199e7d`: the same eight
+trees.
+
+**Not measured.** The gate has judged no real robots.txt — every file it has
+read was a fixture. The examples from RFC 9309 §5, and the cases of §2.2.2
+and §2.2.3, were transcribed into the tests by hand, not fetched; they
+should be compared with the RFC before they are quoted as its text.
+
+**What this does not settle.** That robots.txt allows a request is not
+permission to make it: the terms of use are a separate question, and Divar's
+are still to be read. Two parts of RFC 9309 are left undone: redirects are
+followed by the HTTP client and not counted to five (§2.3.1.2), and no
+parsing limit is set (§2.5). The scan that finds no adapter built inside a
+loop in `scripts/` is a heuristic: a construction in a function that a loop
+calls is not seen. RUN5_SPEC §9 stays as it was frozen; until this entry it
+was true for Divar only.
