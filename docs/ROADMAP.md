@@ -5,7 +5,7 @@ was recorded, and what comes first. An open item goes into code only after it
 has been measured; the measurement comes first and the decision is made on
 it, in its own commit.
 
-Last revised 2026-10-07.
+Last revised 2026-10-10.
 
 ## Where it stands against the brief
 
@@ -44,10 +44,13 @@ intent → explain the best choice**.
      point. `CARO_SELLER_SALT` must be set. Expect to be blocked; the adapter
      stops and says so, and that is the design.
    - Sheypoor and Khodro45: adapters, under the same rules.
-   - `province` where the market is. It is read on 34 of run13's 74 rows,
-     and the misses are the lines the rule cannot read — city and district,
-     or city, province and district — so what it reads leans to small towns
-     (FIELD_PROVENANCE.md). Nothing draws it until that changes.
+   - `province` where the market is. run13 carries it on 34 of 74 rows. The
+     rule now also reads the lines it missed there — a province stated in
+     any part after the city, and a city that shares its province's name,
+     recorded as `province_source` `city` — and the nineteen lines date_watch
+     stored are all of shapes it reads. The next collection is the first to
+     carry it; nothing draws it until a corpus shows the coverage
+     (FIELD_PROVENANCE.md).
    - Longitudinal collection. Time-dependent and unrecoverable: a day not
      collected is gone. A second discovery run is a new sample, not a
      series: on run11's pin, 26 days later, 3 of its 76 listings were drawn
