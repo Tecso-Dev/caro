@@ -149,7 +149,7 @@ git clone https://github.com/Tecso-Dev/caro && cd caro
 #                                   add --extras, and npm install in
 #                                   webapp/web, for all fifteen suites
 
-python3 tests/run_all.py            # 2037 assertions, no API key, no network
+python3 tests/run_all.py            # 2038 assertions, no API key, no network
 python3 tests/run_all.py ranking    # just the win-rate benchmark
 python3 demo/export_demo.py         # regenerate demo/demo_data.json from live output
 ```
@@ -167,10 +167,10 @@ Read their committed output in `docs/` instead — `RUN3_2026-09-07.txt`,
 need more, and the runner says so rather than failing:
 
 ```
-python3 tests/run_all.py            # 1603 assertions across 12 of 15 suites
+python3 tests/run_all.py            # 1604 assertions across 12 of 15 suites
 ./scripts/setup.sh --extras         # scipy + the API packages
 (cd webapp/web && npm install)      # node packages: the screens suite draws with them
-python3 tests/run_all.py            # 2037 across all fifteen
+python3 tests/run_all.py            # 2038 across all fifteen
 ```
 
 Use `setup.sh --extras` rather than a bare `pip install`: on Debian-family
@@ -396,11 +396,11 @@ asking prices — and the appraiser is not serving.
 ```
 caro/            ingest · tracking (W0) · appraisal (W1) · hierarchical (D32)
                  ranking (W3) · agents (W2) · quality · coverage · stratification
-tests/           2037 assertions across fifteen suites
+tests/           2038 assertions across fifteen suites
 scripts/         live runs, replays, the benchmark, the run-3/4 experiment plans
 data/snapshots/  NOT in the repository — see D46; a clone has no corpora
 demo/            index.html is hand-maintained; export_demo.py writes demo_data.json
-docs/            architecture · DATA_CONTRACT (frozen) · DECISIONS (D1-D64) · eval
+docs/            architecture · DATA_CONTRACT (frozen) · DECISIONS (D1-D73) · eval
 ```
 
 ## Sources, and what each is for

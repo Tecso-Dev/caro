@@ -709,6 +709,14 @@ check(f"  and /about says «{_want}» in both places it names the count",
       _about.count(_want) >= 2,
       f"found {_about.count(_want)} occurrence(s) of «{_want}»")
 
+# The README's layout names the range too, and had no check: it said D1-D64
+# for nine decisions after D64, until it was read for something else.
+_range = re.search(r"DECISIONS \(D1-D(\d+)\)",
+                   (ROOT / "README.md").read_text(encoding="utf-8"))
+check(f"  and README's layout names the same range, D1-D{max(_decisions)}",
+      bool(_range) and int(_range.group(1)) == max(_decisions),
+      f"README says {'D1-D' + _range.group(1) if _range else 'no range'}")
+
 # ---------------------------------------------------------------------------
 # scripts/setup.sh is the README's first command, and it tells whoever ran it
 # how many suites they now have. Both halves have been wrong before, with
