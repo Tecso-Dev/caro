@@ -183,11 +183,17 @@ _PROVINCE_BY_NORM = {normalize(p): p for p in PROVINCES}
 def province_of(text: str | None) -> str | None:
     """The province named by `text`, or None — never a guess.
 
-    Bama renders «رباط کریم، تهران»: city first, province last, separated by
-    the Arabic comma. So the province is the LAST segment, and a line that is
-    only a city («کرج») yields nothing rather than the province it happens to
-    sit in — inferring البرز from کرج would be this module asserting a
-    geography it does not hold.
+    Bama puts the city first, separated by the Arabic comma: «رباط کریم،
+    تهران» is a city and its province, and «مشهد، خراسان رضوی، فلسطین» a city,
+    its province and a district — the second shape measured on real pages on
+    2026-10-06 and 2026-10-10, and missed while only the last part was read.
+    So a province is read from any part AFTER the first, the last tried
+    first, and never from the first: that part is the city. «تهران، آذری»
+    names the city of Tehran and a district of it; whether that says which
+    province is a question about the city, not something the line states.
+    And a line that is only a city («کرج») yields nothing rather than the
+    province it happens to sit in — inferring البرز from کرج would be this
+    module asserting a geography it does not hold.
 
     The whole string is also tried, for a page that states the province with
     no city in front of it.
@@ -198,6 +204,7 @@ def province_of(text: str | None) -> str | None:
     if s in _PROVINCE_BY_NORM:
         return _PROVINCE_BY_NORM[s]
     parts = [p.strip() for p in re.split(r"[،,]", s) if p.strip()]
-    if parts:
-        return _PROVINCE_BY_NORM.get(parts[-1])
+    for part in reversed(parts[1:]):
+        if part in _PROVINCE_BY_NORM:
+            return _PROVINCE_BY_NORM[part]
     return None

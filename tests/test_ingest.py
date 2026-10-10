@@ -2027,6 +2027,26 @@ for _txt, _want in [
     check(f"province_of({_txt!r:26}) = {_want!r}", province_of(_txt) == _want,
           f"got {province_of(_txt)!r}")
 
+# City, province, district: real lines, read off run13's pages by the probe
+# on 2026-10-06 and out of date_watch's stored lines on 2026-10-10, where
+# only the last part was read and so none of them was. The two-part lines
+# below them are real too: the first part is the CITY, and a city is not a
+# province the line states, whatever its name.
+for _txt, _want in [
+    ("مشهد، خراسان رضوی، فلسطین", "خراسان رضوی"),
+    ("رشت، گیلان، قلی پور", "گیلان"),
+    ("شیراز، فارس، فرهنگیان", "فارس"),
+    ("کرج، البرز، گوهردشت", "البرز"),
+    ("تهران، آذری", None),
+    ("اصفهان، کهندژ", None),
+]:
+    check(f"province_of({_txt!r:28}) = {_want!r}", province_of(_txt) == _want,
+          f"got {province_of(_txt)!r}")
+_3 = _swap(OBSERVED_LOCATION_BLOCK, "رباط کریم، تهران", "شیراز، فارس، فرهنگیان")
+check("a line of three parts gives its middle one, found after the odometer",
+      extract_location(_3)[1:] == ("فارس", "after_odometer"),
+      str(extract_location(_3)))
+
 # ---------------------------------------------------------------------------
 # the probe's phone guard — the claim that was false until it was run
 # ---------------------------------------------------------------------------
