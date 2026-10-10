@@ -2047,6 +2047,60 @@ check("a line of three parts gives its middle one, found after the odometer",
       extract_location(_3)[1:] == ("فارس", "after_odometer"),
       str(extract_location(_3)))
 
+# A two-part line whose city is one of the thirteen capitals named as their
+# province is: the nine read off date_watch's stored lines on 2026-10-10 — the
+# largest shape among the misses, and where the market is. Refused below: a
+# city that is not one of the thirteen, a province's name in the city's place,
+# and anything but two parts.
+from caro.ingest.persian import (                                   # noqa: E402
+    SAME_NAME_CAPITALS, province_from_city)
+
+check("thirteen capitals share their province's name, each a province",
+      len(SAME_NAME_CAPITALS) == 13 and SAME_NAME_CAPITALS <= set(PROVINCES),
+      str(sorted(SAME_NAME_CAPITALS - set(PROVINCES))))
+for _txt, _want in [
+    ("تهران، رسالت", "تهران"),
+    ("تهران، مرزداران", "تهران"),
+    ("تهران، تولید دارو", "تهران"),
+    ("تهران، تهران\u200cنو", "تهران"),
+    ("تهران، جنت\u200cآباد شمالی", "تهران"),
+    ("تهران، شاهین", "تهران"),
+    ("تهران، گرگان", "تهران"),        # a district of Tehran, not the city
+    ("اصفهان، کهندژ", "اصفهان"),
+    ("اصفهان، برازنده", "اصفهان"),
+    ("کرج، گلشهر", None),             # البرز's capital, not named البرز
+    ("گلستان، مرکز", None),           # a province's name in the city's place
+    ("البرز، مرکز", None),
+    ("تهران، آذری، شرقی", None),      # three parts: not this rule's shape
+    ("تهران", None),                  # one part: province_of states it
+    ("رباط کریم، تهران", None),       # the city is not one of the thirteen
+]:
+    check(f"province_from_city({_txt!r:30}) = {_want!r}",
+          province_from_city(_txt) == _want,
+          f"got {province_from_city(_txt)!r}")
+
+_c = _swap(OBSERVED_LOCATION_BLOCK, "رباط کریم، تهران", "تهران، آذری")
+check("a page whose city names its province: found, and said to be by the city",
+      extract_location(_c) == ("تهران، آذری", "تهران", "city_names_province"),
+      str(extract_location(_c)))
+_both = _swap(OBSERVED_LOCATION_BLOCK, "5 روز پیش", "تهران، آذری")
+_both = _swap(_both, "رباط کریم، تهران", "شیراز، فارس، فرهنگیان")
+check("  a stated province wins, though the city line comes first",
+      extract_location(_both)[1:] == ("فارس", "after_odometer"),
+      str(extract_location(_both)))
+check("  and «کرج» alone is still refused, as before",
+      extract_location(_swap(OBSERVED_LOCATION_BLOCK, "رباط کریم، تهران",
+                             "کرج"))[1:] == (None, "window_had_no_province"))
+
+for _line, _want in [("تهران، آذری", ("تهران", "city")),
+                     ("رباط کریم، تهران", ("تهران", "stated")),
+                     ("کرج", (None, "none"))]:
+    _car = parse_detail_page(
+        LU, ld_page(body=f"<p>{_line}</p><p>500,000,000</p><p>تومان</p>"))
+    check(f"parse_detail_page on «{_line}»: province and source {_want}",
+          (_car.city, _car.province_source) == _want,
+          str((_car.city, _car.province_source)))
+
 # ---------------------------------------------------------------------------
 # the probe's phone guard — the claim that was false until it was run
 # ---------------------------------------------------------------------------

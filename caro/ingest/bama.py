@@ -85,7 +85,7 @@ from caro.ingest.divar_car import (
 )
 from caro.ingest.persian import (
     digits_only, normalize, parse_mileage_km, parse_price, parse_year_jalali,
-    province_of,
+    province_from_city, province_of,
 )
 from caro.ingest.quality import (
     PriceStatus, classify_mileage, classify_price_kind, classify_product,
@@ -589,6 +589,12 @@ def _labelled(lines: Sequence[str], label: str) -> str | None:
 #   way a wrong line survives is by being a province, which the price, the
 #   odometer line and the date phrase cannot be. A miss yields None and says
 #   so; it never yields the neighbouring line's contents.
+#
+#   STATED FIRST. A line that states its province wins wherever it stands in
+#   the window. Only when none does is the city asked: a two-part line whose
+#   city is one of the thirteen capitals that share their province's name.
+#   A province found that way says so — `city_names_province` here, and
+#   `province_source` `city` on the record.
 _LOCATION_WINDOW = 4
 
 
@@ -609,11 +615,15 @@ def extract_location(lines: Sequence[str]) -> tuple[str | None, str | None, str]
         n = normalize(ln)
         if not (n.startswith("کارکرد") and "کیلومتر" in n):
             continue
-        for j in range(i + 1, min(i + 1 + _LOCATION_WINDOW, len(lines))):
-            cand = lines[j]
+        window = lines[i + 1:i + 1 + _LOCATION_WINDOW]
+        for cand in window:
             prov = province_of(cand)
             if prov:
                 return cand.strip(), prov, "after_odometer"
+        for cand in window:
+            prov = province_from_city(cand)
+            if prov:
+                return cand.strip(), prov, "city_names_province"
         # The anchor was found and the window held no province. That is a
         # different fact from "no anchor", and the trace keeps them apart:
         # one means the page changed shape, the other means this page has no
@@ -638,7 +648,8 @@ class ParseTrace:
     price_agreement: str = "none"     # see reconcile_price()
     mileage_source: str = "none"
     condition_source: str = "none"    # field | description | none
-    # labelled | after_odometer | window_had_no_province | no_anchor
+    # labelled | after_odometer | city_names_province
+    #   | window_had_no_province | no_anchor
     location_source: str = "none"
     # The line as rendered — «رباط کریم، تهران». The city half has nowhere to
     # go yet: the corpus carries `province` and nothing else, and adding a
@@ -841,7 +852,8 @@ def parse_detail_page(url: str, html: str,
         # becomes is named province, `tracking` blocks and scores on it, and
         # only the province half can be checked against anything.
         city=loc_province,
-        province_source="stated" if loc_province else "none",
+        province_source=("city" if loc_source == "city_names_province"
+                         else "stated" if loc_province else "none"),
         seller_raw=None,          # the masked phone is never read
         # Everything the reconciliation was based on, kept verbatim.
         price_raw=(str(offers.get("price"))

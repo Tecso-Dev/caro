@@ -168,6 +168,10 @@ def parse_year_jalali(text: str) -> int | None:
 # absence-from-the-list as absence-from-Iran. The city is kept verbatim by the
 # caller; only the province — the part that can be checked — is ever promoted
 # to a field that something downstream will compare on.
+#
+# One exception, closed and named below: the thirteen provinces whose capital
+# carries the province's own name. That is a fact about thirteen of the
+# thirty-one, not a list of cities, and it cannot be incomplete.
 PROVINCES: tuple[str, ...] = (
     "آذربایجان شرقی", "آذربایجان غربی", "اردبیل", "اصفهان", "البرز", "ایلام",
     "بوشهر", "تهران", "چهارمحال و بختیاری", "خراسان جنوبی", "خراسان رضوی",
@@ -178,6 +182,17 @@ PROVINCES: tuple[str, ...] = (
 )
 
 _PROVINCE_BY_NORM = {normalize(p): p for p in PROVINCES}
+
+# The provinces whose capital is named as the province is, from the table of
+# all thirty-one (Wikipedia, «Provinces of Iran», read 2026-10-10). Alborz's
+# capital is Karaj, Golestan's is Gorgan, and eighteen more differ the same
+# way; those are not here, and neither is any other city.
+SAME_NAME_CAPITALS: frozenset[str] = frozenset({
+    "اردبیل", "اصفهان", "ایلام", "بوشهر", "تهران", "زنجان", "سمنان",
+    "قزوین", "قم", "کرمان", "کرمانشاه", "همدان", "یزد",
+})
+
+_CAPITAL_BY_NORM = {normalize(c): c for c in SAME_NAME_CAPITALS}
 
 
 def province_of(text: str | None) -> str | None:
@@ -208,3 +223,26 @@ def province_of(text: str | None) -> str | None:
         if part in _PROVINCE_BY_NORM:
             return _PROVINCE_BY_NORM[part]
     return None
+
+
+def province_from_city(text: str | None) -> str | None:
+    """The province a two-part line's city gives, when that city is one of
+    the thirteen capitals named as their province is; otherwise None.
+
+    «تهران، آذری» is the city of Tehran and a district of it. The line states
+    no province, and the city does not need one stated: Tehran is in Tehran.
+    So: a line of exactly two parts, its first part, one of the thirteen.
+    «کرج، گلشهر» stays unread — Karaj is in البرز, and knowing that would be
+    holding a geography — and so does a first part that names a province
+    whose capital has another name («گلستان، …», «البرز، …»): the first part
+    is a city, and no city of that name is that province's capital.
+
+    The caller records a province found this way as coming from the city,
+    never as stated (`province_source`).
+    """
+    if not text:
+        return None
+    parts = [p.strip() for p in re.split(r"[،,]", normalize(text)) if p.strip()]
+    if len(parts) != 2:
+        return None
+    return _CAPITAL_BY_NORM.get(parts[0])

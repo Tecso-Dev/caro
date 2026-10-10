@@ -181,6 +181,17 @@ one a filter may offer. A district named like a province, standing last, would
 be read as that province; none of the ten pages had one, and nothing else
 rules it out.
 
+The rule now reads more than the one run13 was read by. A province the line
+states is read in any part after the city, not only the last; and a two-part
+line whose city is one of the thirteen capitals that share their province's
+name — «تهران، آذری», «اصفهان، کهندژ» — gives that province, recorded as
+`province_source` `city`, never as stated. On the nineteen listings whose lines
+date_watch stored (read 2026-10-10), the old rule found eight; two more state
+their province but not last, and nine are a capital and a district — 7 Tehran,
+2 Isfahan. run13's numbers above stay run13's: its pages were not kept, so it
+cannot be read again. The district hazard stays too: «تهران، گلستان» would be
+read as گلستان, stated, because a stated province wins.
+
 ## Price: extraction quality is not plausibility
 
 `price_status` and `price_kind` are two vocabularies about one number and
