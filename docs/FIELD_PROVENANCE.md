@@ -182,15 +182,22 @@ be read as that province; none of the ten pages had one, and nothing else
 rules it out.
 
 The rule now reads more than the one run13 was read by. A province the line
-states is read in any part after the city, not only the last; and a two-part
-line whose city is one of the thirteen capitals that share their province's
-name — «تهران، آذری», «اصفهان، کهندژ» — gives that province, recorded as
-`province_source` `city`, never as stated. On the nineteen listings whose lines
-date_watch stored (read 2026-10-10), the old rule found eight; two more state
-their province but not last, and nine are a capital and a district — 7 Tehran,
-2 Isfahan. run13's numbers above stay run13's: its pages were not kept, so it
-cannot be read again. The district hazard stays too: «تهران، گلستان» would be
-read as گلستان, stated, because a stated province wins.
+states is read in any part after the city, not only the last; a two-part line
+whose city is one of the thirteen capitals that share their province's name —
+«تهران، آذری», «اصفهان، کهندژ» — gives that province, recorded as
+`province_source` `city`, never as stated; and a new car's «صفر کیلومتر»
+anchors the window as «کارکرد … کیلومتر» does, which is the last row of the
+table above. On the nineteen listings whose lines date_watch stored (read
+2026-10-10), the old rule found eight. The parser now finds all nineteen: ten
+stated — the eight, and two that state their province but not last — and nine
+a capital and a district, 7 Tehran and 2 Isfahan. Two of the nineteen are new
+cars, one of each kind, and neither was found until the anchor moved. run13's
+numbers above stay run13's: its pages were not kept, so it cannot be read
+again. Three of its rows carry neither mileage nor province, all three Quiks —
+what a new car's page would have left, though without the pages that cannot
+be shown. A new car's mileage is still not read from the line. The district
+hazard stays: «تهران، گلستان» would be read as گلستان, stated, because a
+stated province wins.
 
 ## Price: extraction quality is not plausibility
 

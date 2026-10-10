@@ -46,11 +46,11 @@ intent → explain the best choice**.
    - Sheypoor and Khodro45: adapters, under the same rules.
    - `province` where the market is. run13 carries it on 34 of 74 rows. The
      rule now also reads the lines it missed there — a province stated in
-     any part after the city, and a city that shares its province's name,
-     recorded as `province_source` `city` — and the nineteen lines date_watch
-     stored are all of shapes it reads. The next collection is the first to
-     carry it; nothing draws it until a corpus shows the coverage
-     (FIELD_PROVENANCE.md).
+     any part after the city, a city that shares its province's name,
+     recorded as `province_source` `city`, and a new car's page — and reads
+     all nineteen listings whose lines date_watch stored. The next
+     collection is the first to carry it; nothing draws it until a corpus
+     shows the coverage (FIELD_PROVENANCE.md).
    - Longitudinal collection. Time-dependent and unrecoverable: a day not
      collected is gone. A second discovery run is a new sample, not a
      series: on run11's pin, 26 days later, 3 of its 76 listings were drawn
