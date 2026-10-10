@@ -2101,6 +2101,42 @@ for _line, _want in [("تهران، آذری", ("تهران", "city")),
           (_car.city, _car.province_source) == _want,
           str((_car.city, _car.province_source)))
 
+# A new car: «صفر کیلومتر» where the reading is, then the age slot, then the
+# location — the two new cars among date_watch's nineteen, as it stored them
+# (read 2026-10-10), nine rounds each with the location unmoved. Neither was
+# anchored before, so neither was read.
+for _name, _lines, _want in [
+    ("a new car whose line states its province",
+     ["صفر کیلومتر", "22 ساعت پیش", "شیراز، فارس، فرهنگیان"],
+     ("شیراز، فارس، فرهنگیان", "فارس", "after_odometer")),
+    ("a new car whose city is one of the thirteen",
+     ["صفر کیلومتر", "1405/6/19", "تهران، شاهین"],
+     ("تهران، شاهین", "تهران", "city_names_province")),
+]:
+    check(f"{_name}: anchored on «صفر کیلومتر»",
+          extract_location(_lines) == _want, str(extract_location(_lines)))
+_later = ["کارکرد 500,000 کیلومتر", "5 روز پیش", "350,000,000", "تومان",
+          "خودرو سالم", "صفر کیلومتر", "1405/6/19", "تهران، شاهین"]
+check("  the first odometer line decides; «صفر کیلومتر» below it is not a "
+      "second chance",
+      extract_location(_later) == (None, None, "window_had_no_province"),
+      str(extract_location(_later)))
+_inside = ["خرید خودرو صفر کیلومتر", "1405/6/19", "تهران، شاهین"]
+check("  and «صفر کیلومتر» inside a line is not an odometer line",
+      extract_location(_inside) == (None, None, "no_anchor"),
+      str(extract_location(_inside)))
+for _line, _want in [("شیراز، فارس، فرهنگیان", ("فارس", "stated")),
+                     ("تهران، شاهین", ("تهران", "city"))]:
+    _page = ld_page(body=f"<p>1405/6/19</p><p>{_line}</p>"
+                         "<p>500,000,000</p><p>تومان</p>").replace(
+        "<p>کارکرد 43,000 کیلومتر</p>", "<p>صفر کیلومتر</p>")
+    _car = parse_detail_page(LU, _page)
+    check(f"parse_detail_page on a new car's «{_line}»: province and source "
+          f"{_want}",
+          "کارکرد" not in _page
+          and (_car.city, _car.province_source) == _want,
+          str(("کارکرد" in _page, _car.city, _car.province_source)))
+
 # ---------------------------------------------------------------------------
 # the probe's phone guard — the claim that was false until it was run
 # ---------------------------------------------------------------------------

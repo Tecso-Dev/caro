@@ -571,6 +571,14 @@ def _labelled(lines: Sequence[str], label: str) -> str | None:
 #     [48]  350,000,000
 #     [49]  تومان
 #
+# A new car's page says «صفر کیلومتر» where the reading is, and the same two
+# lines follow it: the age slot, then the location. Measured on the lines
+# date_watch stored, read 2026-10-10: two of its nineteen listings are new
+# cars, and on all eighteen of their observations the location stood there.
+# Until then only «کارکرد … کیلومتر» was an anchor, so a new car's location
+# was never read. On every one of the 150 pages date_watch stored lines
+# from, the first line of either kind was the car's own odometer line.
+#
 # There is NO LABEL. `city=_labelled(lines, "موقعیت")` has been reading a word
 # the page does not render since the adapter was written, which is why
 # `province` is empty on all 76 records of run 11 — and why repost matching,
@@ -598,6 +606,14 @@ def _labelled(lines: Sequence[str], label: str) -> str | None:
 _LOCATION_WINDOW = 4
 
 
+def _odometer_line(n: str) -> bool:
+    """Whether `n`, normalized, is a car's odometer line: «کارکرد N کیلومتر»,
+    or a new car's «صفر کیلومتر» — the two date_watch anchors on. At the
+    start of the line only; «صفر کیلومتر» inside one is some other text."""
+    return ((n.startswith("کارکرد") and "کیلومتر" in n)
+            or n.startswith("صفر کیلومتر"))
+
+
 def extract_location(lines: Sequence[str]) -> tuple[str | None, str | None, str]:
     """(the line as rendered, the province if it validates, how it was found).
 
@@ -612,8 +628,7 @@ def extract_location(lines: Sequence[str]) -> tuple[str | None, str | None, str]
         return label, province_of(label), "labelled"
 
     for i, ln in enumerate(lines):
-        n = normalize(ln)
-        if not (n.startswith("کارکرد") and "کیلومتر" in n):
+        if not _odometer_line(normalize(ln)):
             continue
         window = lines[i + 1:i + 1 + _LOCATION_WINDOW]
         for cand in window:
