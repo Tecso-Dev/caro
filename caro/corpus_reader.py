@@ -223,6 +223,10 @@ def listing_from_record(rec: dict) -> CarListing:
         price_kind=rec.get("price_kind") or "absent",
         price_kind_source=rec.get("price_kind_source") or "none",
         city=rec.get("province"),
+        # Read, and derived only the way promotion derives it: a published
+        # row before this field existed carried only stated provinces.
+        province_source=(rec.get("province_source")
+                         or ("stated" if rec.get("province") else "none")),
         price_currency_raw=rec.get("price_currency_raw"),
         # Read, never reconstructed. If the artifact does not state a
         # provenance then none was recorded, `None` is the honest value and

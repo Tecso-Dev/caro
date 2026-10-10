@@ -263,6 +263,13 @@ class CarListing:
     # observations of a market.
     seller_type: str = "unknown"
 
+    # How `city` — the province — was known: `stated` when the page names
+    # the province, `city` when a city that shares its province's name gave
+    # it (caro/ingest/persian.py), `none` with no province. Left at `None`,
+    # a province is reported as stated: until the city rule, every province
+    # any adapter produced was one its source stated.
+    province_source: str | None = None
+
     def to_fetch_outcome(self, source: str = "divar",
                          salt: str | None = None) -> FetchOutcome:
         return FetchOutcome(
@@ -273,6 +280,8 @@ class CarListing:
             make=self.make, model=self.model, trim=self.trim,
             year_jalali=self.year_jalali, color=self.color,
             province=self.city, mileage_km=self.mileage_km,
+            province_source=(self.province_source
+                             or ("stated" if self.city else "none")),
             # Carried because `listing_from_record` reads all three off a
             # published row and nothing could ever supply them. See the block
             # on FetchOutcome for how that was found and what it cost.

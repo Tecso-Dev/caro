@@ -259,6 +259,8 @@ SURVIVAL = [
                                                           "price_kind_source"),
     ("price_cur_raw",  "price_currency_raw",  "price_currency_raw",
                                                          "price_currency_raw"),
+    ("province_src",   "province_source",     "province_source",
+                                                            "province_source"),
 ]
 
 

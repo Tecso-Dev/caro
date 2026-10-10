@@ -166,6 +166,13 @@ def promote_record(rec: dict) -> tuple[dict | None, str | None]:
         "make": rec.get("make"), "model": rec.get("model"),
         "trim": rec.get("trim"), "color": rec.get("color"),
         "province": rec.get("province"),
+        # Where it came from. A recorded `city` is believed; a province with
+        # no recorded source is published as `stated`, because until the
+        # city rule every province any adapter produced was one the page
+        # stated. No province, no source.
+        "province_source": (
+            ("city" if rec.get("province_source") == "city" else "stated")
+            if rec.get("province") else "none"),
         # `listing_from_record` has read both since it was written and no
         # snapshot could supply either, so every published row carried None.
         # `price_currency_raw` above was in the same state until the record

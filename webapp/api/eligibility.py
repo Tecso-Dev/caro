@@ -102,6 +102,9 @@ FIELDS: dict[str, Eligibility] = {
     # rule cannot read (FIELD_PROVENANCE.md) — so nothing may draw or choose
     # it.
     "province": Eligibility("SOURCE_BACKED"),
+    # Not in run13: the key is published from the next promotion on, and
+    # nothing has produced a `city` on a real run yet.
+    "province_source": Eligibility("PENDING_LIVE_VALIDATION"),
     # A facet: «اتومات» is a red line a buyer states, and the search checks it
     # against this field (webapp/api/constraints.py).
     "gearbox": Eligibility("SOURCE_BACKED", facet=True),

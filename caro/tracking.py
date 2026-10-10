@@ -86,6 +86,11 @@ class FetchOutcome:
     year_jalali: int | None = None
     color: str | None = None
     province: str | None = None
+    # How the province was known: `stated` — the line names it; `city` — a
+    # city that shares its province's name (one of thirteen, nothing else);
+    # `none`. Carried beside it so an inferred province is never read as one
+    # the page stated. `None` means the adapter recorded neither.
+    province_source: str | None = None
     seller_fingerprint: str | None = None
     mileage_km: int | None = None
     image_phashes: tuple[str, ...] = ()

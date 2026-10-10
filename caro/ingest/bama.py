@@ -841,6 +841,7 @@ def parse_detail_page(url: str, html: str,
         # becomes is named province, `tracking` blocks and scores on it, and
         # only the province half can be checked against anything.
         city=loc_province,
+        province_source="stated" if loc_province else "none",
         seller_raw=None,          # the masked phone is never read
         # Everything the reconciliation was based on, kept verbatim.
         price_raw=(str(offers.get("price"))

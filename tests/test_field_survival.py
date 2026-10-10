@@ -100,7 +100,7 @@ def a_listing(**over) -> CarListing:
         year_jalali=1398, mileage_km=43_000,
         gearbox="دنده‌ای", fuel="بنزینی", color="سفید",
         body_condition="minor_paint", condition_source="field",
-        document_issue=False, city="تهران",
+        document_issue=False, city="تهران", province_source="stated",
         product_class="vehicle", product_class_source="canonical_name",
         price_kind="cash", price_kind_source="no_contrary_evidence",
         seller_raw=None, image_urls=(),
@@ -128,6 +128,25 @@ for key, want in SPINE:
 
 check("province is the renamed city, not a dropped one",
       row.get("province") == "تهران", str(row.get("province")))
+
+
+def _psources(listing):
+    rec_, row_, back_, _ = through_the_chain(listing)
+    return (rec_.get("province_source"), (row_ or {}).get("province_source"),
+            getattr(back_, "province_source", None))
+
+
+check("where the province came from crosses with it: snapshot, row, reader",
+      _psources(a_listing()) == ("stated",) * 3, str(_psources(a_listing())))
+check("  one given by its city stays `city` all the way, never `stated`",
+      _psources(a_listing(province_source="city")) == ("city",) * 3,
+      str(_psources(a_listing(province_source="city"))))
+check("  one recorded with no source is `stated` — the only kind there was",
+      _psources(a_listing(province_source=None)) == ("stated",) * 3,
+      str(_psources(a_listing(province_source=None))))
+check("  and no province has no source",
+      _psources(a_listing(city=None, province_source=None)) == ("none",) * 3,
+      str(_psources(a_listing(city=None, province_source=None))))
 
 # ---------------------------------------------------------------------------
 print("\ncondition — the field that was lost, and its provenance with it")
@@ -213,6 +232,7 @@ CROSSES = {
     "year_jalali": "year_jalali", "mileage_km": "mileage_km",
     "color": "color",
     "city": "province",                    # renamed, not dropped
+    "province_source": "province_source",  # and how it was known, beside it
     "seller_raw": "seller_fingerprint",    # salted on the way out (D-privacy)
     "body_condition": "body_condition",
     "condition_source": "condition_source",
@@ -336,6 +356,12 @@ check("  sourced to nothing, so the corpus does not claim it was observed",
       old_row.get("condition_source") == "none")
 check("  and it carries no seller type, rather than a private one",
       old_row.get("seller_type") is None and old_row.get("dealer_badge") is False)
+
+_pre = {k: v for k, v in old_rec.items() if k != "province_source"}
+_pre["province"] = "تهران"
+check("a snapshot from before province_source existed publishes `stated`",
+      (promote_record(_pre)[0] or {}).get("province_source") == "stated",
+      str((promote_record(_pre)[0] or {}).get("province_source")))
 
 check("today's snapshot of the same car does NOT produce that",
       row.get("condition") != "unknown",
