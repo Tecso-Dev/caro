@@ -4537,3 +4537,146 @@ parsing limit is set (§2.5). The scan that finds no adapter built inside a
 loop in `scripts/` is a heuristic: a construction in a function that a loop
 calls is not seen. RUN5_SPEC §9 stays as it was frozen; until this entry it
 was true for Divar only.
+
+## D74 — The province is read where the market is
+
+The roadmap's next item was `province` where the market is. run13 carries it
+on 34 of 74 rows, and the ten run13 pages read by hand on 2026-10-06
+(FIELD_PROVENANCE.md) put every miss in a shape the rule could not read: a
+city and a district (5 of 8), a city, its province and a district (2 of 8),
+and a page with no «کارکرد … کیلومتر» line at all (1 of 8, a 1405 Quik). So
+what it read leaned to small towns.
+
+**Measured first, and D73's gates read for real.** On 2026-10-10, on the
+owner's machine, one read-only script did two things. It sorted the lines
+date_watch had stored — for each of the 19 listings with an odometer line,
+the two lines after that line in its latest observation — by what the
+shipped `province_of` made of them: 8 read; 2 stating their province but not
+last («شیراز، فارس، فرهنگیان», «کرج، البرز، گوهردشت»); 9 two-part lines
+whose first part names a province, 7 «تهران، …» and 2 «اصفهان، …»; no comma
+line without a province, and none without a comma line. The counts predicted
+before it ran held. And, with the owner's leave for two requests, it read
+robots.txt through the gates D73 built. bama.ir at 2026-10-10T10:46:38Z:
+http 200, 592 bytes, sha256
+`ec67e8a840ad9e5273a419bd66674c3b9886049bb9609ea6f5abb7b2227f1597`, two
+rules from group `*` — the directives of 2026-09-11 — and the sitemap, a
+category, a filtered category and a listing allowed. divar.ir at 10:46:44Z:
+http 200, 92 bytes, sha256
+`cf0415ac314ee550222c5b2d07323f51dec373e2c1bff364a3fd4eeeb9cf0849`, four
+rules from `*` — the directives transcribed on 2026-09-07 — its three search
+pages allowed, and the gate and `assert_allowed` agreeing on 8 of 8 sample
+urls. D73 said the gate had judged no real robots.txt; it has judged two,
+and neither transcription had to change.
+
+**The decision.** The owner's, of three put to him: a province the line
+states is read wherever it stands after the city, and a two-part line whose
+city is one of the thirteen capitals that carry their province's name —
+Ardabil, Bushehr, Hamadan, Ilam, Isfahan, Kerman, Kermanshah, Qazvin, Qom,
+Semnan, Tehran, Yazd and Zanjan, from Wikipedia's table of the thirty-one,
+read 2026-10-10 — gives that province. Not taken: the stated province alone,
+which on these lines reads 10 of 19 and no Tehran; and neither, leaving this
+entry to record the measurement. A province found by the city says so:
+`province_source` — `stated`, `city` or `none` — crosses from the parse to
+the snapshot, the promoted row and the reader, and a province with no
+recorded source is published as `stated`, since before this every province
+was. A stated province wins wherever it stands in the window. «کرج» stays
+refused, Karaj being in Alborz by a geography the code does not hold, and so
+does a first part that names a province whose capital has another name,
+«گلستان، …» or «البرز، …»: the first part is a city. Four commits:
+`8f3b913`, `df0d722`, `cff7505` and `dbe7829`.
+
+**The prediction that failed.** The choice was put as 19 of 19 on this
+sample, and the check written to confirm it — the shipped `extract_location`
+over the same stored lines, run on the owner's machine after the four
+commits — was predicted to give 10 stated, 9 by the city and none
+unanchored. It gave 9, 8 and 2. The seventeen with an anchor came out one
+for one; the two without, `bama:l39y2bdi` and `bama:wmxsljsn`, have a
+location line the rule reads (فارس, stated; تهران, by the city), but the
+parser never reached it: it anchored only on «کارکرد … کیلومتر», and their
+odometer line was something else. The push was held. The miss had been named
+before the round began — the last row of FIELD_PROVENANCE's table of
+2026-10-06 — and the round went past it: the measurement sorted the two
+lines after the odometer line and never asked whether the parser anchors on
+that line, and the prediction carried it only as its uncertain case. The
+roadmap, after the four commits, said the nineteen lines were all of shapes
+the rule reads, and FIELD_PROVENANCE counted them the same way: true of the
+lines, not of the parser.
+
+**Measured again.** A second read-only script, on the owner's machine: of
+150 stored observations with an odometer line, 132 were «کارکرد … کیلومتر»
+and 18 «صفر کیلومتر» — the two, nine rounds each, followed every time by the
+age slot (a relative phrase, then an absolute date) and the same location —
+no other kind, and no listing changing kind between rounds. Anchored on
+«صفر کیلومتر» too, the nineteen gave 10 and 9, and a copy of the rule agreed
+with the shipped one on the seventeen it anchors. date_watch stores the
+first line of the whole page that begins «کارکرد » or «صفر کیلومتر», split
+into lines by the parser's own `_text`, and on all 150 pages that first line
+was the car's own odometer line. Every line of that prediction held. It is
+the layout docs/WATCH_ROUND1_2026-09-12.md recorded, whose anchor is
+«کارکرد N کیلومتر / صفر کیلومتر»; the parser's anchor, written four days
+later, took only the first.
+
+**The second decision.** The owner's, of two: a new car's «صفر کیلومتر»
+anchors the window as «کارکرد … کیلومتر» does, at the start of a line only,
+with the same window, the same two passes and the same labels in the trace.
+Not taken: leaving the anchor and correcting the documents to 17 of 19. A
+new car's mileage is not read from the line. Two commits: `ea7038b`, and
+`ccd2fa6`, which corrects what the four had written.
+
+**Measured.** Two requests went to a source, the robots.txt reads above,
+sent by the owner with his leave; nothing else at any stage. Every suite,
+every mutation and the web build ran in a network namespace with no
+interface. Twelve mutations were predicted with the exact number of checks
+each would turn red, after the tests existed and before any mutation ran,
+and all twelve held — the first nine against 2077, the last three against
+2083:
+
+                                                    red   green
+    province_of back to the last part only            6    2071
+    province_of reads the first part too              5    2072
+    the city rule takes any province's name           2    2075
+    the city rule takes a line of any length          2    2075
+    the city pass before the stated pass              1    2076
+    parse_detail_page calls everything stated         1    2076
+    promote_record ignores a recorded `city`          1    2076   survival
+    the reader ignores province_source                1    2076   survival
+    to_fetch_outcome passes the source underived      2    2075   survival
+    the anchor back to «کارکرد … کیلومتر» only        4    2079
+    «صفر کیلومتر» anywhere in a line                  1    2082
+    the next anchor tried when a window holds none    4    2079
+
+The red checks are in test_ingest but for the three marked; no other suite
+moved. Two things not predicted, both about the runs and not the code. The
+owner stopped the first nine while the eighth was running, which left its
+edit in the scratch clone; it was restored and the eighth and ninth run
+alone — and the owner was first told the run had not happened at all, which
+was wrong and was corrected in the next report. The last three first ran in
+a clone without the web app's node_modules, where the baseline is 1947
+rather than 2083: the same four, one and four red; they were run again with
+it. Each commit is green on its own — 2045, 2055, 2077, 2077, 2083 and 2083
+assertions across 15 suites, 1611, 1621, 1643, 1643, 1649 and 1649 across 12
+without the extras — and the web build is green with its nine routes. Both
+rounds were applied to fresh clones before they were sent, and on the
+owner's machine as `8f3b913` to `ccd2fa6`: the same six trees. After the
+last two, the check gave 10 stated, 9 by the city and none unanchored, every
+listing as predicted. Between D73 and this entry one commit more, `63868cb`:
+README's layout names the decisions' range, and test_claims holds it to the
+last one, as it already held /about's count.
+
+**Not measured.** No collection has run on the new rule: the nineteen are
+three stored lines a page, put through `extract_location`, not pages through
+`parse_detail_page` and a promotion. run13's numbers stay run13's, because
+its pages were not kept; three of its rows carry neither mileage nor
+province, all three Quiks, which is what a new car's page would have left,
+though without the pages that cannot be shown. The thirteen capitals were
+transcribed from one table, read once. A line that begins or ends with a
+comma («، تهران», «تهران،») was read by the old rule, as its last part, and
+is not read by the new one; no stored line has that shape — the eight the
+old rule read are all «شهر، استان» — and none was looked for elsewhere.
+
+**What this does not settle.** A district named like a province is read as
+that province, stated: «تهران، گلستان» would give گلستان, because a stated
+province wins. A new car's mileage stays unread, and whether «صفر کیلومتر»
+reads as zero is the ground of D21 and D67, not of this entry. Nothing draws
+`province` or `province_source` until a collection shows the coverage, and
+`province_source` stays PENDING_LIVE_VALIDATION.
