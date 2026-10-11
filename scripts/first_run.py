@@ -259,6 +259,13 @@ SURVIVAL = [
                                                           "price_kind_source"),
     ("price_cur_raw",  "price_currency_raw",  "price_currency_raw",
                                                          "price_currency_raw"),
+    # Two that cross under another name, which a guard matching names could
+    # not see: CarListing's `city` lands as `province`, its `seller_raw` as
+    # `seller_fingerprint`, salted on the way out. run14's report (2026-10-11)
+    # said where the province came from and never whether it came at all.
+    ("province",       "city",                "province",       "province"),
+    ("seller_fp",      "seller_raw",          "seller_fingerprint",
+                                                         "seller_fingerprint"),
     ("province_src",   "province_source",     "province_source",
                                                             "province_source"),
 ]

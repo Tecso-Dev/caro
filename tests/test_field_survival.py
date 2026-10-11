@@ -432,6 +432,32 @@ check("  and the header states one denominator",
       "18 parsed · 18 matched in the snapshot · 18 published" in _report,
       "\n" + _report)
 
+
+def _row(report: str, label: str) -> list[str] | None:
+    """The report's row for one field, split into its cells."""
+    return next((ln.split() for ln in report.splitlines()
+                 if ln.split()[:1] == [label]), None)
+
+
+check("the report audits province, parsed as `city`, at all three stages",
+      _row(_report, "province") == ["province", "100%", "100%", "100%", "0"],
+      str(_row(_report, "province")))
+
+# Divar's shape: a seller the parse holds raw, which only its salted hash
+# may leave. Bama's listings have none (`seller_raw=None`), so the fixture
+# above cannot show the row doing anything.
+_sellers = [a_listing(listing_id=f"s{i}", seller_raw="۰۹۱۲۳۴۵۶۷۸۹")
+            for i in range(3)]
+with tempfile.TemporaryDirectory() as _d:
+    _p = write_snapshot(Path(_d), Snapshot(
+        "seller", date(2026, 10, 11),
+        [x.to_fetch_outcome("divar", "test-salt") for x in _sellers]))
+    _sreport = "\n".join(survival(_sellers, _p))
+check("  and a seller crosses as its fingerprint: raw at the parse, hashed "
+      "after",
+      _row(_sreport, "seller_fp") == ["seller_fp", "100%", "100%", "100%", "0"],
+      str(_row(_sreport, "seller_fp")))
+
 # The positive control, in the same shape: a real loss must still be caught
 # with the unparsed records present, or the fix would have bought silence.
 with tempfile.TemporaryDirectory() as _d:
@@ -583,6 +609,19 @@ check("  and the table audits nothing that does not cross this boundary",
       not (_audited - _car - _fo), f"stray: {sorted(_audited - _car - _fo)}")
 check(f"  ({len(_shared)} shared fields, {len(_audited)} rows in the table)",
       len(_audited) >= len(_shared) - len(NOT_AUDITED))
+
+# A rename is a crossing the intersection of names cannot see: CarListing's
+# `city` lands as FetchOutcome's `province`, its `seller_raw` as
+# `seller_fingerprint`. CROSSES above says so field by field, so the table is
+# held to CROSSES as well, by where each value lands. run14's own report
+# (2026-10-11) printed `province_src` and no `province` at all.
+_keys = {key for _, _, key, _ in SURVIVAL}
+_lands = {v for v in CROSSES.values() if v}
+_unkeyed = _lands - _keys - NOT_AUDITED
+check("every field that crosses, renamed or not, is audited where it lands",
+      not _unkeyed,
+      f"unaudited: {sorted(_unkeyed)} — add them to SURVIVAL or declare them "
+      f"in NOT_AUDITED with a reason")
 
 check("nothing is reconstructed: a row with a price but no provenance is refused",
       not eligibility(listing_from_record({
