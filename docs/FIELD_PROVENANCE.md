@@ -290,16 +290,22 @@ converts the absence into a number. The panel is twenty of run11's listings —
 them.
 
 **document_issue — `DERIVED`, and weaker than it reads.** run13 carries a value
-on no row, so the key is absent from it; run11 carried one in seventy-six.
-`promote_corpus.py` takes the structured field when there is one and otherwise
-falls back to `has_document_issue(desc)`, so a `false` means *the parser read
-the prose and found no phrase* — not that the seller stated there is no issue.
+on no row, so the key is absent from it; run11 carried one in seventy-six, a
+`false`. `promote_corpus.py` takes the structured field when there is one and
+otherwise falls back to `has_document_issue(desc)`, which answers `true` where
+the prose holds a phrase it knows for an issue, `false` where it holds one of
+three phrases for a clean title — «سند آزاد», «سند تک برگ», «سند دست اول» —
+and null where it holds neither. So a `false` is the seller's own sentence
+about the title, found by a three-phrase list, and not a check of the title.
+This paragraph said from 2026-09-18 that a `false` meant the parser had read
+the prose and found no phrase; the function, unchanged since `4a16962`, has
+never answered `false` for that.
 Converting a null into a third vocabulary member (`not_reported`) is a
 derivation performed by the mapping layer, not a value the corpus supplies, and
 that is why this row's status is `DERIVED` rather than `SOURCE_BACKED`. Two
-states must never collapse into one on a screen: `false` is a weak negative
-finding, null is the absence of any finding, and neither is the seller's
-assurance.
+states must never collapse into one on a screen: `false` is a seller's claim
+that a short list recognised, null is the absence of any finding, and neither
+is a check of the title.
 
 ## What this file does not decide
 
