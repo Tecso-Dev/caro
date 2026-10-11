@@ -300,8 +300,12 @@ def main() -> int:
         return 1
 
     a.output.parent.mkdir(parents=True, exist_ok=True)
-    a.output.write_text(serialized, encoding="utf-8")
-    print(f"\nwrote {a.output} ({len(serialized):,} bytes, both guards clean)")
+    # Bytes, as written: len() of the text counts characters, and every
+    # Persian letter is two bytes in UTF-8 — run14 printed 62,207 "bytes"
+    # for a file of 63,952.
+    data = serialized.encode("utf-8")
+    a.output.write_bytes(data)
+    print(f"\nwrote {a.output} ({len(data):,} bytes, both guards clean)")
     return 0
 
 

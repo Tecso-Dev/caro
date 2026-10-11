@@ -241,6 +241,26 @@ check("  and carries provenance for the input it came from",
 check("  and the guards pass their own output",
       not validate(json.loads(text), text))
 
+# The size promotion prints is the file's. It printed len() of the text —
+# characters — and called them bytes: 62,207 for run14's 63,952 (2026-10-11).
+with tempfile.TemporaryDirectory() as d:
+    _src, _dst = Path(d) / "in.json", Path(d) / "out.json"
+    _src.write_text(json.dumps(CLEAN, ensure_ascii=False), encoding="utf-8")
+    _run = subprocess.run(
+        [sys.executable, "scripts/promote_corpus.py", "--input", str(_src),
+         "--run-id", "t", "--output", str(_dst)],
+        cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
+        env={"PYTHONPATH": ".", "PATH": "/usr/bin:/bin"})
+    _bytes = _dst.stat().st_size if _dst.exists() else -1
+    _chars = len(_dst.read_text(encoding="utf-8")) if _dst.exists() else -1
+check("the clean artifact has more bytes than characters, so the two can be "
+      "told apart",
+      _bytes > _chars > 0, f"{_bytes} bytes, {_chars} characters")
+check("  and promotion says how many bytes it wrote",
+      f"({_bytes:,} bytes" in _run.stdout,
+      f"{_bytes:,} bytes on disk; it said: "
+      + next((ln for ln in _run.stdout.splitlines() if "wrote" in ln), "")[-60:])
+
 code, exists, _ = promote(LEAK)
 check("an identifier in an ALLOWED field is refused", code == 1)
 check("  and NO artifact is written — a file on disk is a file someone commits",
