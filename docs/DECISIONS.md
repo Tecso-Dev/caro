@@ -4680,3 +4680,120 @@ province wins. A new car's mileage stays unread, and whether «صفر کیلوم
 reads as zero is the ground of D21 and D67, not of this entry. Nothing draws
 `province` or `province_source` until a collection shows the coverage, and
 `province_source` stays PENDING_LIVE_VALIDATION.
+
+## D75 — run14 reads the province on a collection, and what it turned up
+
+The stored lines had nothing more to give. After D74 the rule was run on
+every observation date_watch kept, not only the latest of each listing —
+150, over eight rounds: each listing gave one province and one source in
+every round, 89 rows stated and 61 by the city, and the location stood
+second after the odometer line on all 150; the 30 rows with no odometer line
+were 29 pages gone (410) and one 502. The snapshots on the owner's machine
+hold provinces already parsed, not lines, so nothing else could be read
+again. How much of a collection gets a province is a question only requests
+answer, and the owner decided it, of three — run13's pin, a smaller run, not
+now: run14 on run13's pin, on his machine, a snapshot and nothing promoted
+or published, the predictions first.
+
+**The run,** 2026-10-11. The first attempt stopped at first_run's salt
+guard, before any request. A Bama run uses the salt for nothing —
+parse_detail_page sets `seller_raw` to None, and no row of run13 carries a
+fingerprint — so it was set from a file outside the repository, kept for the
+runs to come. The gate read robots.txt at 00:05:28Z: http 200, 592 bytes,
+the sha256 of 2026-10-10, no url refused. Twelve category pages, 93 links,
+78 unique listings, 77 answered and one not at all.
+
+**What it measured.** A province on 76 of the 77 rows: 44 stated (57.1%), 32
+by the city (41.6%) and one with none — where run13, on the same pin, has 34
+of 74 (45.9%). تهران on 25, 21 of them by the city, and اصفهان on 14, 8 by
+the city, where run13 has 5 and 5; البرز on 6 and خراسان رضوی on 4, all
+stated — Karaj's and Mashhad's three-part lines. The five rows with no
+mileage — four Quiks and a Pride, all of 1405 — each have a province, which
+on their pages takes the «صفر کیلومتر» anchor: inferred, the trace not being
+kept. 37 listings are in both runs: the 13 run13 read give the same
+province, stated, and of the 24 it did not, all but one are read now.
+Predicted before the run, and held: the robots file; 78 unique listings,
+within 65 to 85; one fetch unanswered, within three; all three shares within
+their ranges; Tehran and Isfahan rising most; a province on every new car;
+no disagreement with run13, and at most one listing unread. Not held: 90
+links — the target is checked after each category page, and the last carried
+the count to 93 — and the new cars all Quiks, when one was a Pride. One
+could not be checked: that `province` crosses parse, snapshot and corpus at
+one rate, because the report has no province row.
+
+**Four things it turned up, and what the owner decided on each.** The
+survival report never audited `province`: its guard asks for the fields
+CarListing and FetchOutcome share by name, and `city` lands as `province`,
+`seller_raw` as `seller_fingerprint` — renames the CROSSES map in the same
+test file records and the guard did not read. Both rows were added, and the
+guard is held to CROSSES by where each value lands; added alone, it named
+exactly those two: `53bf72c`. Promotion would have published a fetch that
+returned nothing: promote_record made a row of the unanswered fetch — an id,
+condition unknown — and both guards passed it, where run11's and run13's
+snapshots had held only answered fetches. Of three ways — fix it first,
+promote as it was, promote later — the owner chose the first: a record whose
+status says its fetch returned no listing is refused, by name, and one with
+no status is believed as before: `3dadc08`. run14 was then promoted — 78
+records in, 77 published, 1 refused; 63,952 bytes, sha256
+`00ad4e061b7b058e110300bd8abf87f9b56125055c4ec420a8ce66da662d402c` — and
+committed byte for byte as the owner promoted it: `c57dae9`. Nothing reads
+it: the default stays run13. The one row with no province was probed, the
+owner allowing one listing: robots.txt and the page, two requests, which
+went twice, ten seconds apart, because the command was left in a block of
+commands meant to be run whole — four requests where two were meant.
+bama:4flyapjw's window holds «یاسوج، کهکیلویه و بویراحمد» two lines after
+the odometer: its province stated, and spelled with ک where the province's
+name has گ. Predicted and held: http 200, the anchor, nothing read. Not
+held: why — it was none of the three causes written down, a city no rule
+names, a location past the window, or no location at all. A closed table of
+spellings seen on a source page, each with where it was seen, now gives the
+province it names, and ک and گ are not folded: `d12c592`. run14 stays as it
+was collected; the next collection reads it. And promotion had printed
+62,207 "bytes" for 63,952 — len() of the text — where run13's commit carried
+the file's size; it now counts what it writes: `9e4df12`.
+
+**Measured.** Requests went to Bama only from the owner's machine, with his
+leave: the run's — robots.txt, the sitemap, twelve category pages, 78
+listings — and the probe's four. Every suite, mutation and build here ran in
+a network namespace with no interface. Each change was measured before it
+was made, its checks added alone turning red exactly as predicted — the
+survival guard one, the promotion checks four, the spelling checks three,
+the byte checks one — and each mutation was predicted with the exact number
+of checks it would turn red, against the count of the tree it ran on — 2086,
+2093 or 2099, and 2083 for the one run on the tree before. All held:
+
+                                                      red   green
+    the survival table without the province row         2    2084
+    the survival table without the seller_fp row        2    2084
+    the province row keyed `city` in the snapshot       2    2084
+    promotion publishes no province                     3    2083
+      the same, on the tree before the change           1    2082
+    survival() reads the snapshot by the parsed name    2    2084
+    the status check removed                            4    2089
+    only `unknown` refused                              1    2092
+    the refusal names no status                         2    2091
+    the spellings table empty                           3    2096
+    a spelling read as itself                           2    2097
+    promotion counts characters again                   1    2098
+
+The red checks are in the suite of the change — survival, corpus or ingest —
+and no other suite moved. Not predicted, and about the runs only: the first
+launch of the survival mutations died on a NameError in the harness, before
+any edit, and was relaunched. Each commit is green on its own — 2086, 2093,
+2093, 2097, 2099 and 2099 assertions across 15 suites, 1652, 1659, 1659,
+1663, 1665 and 1665 across 12 without the extras — and the web build is
+green with its nine routes. Every round was applied to fresh clones before
+it was sent, and on the owner's machine as `53bf72c`, `3dadc08`, `c57dae9`,
+`d12c592` and `9e4df12`, each script checking that the tree it left is the
+one rehearsed.
+
+**Not measured.** Coverage beyond run13's pin: three models of one maker, 78
+listings, one day. The spellings table holds one entry, and nothing has
+looked for others. The «صفر کیلومتر» anchor on a live page is inferred from
+five rows, not traced.
+
+**What this does not settle.** run14 is published and not served: the
+default stays run13 and the site still serves `a636ea6`; serving it is the
+owner's to decide. A district named like a province is still read as that
+province, stated. A new car's mileage stays unread. Nothing draws `province`
+or `province_source`.
