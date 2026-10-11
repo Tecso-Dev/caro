@@ -175,6 +175,31 @@ check("and the prose itself is gone from the published row",
       not any(k in (row or {}) for k in ("description", "desc", "title")))
 
 # ---------------------------------------------------------------------------
+print("\na fetch is not a listing")
+# ---------------------------------------------------------------------------
+#
+# A snapshot holds one record per FETCH. One that came back gone, or with no
+# answer at all, carries an id and nothing else — and was promoted as a row:
+# an id, `condition: unknown`, and both guards content with it. run14's
+# snapshot (2026-10-11) held one such fetch among 78; run11's and run13's held
+# none, which is why no corpus carries one. A record that does not say how
+# its fetch went — a fixture written by hand, a positional corpus — is
+# believed, as before.
+
+for _st in ("unknown", "absent"):
+    _r, _why = promote_record({"listing_id": f"bama:x-{_st}", "status": _st})
+    check(f"a fetch that returned no listing ({_st}) is not promoted, and "
+          "says why",
+          _r is None and _st in (_why or ""), str((_r, _why)))
+check("  a fetch that returned one is",
+      promote_record({"listing_id": "bama:x-ok", "status": "ok",
+                      "mileage_km": 90000, "year_jalali": 1395})[0]
+      is not None)
+check("  and a record that does not say how its fetch went is believed",
+      promote_record({"listing_id": "x-none", "mileage_km": 90000,
+                      "year_jalali": 1395})[0] is not None)
+
+# ---------------------------------------------------------------------------
 print("\nend to end — four fixtures, and what reaches disk")
 # ---------------------------------------------------------------------------
 
@@ -230,6 +255,18 @@ check("  and never reaches the artifact", "09361042988" not in text
 code, exists, _ = promote(REFUSE)
 check("a row whose only mileage evidence is tainted is refused", code == 1)
 check("  and again nothing is written", not exists)
+
+MIXED = {"taken_on": "2026-10-11", "outcomes": [
+    {**CLEAN["listings"][0], "status": "ok"},
+    {"listing_id": "bama:gone1", "status": "unknown", "http_status": 0}]}
+code, exists, text = promote(MIXED)
+check("a snapshot with a fetch that returned nothing still promotes the rest",
+      code == 0 and exists, str(code))
+_prov = (json.loads(text).get("provenance") or {}) if text else {}
+check("  the empty fetch is counted as refused, not published",
+      (_prov.get("records_published"), _prov.get("records_refused")) == (1, 1),
+      str(_prov))
+check("  and its id is nowhere in the artifact", "bama:gone1" not in text)
 
 # ---------------------------------------------------------------------------
 print("\nmigration property — a corpus may be stricter, never more permissive")

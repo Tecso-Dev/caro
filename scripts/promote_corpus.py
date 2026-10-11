@@ -120,6 +120,14 @@ def canonical_km_line(rec: dict, year: int | None) -> tuple[str | None, str | No
 
 def promote_record(rec: dict) -> tuple[dict | None, str | None]:
     """One snapshot record -> one publishable row, or a refusal reason."""
+    # A snapshot holds one record per FETCH, and a fetch that came back gone
+    # or with no answer is not a listing: promoted, it became a row with an
+    # id and nothing else, and both guards let it through. A record that does
+    # not say how its fetch went — a hand-written fixture, a positional
+    # corpus — is believed, as it always was.
+    status = rec.get("status")
+    if status is not None and status != "ok":
+        return None, f"the fetch returned no listing (status {status})"
     desc = _first(rec, _DESC_KEYS)
     year = rec.get("year_jalali") or rec.get("YEAR")
     km_line, refusal = canonical_km_line(rec, year)
