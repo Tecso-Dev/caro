@@ -98,15 +98,17 @@ FIELDS: dict[str, Eligibility] = {
     "dealer_badge": Eligibility("SOURCE_BACKED"),
     "document_issue": Eligibility("DERIVED"),
     "seller_type": Eligibility("PENDING_LIVE_VALIDATION"),
-    # On 34 of 74 rows, and the misses are not random — big-city lines the
-    # rule cannot read (FIELD_PROVENANCE.md) — so nothing may draw or choose
-    # it.
+    # On 76 of 77 rows of run14 (FIELD_PROVENANCE.md). Nothing draws or
+    # chooses it yet: no screen has been designed for it, and which surface
+    # does is a round of its own, measured first. On run13, 34 of 74.
     "province": Eligibility("SOURCE_BACKED"),
-    # Not in run13: the key is published from the next promotion on, and
-    # nothing has produced a `city` on a real run yet.
-    "province_source": Eligibility("PENDING_LIVE_VALIDATION"),
+    # `stated` on 44 rows of run14 and `city` on 32: a real run has produced
+    # both. Not a key in run13, which predates it. Every flag no, as
+    # province's.
+    "province_source": Eligibility("SOURCE_BACKED"),
     # A facet: «اتومات» is a red line a buyer states, and the search checks it
-    # against this field (webapp/api/constraints.py).
+    # against this field (webapp/api/constraints.py). On run14 every row is
+    # manual, so the check leaves every row out, which is the answer.
     "gearbox": Eligibility("SOURCE_BACKED", facet=True),
     "fuel": Eligibility("SOURCE_BACKED"),
     # The key the payload carries, `make|model|trim`, rendered through

@@ -6,7 +6,7 @@ or a detail page might want.
 Written 2026-09-18. **Correction, 2026-09-21:** this line first said the file
 came before any of the screens it governs, and that the order was the point.
 It did not come first. `CarDetail.tsx` already drew `gearbox`, `fuel`,
-`province` and `seller_type` — the four `PENDING_LIVE_VALIDATION` rows below —
+`province` and `seller_type` — the four rows then `PENDING_LIVE_VALIDATION` —
 under «آنچه از آگهی استخراج شد», rendering the three empty ones as «ثبت‌نشده»
 and seller type's `unknown` as «نامشخص — نشان کسب‌وکاری روی آگهی نبود». The
 repair the next paragraph describes had already been made.
@@ -41,12 +41,13 @@ ignorance with less excuse.
 
 ## What was measured, and how to measure it again
 
-One artifact: `data/corpora/run13.json` — 74 Bama listings, collected
-2026-10-06, `schema: caro.corpus/1`, the run the API serves by default.
-`run11.json` — 76 listings, collected 2026-09-10 — stays published (D57): this
-file was first measured on it, the decision record cites it, and its
-assignment is the one real non-vehicle the suites follow. Where a row below
-says what run11 held, it names it.
+One artifact: `data/corpora/run14.json` — 77 Bama listings, collected
+2026-10-11, `schema: caro.corpus/1`, the run the API serves by default. Two
+earlier runs on the same pin stay published: `run13.json` — 74 listings,
+collected 2026-10-06, served until run14 — and `run11.json` — 76 listings,
+collected 2026-09-10 (D57): this file was first measured on it, the decision
+record cites it, and its assignment is the non-vehicle the suites follow by
+name. Where a row below says what run11 or run13 held, it names it.
 
 A value counts as filled when it is not null, empty, `"unknown"` or `"none"`.
 Distinct counts the filled values.
@@ -54,7 +55,7 @@ Distinct counts the filled values.
 ```python
 import json
 from pathlib import Path
-rows = json.loads(Path("data/corpora/run13.json").read_text(encoding="utf-8"))["listings"]
+rows = json.loads(Path("data/corpora/run14.json").read_text(encoding="utf-8"))["listings"]
 EMPTY = {None, "", "unknown", "none"}
 for k in sorted({k for r in rows for k in r}):
     nn = [r.get(k) for r in rows if r.get(k) not in EMPTY]
@@ -64,36 +65,36 @@ for k in sorted({k for r in rows for k in r}):
 
 ## The table
 
-`filled` and `distinct` are that script's output on run13, unedited.
+`filled` and `distinct` are that script's output on run14, unedited.
 
 | field | status | filled | distinct | card | detail | gate | facet | reason |
 |---|---|---|---|---|---|---|---|---|
-| `listing_id` | `SOURCE_BACKED` | 74/74 | 74 | no | no | no | no | identity; keyed on, never drawn |
-| `source_url` | `SOURCE_BACKED` | 74/74 | 74 | yes | yes | no | no | the source's own statement of where the listing lives |
-| `make` | `SOURCE_BACKED` | 74/74 | 1 | yes | yes | no | no | one distinct value here; a filter over it offers one choice |
-| `model` | `SOURCE_BACKED` | 74/74 | 3 | yes | yes | no | yes |  |
-| `trim` | `SOURCE_BACKED` | 74/74 | 23 | yes | yes | no | yes |  |
-| `year_jalali` | `SOURCE_BACKED` | 74/74 | 21 | yes | yes | no | yes |  |
-| `color` | `SOURCE_BACKED` | 72/74 | 6 | no | yes | no | yes |  |
-| `asking_price_toman` | `SOURCE_BACKED` | 70/74 | 54 | yes | yes | no | yes | 4 listings carry no price and must render as carrying none |
-| `price_status` | `SOURCE_BACKED` | 74/74 | 4 | yes | yes | no | no | extraction quality, NOT plausibility — see below |
-| `price_kind` | `SOURCE_BACKED` | 74/74 | 3 | yes | yes | no | no | what the number means (D52); own namespace, see below |
-| `price_kind_source` | `SOURCE_BACKED` | 74/74 | 3 | no | yes | no | no |  |
-| `price_currency_raw` | `SOURCE_BACKED` | 72/74 | 1 | no | no | no | no | the structured block's currency label, `IRR` wherever there is one; diagnostic only — `assert_not_features` refuses it as a predictor |
-| `mileage_km` | `SOURCE_BACKED` | 71/74 | 58 | yes | yes | no | yes | 3 listings carry none |
-| `mileage_status` | `SOURCE_BACKED` | 71/74 | 2 | yes | yes | no | no | travels with the number or neither renders |
-| `mileage_line_canonical` | `SOURCE_BACKED` | 71/74 | 58 | no | yes | no | no | canonicalised, not the source's prose |
-| `condition` | `SOURCE_BACKED` | 67/74 | 5 | no | yes | no | yes | the body-condition block (D45); `unknown` is a value, not an absence |
-| `condition_source` | `SOURCE_BACKED` | 67/74 | 1 | no | yes | no | no | `field` here — never `description` on this corpus |
-| `product_class` | `SOURCE_BACKED` | 74/74 | 1 | yes | yes | yes | no | the gate: only `vehicle` renders as a car (D52), and search applies it (D60). `card` because compare shows a non-vehicle row labelled with its class instead of dropping it — the class drawn as a fact about the row. Every row of run13 is a vehicle; run11's assignment is what the suites follow |
-| `product_class_source` | `SOURCE_BACKED` | 74/74 | 1 | no | yes | no | no |  |
-| `dealer_badge` | `SOURCE_BACKED` | 74/74 | 1 | no | no | no | no | `false` on every row; carries no information here |
-| `document_issue` | `DERIVED` | — | — | no | no | no | no | no row of run13 carries a value, so the key is absent; run11 carried one in seventy-six — see below |
-| `seller_type` | `PENDING_LIVE_VALIDATION` | 0/74 | 0 | no | no | no | no | inferred only from a business badge, never from a person (D26) |
-| `province` | `SOURCE_BACKED` | 34/74 | 15 | no | no | no | no | read off the page since `8e34dba`; empty wherever the rule cannot read the line, and those misses lean to the largest cities — see below |
-| `province_source` | `PENDING_LIVE_VALIDATION` | — | — | no | no | no | no | `stated` or `city`: whether the line names the province or a city sharing its name gave it. Not a key in run13, which predates it; every province run13 carries was stated |
-| `gearbox` | `SOURCE_BACKED` | 74/74 | 2 | no | no | no | yes | the structured block's transmission, on every row since `72c2573` carried it across the boundary. `facet` because «اتومات» is a red line a buyer states and the search checks against it (`webapp/api/constraints.py`) |
-| `fuel` | `SOURCE_BACKED` | 74/74 | 2 | no | no | no | no | on every row; nothing reads it yet |
+| `listing_id` | `SOURCE_BACKED` | 77/77 | 77 | no | no | no | no | identity; keyed on, never drawn |
+| `source_url` | `SOURCE_BACKED` | 77/77 | 77 | yes | yes | no | no | the source's own statement of where the listing lives |
+| `make` | `SOURCE_BACKED` | 77/77 | 1 | yes | yes | no | no | one distinct value here; a filter over it offers one choice |
+| `model` | `SOURCE_BACKED` | 77/77 | 3 | yes | yes | no | yes |  |
+| `trim` | `SOURCE_BACKED` | 77/77 | 21 | yes | yes | no | yes |  |
+| `year_jalali` | `SOURCE_BACKED` | 77/77 | 19 | yes | yes | no | yes |  |
+| `color` | `SOURCE_BACKED` | 73/77 | 7 | no | yes | no | yes |  |
+| `asking_price_toman` | `SOURCE_BACKED` | 74/77 | 54 | yes | yes | no | yes | 3 listings carry no price and must render as carrying none |
+| `price_status` | `SOURCE_BACKED` | 77/77 | 4 | yes | yes | no | no | extraction quality, NOT plausibility — see below |
+| `price_kind` | `SOURCE_BACKED` | 77/77 | 3 | yes | yes | no | no | what the number means (D52); own namespace, see below |
+| `price_kind_source` | `SOURCE_BACKED` | 77/77 | 3 | no | yes | no | no |  |
+| `price_currency_raw` | `SOURCE_BACKED` | 75/77 | 1 | no | no | no | no | the structured block's currency label, `IRR` wherever there is one; diagnostic only — `assert_not_features` refuses it as a predictor |
+| `mileage_km` | `SOURCE_BACKED` | 72/77 | 60 | yes | yes | no | yes | 5 listings carry none, all of 1405 |
+| `mileage_status` | `SOURCE_BACKED` | 72/77 | 2 | yes | yes | no | no | travels with the number or neither renders |
+| `mileage_line_canonical` | `SOURCE_BACKED` | 72/77 | 60 | no | yes | no | no | canonicalised, not the source's prose |
+| `condition` | `SOURCE_BACKED` | 69/77 | 5 | no | yes | no | yes | the body-condition block (D45); `unknown` is a value, not an absence |
+| `condition_source` | `SOURCE_BACKED` | 69/77 | 1 | no | yes | no | no | `field` here — never `description` on this corpus |
+| `product_class` | `SOURCE_BACKED` | 77/77 | 2 | yes | yes | yes | no | the gate: only `vehicle` renders as a car (D52), and search applies it (D60). `card` because compare shows a non-vehicle row labelled with its class instead of dropping it — the class drawn as a fact about the row. run14 holds one assignment, `bama:ktawd8le`; the suites follow run11's by name |
+| `product_class_source` | `SOURCE_BACKED` | 77/77 | 1 | no | yes | no | no |  |
+| `dealer_badge` | `SOURCE_BACKED` | 77/77 | 1 | no | no | no | no | `false` on every row; carries no information here |
+| `document_issue` | `DERIVED` | 1/77 | 1 | no | no | no | no | one row's text names a clean title, a `false`; no other row carries the key — see below |
+| `seller_type` | `PENDING_LIVE_VALIDATION` | 0/77 | 0 | no | no | no | no | inferred only from a business badge, never from a person (D26) |
+| `province` | `SOURCE_BACKED` | 76/77 | 18 | no | no | no | no | read off the page by position (D74); no surface draws or chooses it yet — see below |
+| `province_source` | `SOURCE_BACKED` | 76/77 | 2 | no | no | no | no | `stated` or `city`: whether the line names the province or a city sharing its name gave it — 44 and 32 here. Not a key in run13, which predates it |
+| `gearbox` | `SOURCE_BACKED` | 77/77 | 1 | no | no | no | yes | the structured block's transmission, on every row since `72c2573` carried it across the boundary; `manual` on every row of run14, and the trims agree. `facet` because «اتومات» is a red line a buyer states and the search checks against it (`webapp/api/constraints.py`) — see below |
+| `fuel` | `SOURCE_BACKED` | 77/77 | 2 | no | no | no | no | on every row; nothing reads it yet |
 | `model_key` | `DERIVED` | — | — | yes | yes | no | no | make, model and trim joined into one key, rendered through `modelLabel`. Drawn by the detail page and by all three card surfaces — the evidence grid, `ListingCard` and `CompareTable` — which is why `card` is `yes`: `derived_title`, which this table meant for the card, is not a key in any published corpus and is not on the payload |
 | `derived_title` | `DERIVED` | — | — | yes | yes | no | no | composed from `make + model + trim + year_jalali` |
 | `observed_at` | `DERIVED` | — | — | yes | yes | no | no | the artifact's `collected_on`, carried onto every row — see below |
@@ -116,21 +117,21 @@ may be both; none is today.
 **None of these four columns is derived from `filled` and `distinct`.**
 Coverage and variety are inputs to the judgement, not the judgement: `make` is
 filled on every row and is still `facet: no`, because one distinct value is not
-a choice. `filled: 74/74` on its own authorises nothing — and `product_class`,
-one value on run13 and two on run11, would fail the variety condition as a
-facet while being a gate, which is the clearest case of why the two are not one
-column.
+a choice. `filled: 77/77` on its own authorises nothing — and `product_class`,
+two values on run14 and on run11 and one on run13, is a gate on all three and
+would fail the variety condition as a facet on run13, which is the clearest
+case of why the two are not one column.
 
-A dash means the field is not a key in run13 at all. `promote_corpus.py` ends
+A dash means the field is not a key in run14 at all. `promote_corpus.py` ends
 with `{k: v for k, v in out.items() if v is not None}`, so a key with no value
 does not reach the artifact — and absence has more than one upstream cause,
 which the table keeps apart rather than flattening into "missing":
 
-- `document_issue` — a value the parser writes only where the seller's text
-  has a phrase it knows, an issue or a clean title; on run13 no text had one,
-  so no row carries the key.
 - `model_key`, `derived_title`, `observed_at` — CARO's own, composed after the
   artifact is read, never in it.
+- `document_issue` — no longer a dash: a value the parser writes only where
+  the seller's text has a phrase it knows, an issue or a clean title, and one
+  text in run14 had one. On run13 none did, and no row carried the key.
 - `seller_type` — not a dash: the key survives, because its value is the string
   `unknown` on every row, which this file counts as unfilled. It is published
   precisely so that a car with no business badge is never published as
@@ -139,73 +140,79 @@ which the table keeps apart rather than flattening into "missing":
 run11 had three more dashes, for causes since repaired: `province` was read
 from a label the page does not render, and `gearbox` and `fuel` were dropped at
 the snapshot boundary until `72c2573` carried them across. run13 is the first
-corpus promoted after both repairs.
+corpus promoted after both repairs, and run14 the first to carry
+`province_source`.
 
 ## Coverage is not variety
 
-`make` is filled on every one of the 74 rows and has exactly **one** value.
+`make` is filled on every one of the 77 rows and has exactly **one** value.
 A brand filter over this corpus offers the reader a single choice, and a
 ranking term computed from it moves nothing. D41 found four of six scoring
 terms constant on a real corpus and the gate refusing; the same arithmetic
 applies to a filter.
 
 So UI eligibility has two conditions, not one: enough coverage to be honest,
-and enough distinct values to be useful. On run13 that admits `model` (3),
-`trim` (23), `year_jalali` (21), `color` (6), `condition` (5),
-`asking_price_toman` (54), `mileage_km` (58) and `gearbox` (2) as facets, and
-excludes `make`, `dealer_badge`, `condition_source`, `mileage_status` and
+and enough distinct values to be useful. On run14 that admits `model` (3),
+`trim` (21), `year_jalali` (19), `color` (7), `condition` (5),
+`asking_price_toman` (54) and `mileage_km` (60) as facets, and excludes
+`make`, `dealer_badge`, `condition_source`, `mileage_status` and
 `product_class_source` — several of which are still worth showing.
+
+`gearbox` is the one facet the variety condition does not admit on run14 —
+one value, `manual` on every row — and it stays a facet for the reason its
+row gives. The condition exists because a filter offering one choice tells a
+reader nothing. «اتومات» is not a choice offered: it is a red line a buyer
+states, checked against every row, and on run14 the answer is that no listing
+meets it — which a reader who asked should be told. On run13 it had two
+values, and D72 made it a facet there.
 
 The variety condition applies to `facet` and not to `gate`. A gate exists to
 remove rows the reader should never have been offered, so two values is all it
 needs.
 
-## Province: on 34 of 74, and not at random
+## Province: on 76 of 77
 
-`province` is read off the page by position (`8e34dba`): the four lines after
-the odometer, the last comma-separated part of a line, and only if it is one of
-Iran's thirty-one provinces. On run13 it reads 34 rows. Ten pages were read by
-hand on 2026-10-06 — eight without a province, two with — and every miss was
-empty, none wrong. The misses are lines the rule cannot read:
+run14, collected on 2026-10-11, is the first collection the rule below read:
+a province on 76 of its 77 rows, 44 stated and 32 by the city. تهران is on
+25, 21 of them by the city, and اصفهان on 14, 8 by the city — where run13 has
+5 and 5 — and there are eighteen provinces in all. The one row without states
+its province as «کهکیلویه و بویراحمد», Bama's spelling, with ک; spellings a
+source uses are read since `d12c592`, after run14 was collected, so the next
+collection reads that one. Of the 37 listings run14 shares with run13, the 13
+run13 read give the same province, and of the 24 it did not, run14 reads all
+but one (D75).
+
+The rule. `province` is read off the page by position, in the four lines
+after the odometer line — «کارکرد … کیلومتر», or a new car's «صفر کیلومتر».
+A province the line states is read in any part after the city; a two-part
+line whose city is one of the thirteen capitals that share their province's
+name — «تهران، آذری», «اصفهان، کهندژ» — gives that province, recorded as
+`province_source` `city`, never as stated (D74). On the nineteen listings
+whose lines date_watch stored (read 2026-10-10), the rule run13 was read by
+found eight; this one finds all nineteen.
+
+run13 was read by the narrower rule of `8e34dba` — the last comma-separated
+part of a line, after «کارکرد … کیلومتر» only — and carries a province on 34
+of 74. Ten of its pages were read by hand on 2026-10-06 — eight without a
+province, two with — and every miss was empty, none wrong. The misses were
+lines that rule could not read:
 
     «شهر، استان»            منوجان، کرمان                 read
     «شهر، محله»             تهران، آذری                   5 of the 8
     «شهر، استان، محله»      مشهد، خراسان رضوی، فلسطین     2 of the 8
     no «کارکرد … کیلومتر»   a 1405 Quik with no reading    1 of the 8
 
-So the 34 lean to small towns, and Tehran city and Mashhad are almost absent
-from them. The field is `SOURCE_BACKED` because a real run has put a number
-beside it, and nothing draws or chooses it because every flag is `no`: a value
-that is right where it exists and missing where the market is largest is not
-one a filter may offer. A district named like a province, standing last, would
-be read as that province; none of the ten pages had one, and nothing else
-rules it out.
+So run13's 34 lean to small towns. Its pages were not kept, and its numbers
+stay as they are.
 
-The rule now reads more than the one run13 was read by. A province the line
-states is read in any part after the city, not only the last; a two-part line
-whose city is one of the thirteen capitals that share their province's name —
-«تهران، آذری», «اصفهان، کهندژ» — gives that province, recorded as
-`province_source` `city`, never as stated; and a new car's «صفر کیلومتر»
-anchors the window as «کارکرد … کیلومتر» does, which is the last row of the
-table above. On the nineteen listings whose lines date_watch stored (read
-2026-10-10), the old rule found eight. The parser now finds all nineteen: ten
-stated — the eight, and two that state their province but not last — and nine
-a capital and a district, 7 Tehran and 2 Isfahan. Two of the nineteen are new
-cars, one of each kind, and neither was found until the anchor moved. run13's
-numbers above stay run13's: its pages were not kept, so it cannot be read
-again. Three of its rows carry neither mileage nor province, all three Quiks —
-what a new car's page would have left, though without the pages that cannot
-be shown. A new car's mileage is still not read from the line. The district
-hazard stays: «تهران، گلستان» would be read as گلستان, stated, because a
-stated province wins.
-
-run14, collected on 2026-10-11 on run13's pin and published but not served,
-is the first collection this rule read: a province on 76 of its 77 rows, 44
-stated and 32 by the city — تهران on 25 and اصفهان on 14, where run13 has 5
-and 5. The one row without states its province as «کهکیلویه و بویراحمد»,
-Bama's spelling, with ک; spellings a source uses are read since `d12c592`, so
-the next collection reads that one. The table above stays run13's while
-run13 is the corpus served.
+Every flag is still `no`. On run13 the reason was coverage: a value missing
+where the market is largest is not one a filter may offer. On run14 that no
+longer holds, and the reason now is that no screen has been designed to draw
+the field: which surface does is a decision of its own, measured first. Two
+hazards stand. A district named like a province, after the city, is read as
+that province, stated, because a stated province wins: «تهران، گلستان» would
+give گلستان. None of the pages read by hand had one, and nothing else rules
+it out. And a new car's mileage is still not read from its line.
 
 ## Price: extraction quality is not plausibility
 
@@ -230,11 +237,11 @@ the same word means two different things:
 
     price_status ∈ {display_confirmed, …}     AND     price_kind == cash
 
-On run13 that gate costs nothing: the four rows whose `price_kind` is not
-`cash` — two negotiable, two financing totals — are exactly the four rows that
-carry no number, as run11's two were. Which is the reason to write the rule
-now rather than when it first matters — a rule checked only against this
-corpus looks complete.
+On run14 that gate costs nothing: the three rows whose `price_kind` is not
+`cash` — two negotiable, one financing total — are exactly the three rows that
+carry no number, as run13's four and run11's two were. Which is the reason to
+write the rule now rather than when it first matters — a rule checked only
+against this corpus looks complete.
 
 **There is no `price_validity`, and mileage has one.** `Validity` grades an
 odometer `plausible`, `suspicious`, `impossible` or `unknown`, and its own
@@ -244,8 +251,9 @@ Nothing equivalent exists for price. A row can be `vehicle`, `cash`,
 `display_confirmed` and `plausible` — every gate in this file — and still
 carry a number an order of magnitude away from its neighbours. `run11` contains
 one such row — 65 million toman beside a Pride median of about 612 million;
-run13 has none as far from its model's median. Whether that is a fault, and
-what a plausibility state for price would have to be, belongs in
+run13 and run14 have none as far from their models' medians, run14's lowest
+being a 1381 Pride at 260 million against a median of 635. Whether that is a
+fault, and what a plausibility state for price would have to be, belongs in
 `caro/ingest/quality.py` and is not settled by observing it here. What this
 file fixes is narrower: nothing may read `display_confirmed` as "plausible".
 
@@ -269,9 +277,9 @@ past it.
 
 **observed_at — `DERIVED`.** When CARO last looked, which is a different
 question from how old the listing is, and the only one of the two that can be
-answered for every row. The artifact states `collected_on` once — `2026-10-06`
-for run13 — and every row inherits it, so `observed_at` is available on 74 of
-74, while `listing_age` comes from a channel that covers a handful (below).
+answered for every row. The artifact states `collected_on` once — `2026-10-11`
+for run14 — and every row inherits it, so `observed_at` is available on 77 of
+77, while `listing_age` comes from a channel that covers a handful (below).
 It is CARO's record of its own looking, never the source's statement, and a
 screen that shows it is telling the reader how stale the page is rather than
 how old the car's advertisement is. The equivalent on Torob is the date in the
@@ -286,12 +294,13 @@ above and was absent in all 34 observations of age 7 to 29. It is not a general
 rule about the source. A screen that shows an age therefore shows it for
 listings inside that window, says what it does not know outside it, and never
 converts the absence into a number. The panel is twenty of run11's listings —
-`date_watch` samples them with `seed 0` — and one of run13's 74 rows is among
-them.
+`date_watch` samples them with `seed 0` — and none of run14's 77 rows is among
+them; one of run13's 74 was.
 
-**document_issue — `DERIVED`, and weaker than it reads.** run13 carries a value
-on no row, so the key is absent from it; run11 carried one in seventy-six, a
-`false`. `promote_corpus.py` takes the structured field when there is one and
+**document_issue — `DERIVED`, and weaker than it reads.** run14 carries one
+value in seventy-seven, a `false`, on `bama:bwfgrup6`; run11 carried one in
+seventy-six, also a `false`; run13 carried none, so the key was absent from
+it. `promote_corpus.py` takes the structured field when there is one and
 otherwise falls back to `has_document_issue(desc)`, which answers `true` where
 the prose holds a phrase it knows for an issue, `false` where it holds one of
 three phrases for a clean title — «سند آزاد», «سند تک برگ», «سند دست اول» —
@@ -312,9 +321,10 @@ is a check of the title.
 Card layout, detail layout, which fields share a row, the image question, and
 whether a field with a `PENDING_LIVE_VALIDATION` status is worth a run. It also
 does not close a schema: an optional field may exist in a schema while no
-renderer is allowed to draw it. That is where `province` stays with a coverage
-number beside it, and where `gearbox` and `fuel` stay for every surface but
-the one `gearbox` is judged for.
+renderer is allowed to draw it. That is where `province` and
+`province_source` stay, with coverage numbers beside them, until a round
+decides which surface draws them; and where `gearbox` and `fuel` stay for
+every surface but the one `gearbox` is judged for.
 
 Nothing above is evidence about Divar, Sheypoor or Khodro45. Divar's
 `CarListing` is a richer shape — it carries `city`, `gearbox`, `fuel` and
