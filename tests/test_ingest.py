@@ -2137,6 +2137,31 @@ for _line, _want in [("شیراز، فارس، فرهنگیان", ("فارس", "
           and (_car.city, _car.province_source) == _want,
           str(("کارکرد" in _page, _car.city, _car.province_source)))
 
+# A province as the source spells it. Probed on bama:4flyapjw, 2026-10-11 —
+# run14's one listing with no province: its window holds
+# «یاسوج، کهکیلویه و بویراحمد», with ک where the province's name has گ, and
+# so was read as naming no province at all. A spelling seen on a page is
+# held in a closed table with where it was seen; ک and گ are not folded.
+import caro.ingest.persian as _persian                               # noqa: E402
+
+_KB = "کهگیلویه و بویراحمد"
+check("province_of reads a province as the source spells it",
+      province_of("یاسوج، کهکیلویه و بویراحمد") == _KB,
+      repr(province_of("یاسوج، کهکیلویه و بویراحمد")))
+_probed = ["کارکرد 200,000 کیلومتر", "12 ساعت پیش",
+           "یاسوج، کهکیلویه و بویراحمد", "قیمت توافقی", "وضعیت بدنه"]
+check("  and the probed window gives it, stated, the line kept as rendered",
+      extract_location(_probed)
+      == ("یاسوج، کهکیلویه و بویراحمد", _KB, "after_odometer"),
+      str(extract_location(_probed)))
+check("  but a word one letter from a province is not read as it",
+      province_of("گرمان") is None, repr(province_of("گرمان")))
+_sp = getattr(_persian, "PROVINCE_SPELLINGS", None)
+check("  the spellings are a closed table, each naming one of the 31 and "
+      "none itself one",
+      bool(_sp) and all(v in PROVINCES and k not in PROVINCES
+                        for k, v in _sp.items()), repr(_sp))
+
 # ---------------------------------------------------------------------------
 # the probe's phone guard — the claim that was false until it was run
 # ---------------------------------------------------------------------------

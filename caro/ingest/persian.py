@@ -181,7 +181,22 @@ PROVINCES: tuple[str, ...] = (
     "یزد",
 )
 
+# A province as a source spells it, where that is not the spelling above —
+# each seen on a page, and named here with where. A closed table, not a
+# folding rule: ک and گ are different letters, and making them one would make
+# words equal that are not. Read as the province it names, never as itself.
+#
+#   «کهکیلویه و بویراحمد»   bama:4flyapjw, «یاسوج، کهکیلویه و بویراحمد»,
+#                            probed 2026-10-11 — run14's one listing with no
+#                            province
+PROVINCE_SPELLINGS: dict[str, str] = {
+    "کهکیلویه و بویراحمد": "کهگیلویه و بویراحمد",
+}
+
 _PROVINCE_BY_NORM = {normalize(p): p for p in PROVINCES}
+_PROVINCE_BY_NORM.update(
+    {normalize(seen): PROVINCES[PROVINCES.index(meant)]
+     for seen, meant in PROVINCE_SPELLINGS.items()})
 
 # The provinces whose capital is named as the province is, from the table of
 # all thirty-one (Wikipedia, «Provinces of Iran», read 2026-10-10). Alborz's
