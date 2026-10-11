@@ -14,7 +14,7 @@ intent → explain the best choice**.
 
 | Requirement | State |
 |---|---|
-| crawl offers | ⚠️ **one source.** Two `BamaAdapter` runs on one pin are published, and the site serves the second, `data/corpora/run13.json` (2026-10-06): 74 listings, 64 of them appraisable. The first, run11 (2026-09-10), stays published. `DivarCarAdapter` is built and tested offline, and its live path has never run. Sheypoor and Khodro45 have no adapter. |
+| crawl offers | ⚠️ **one source.** Three `BamaAdapter` runs on one pin are published, and the API serves the third by default, `data/corpora/run14.json` (2026-10-11): 77 listings, 64 of them appraisable. run11 (2026-09-10) and run13 (2026-10-06) stay published. `DivarCarAdapter` is built and tested offline, and its live path has never run. Sheypoor and Khodro45 have no adapter. |
 | normalize messy data | ✅ **built.** Persian numerals and amount words, toman and rial, mileage, Jalali and Gregorian years, make/model aliases, trim, gearbox, fuel, colour, and body condition from free text. |
 | rank by user intent | ⚠️ **built, not served on real data.** `caro/ranking.py` parses Persian intent, filters, relaxes and scores. No estimator has cleared the acceptance gate on a real corpus (D43), so the site shows evidence, not a ranking. |
 | explain the best choice | ✅ **built.** |
@@ -44,11 +44,11 @@ intent → explain the best choice**.
      point. `CARO_SELLER_SALT` must be set. Expect to be blocked; the adapter
      stops and says so, and that is the design.
    - Sheypoor and Khodro45: adapters, under the same rules.
-   - `province` where the market is. run13, the corpus served, carries it
-     on 34 of 74 rows. run14 — the same pin, collected 2026-10-11 and
-     published, not served — carries it on 76 of 77: 44 stated, 32 by a
-     city that shares its province's name. Nothing draws the field until
-     the corpus served carries it (FIELD_PROVENANCE.md).
+   - `province` where the market is. run14, the corpus served, carries it
+     on 76 of 77 rows: 44 stated, 32 by a city that shares its province's
+     name, where run13 had 34 of 74. Nothing draws it yet. Which surface
+     does — the car page, a facet, the search reading «در تهران» — is the
+     next round, measured first (FIELD_PROVENANCE.md).
    - Longitudinal collection. Time-dependent and unrecoverable: a day not
      collected is gone. A second discovery run is a new sample, not a
      series: on run11's pin, 26 days later, 3 of its 76 listings were drawn
