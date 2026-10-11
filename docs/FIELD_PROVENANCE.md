@@ -199,6 +199,14 @@ be shown. A new car's mileage is still not read from the line. The district
 hazard stays: «تهران، گلستان» would be read as گلستان, stated, because a
 stated province wins.
 
+run14, collected on 2026-10-11 on run13's pin and published but not served,
+is the first collection this rule read: a province on 76 of its 77 rows, 44
+stated and 32 by the city — تهران on 25 and اصفهان on 14, where run13 has 5
+and 5. The one row without states its province as «کهکیلویه و بویراحمد»,
+Bama's spelling, with ک; spellings a source uses are read since `d12c592`, so
+the next collection reads that one. The table above stays run13's while
+run13 is the corpus served.
+
 ## Price: extraction quality is not plausibility
 
 `price_status` and `price_kind` are two vocabularies about one number and

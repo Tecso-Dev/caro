@@ -5,7 +5,7 @@ was recorded, and what comes first. An open item goes into code only after it
 has been measured; the measurement comes first and the decision is made on
 it, in its own commit.
 
-Last revised 2026-10-10.
+Last revised 2026-10-11.
 
 ## Where it stands against the brief
 
@@ -44,13 +44,11 @@ intent → explain the best choice**.
      point. `CARO_SELLER_SALT` must be set. Expect to be blocked; the adapter
      stops and says so, and that is the design.
    - Sheypoor and Khodro45: adapters, under the same rules.
-   - `province` where the market is. run13 carries it on 34 of 74 rows. The
-     rule now also reads the lines it missed there — a province stated in
-     any part after the city, a city that shares its province's name,
-     recorded as `province_source` `city`, and a new car's page — and reads
-     all nineteen listings whose lines date_watch stored. The next
-     collection is the first to carry it; nothing draws it until a corpus
-     shows the coverage (FIELD_PROVENANCE.md).
+   - `province` where the market is. run13, the corpus served, carries it
+     on 34 of 74 rows. run14 — the same pin, collected 2026-10-11 and
+     published, not served — carries it on 76 of 77: 44 stated, 32 by a
+     city that shares its province's name. Nothing draws the field until
+     the corpus served carries it (FIELD_PROVENANCE.md).
    - Longitudinal collection. Time-dependent and unrecoverable: a day not
      collected is gone. A second discovery run is a new sample, not a
      series: on run11's pin, 26 days later, 3 of its 76 listings were drawn
