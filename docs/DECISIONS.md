@@ -4797,3 +4797,103 @@ default stays run13 and the site still serves `a636ea6`; serving it is the
 owner's to decide. A district named like a province is still read as that
 province, stated. A new car's mileage stays unread. Nothing draws `province`
 or `province_source`.
+
+## D76 — The site serves run14, and the Quik chip names no gearbox
+
+D75 published run14 and left it unserved: the default stayed run13, and
+which corpus the site serves was the owner's to decide. On 2026-10-11 he
+chose to serve it, measured first, and to take up the province's place on
+the site after it, in a round of its own that he approves separately.
+
+**Measured before the change,** on `28f268e`, with the predictions written
+first. With `DEFAULT_RUN = "run14"` and nothing else changed, 27 checks went
+red in two suites, where 25 were predicted in a range of 25 to 28. 24 were
+the provenance chain's measured rows, whose denominators said 74 against
+run14's 77. Two were rows the document dashed and run14 carries as keys:
+`province_source`, and `document_issue`, which one row's text gives as a
+clean title — the second put at 40%. The 27th was the Quik chip, predicted
+at 75% to find something, which found nothing. run14 has no automatic car:
+every one of its 77 rows says `manual`, no trim of its ten Quiks names an
+automatic, and run13's three automatic Quiks — trims `atfullplus`, twice,
+and `manualrplus at` — were not drawn again. Nothing in the red line is at
+fault; the sample has no such car. Three predictions about the fields failed
+as well: `gearbox` has one value, not two; `product_class` has two, not one,
+because run14 holds an assignment, `bama:ktawd8le` — the 1405 «Pride» D75
+counted among the five rows with no mileage; and the prices have 54 distinct
+values, under the range given. Run on run13 as a control, the same procedure
+gave back the document's table row for row. The chips moved within every
+range predicted, matched and held apart:
+
+                                         run13      run14
+    «پراید»                              54, 0      56, 0
+    «پراید زیر ۳۰۰ میلیون»                2, 2       1, 3
+    the Snapp example                    47, 4      46, 3
+    the family example                   53, 11     56, 10
+    the Quik example, with «اتومات»       1, 2       0, 0
+
+**The decision.** The owner's, of four: serve run14 and take «اتومات» out of
+the Quik chip; serve it and give the chip's place to «پراید سند آزاد»; keep
+run13 until a collection carries an automatic car; or keep the chip and let
+section 8 of the contract suite pass an example that finds nothing. He chose
+the first. The chip reads «یه کوییک کم‌کارکرد تا ۱.۸ میلیارد میخوام». The
+guess I gave him when he chose, two or three matches, was made before I had
+looked at the rows; the prediction written after, by hand from the rows and
+the parser's rules — at most 120,000 km, a budget of 1.8 billion — held
+listing for listing: 5 matched and 5 apart on run13, 5 and 4 on run14, the
+four apart being the 1405s with no reading. The red line stays where it is
+checked, in `webapp/api/constraints.py` and the fixture of the contract
+suite's section 13, and on run14 a buyer who asks for «اتومات» is told that
+nothing meets it.
+
+FIELD_PROVENANCE.md is measured on run14 by its own procedure. `province` is
+on 76 of 77, and `province_source` leaves PENDING_LIVE_VALIDATION, a real
+run having produced both its values; every flag of both stays `no`, because
+no screen has been designed to draw them, and which one does is the next
+round. `gearbox` keeps its facet with one value. The variety condition would
+not admit it; it stays for the reason its row gives — «اتومات» is a red line
+checked against every row, not a choice a filter offers — and the file says
+so where the condition is stated. The deploy checklist looked at
+`bama:zeotfdvq`, which is not in run14, and now looks at `bama:czg8hq9p`, in
+both runs and unchanged but for the province run14 reads.
+
+**What the round turned up.** The document said a `false` in
+`document_issue` meant the parser had read the prose and found no phrase.
+`has_document_issue` has never answered `false` for that: it answers `false`
+where the text holds «سند آزاد», «سند تک برگ» or «سند دست اول», and null
+where it holds no phrase it knows. The paragraph was written so on
+2026-09-18, the function is unchanged since `4a16962`, and the bullet above
+the table already had it right. The one row of run14 that carries the key,
+`bama:bwfgrup6`, is such a `false`, and «پراید سند آزاد» matches it — the
+only one of the 56 Prides not held apart. And of the 37 listings run14
+shares with run13, two changed in five days: `bama:zvdmu5cv` from 1.02 to
+1.2 billion, its odometer from 66,000 to 46,000 km, and `bama:yovfwzpv` from
+575 to 560 million. On run11's pin 26 days apart, 3 listings were drawn
+again and none had changed (D72).
+
+Four commits, on the owner's machine: `7fe4e72`, `f145bc3`, `a08e6c2` and
+`3a03f2f`.
+
+**Measured.** Every suite, mutation and build ran in a network namespace
+with no interface, and no request went to any source. Each commit is green
+on its own — 2099 assertions across 15 suites at every step, 1665 across 12
+without the extras — and the web build is green with its nine routes. Three
+mutations on the round's last commit, each predicted to turn exactly one
+check red in one suite, all held:
+
+    the Quik chip given «اتومات» back                 contract   1
+    the province row back to run13's 34/74            corpus     1
+    province_source back to PENDING_LIVE_VALIDATION   corpus     1
+
+The round was applied to fresh clones before it was sent, and on the owner's
+machine as `7fe4e72` to `3a03f2f`: 2099 across 15 suites, the web build
+green with its nine routes.
+
+**Not measured.** The deployed site, which serves `a636ea6`; run14 reaches
+it with the next deployment. Whether any of run14's stated provinces is a
+district named like one: nothing on run14 was read by hand to look.
+
+**What this does not settle.** Which surface draws the province is the next
+round. run14 is one snapshot, as unjudgeable for an estimator as the two
+before it (D55). And the corpus served has no automatic car, so the chip
+that showed «اتومات» checked against a field is gone until a corpus carries
+one.
