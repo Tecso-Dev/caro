@@ -9,7 +9,8 @@ import {
 import {
   NOT_A_CAR_FA, askingPrice, classLabel, compact, conditionLabel, faNum,
   faPlain,
-  isAppraisalRow, isVehicleClass, modelLabel, odometer, toman, trimLabel,
+  isAppraisalRow, isVehicleClass, modelLabel, odometer, provinceLabel, toman,
+  trimLabel,
 } from '@/lib/format';
 import TechDetail from '@/components/TechDetail';
 import TermBars from '@/components/TermBars';
@@ -374,18 +375,21 @@ export function ListingFile({
                                              listing.price_kind)} num />
           <F k="رنگ" v={listing.color ?? 'ثبت‌نشده'} />
           <F k="وضعیت بدنه" v={conditionLabel(listing.condition)} />
-          {/* Eight cells, not twelve. «گیربکس», «سوخت», «استان» and «نوع
-              فروشنده» were here, each falling back to «ثبت‌نشده» — a
-              sentence about the LISTING — while the truth was that no
-              published corpus carries those four at all. All four are
-              PENDING_LIVE_VALIDATION in docs/FIELD_PROVENANCE.md, which is
-              `detail=no`, so the renderer now agrees with the declaration
-              instead of contradicting it.
+          <F k="استان" v={provinceLabel(listing.province,
+                                         listing.province_source)} />
+          {/* Nine cells. «استان» is back, drawn with how it was known:
+              docs/FIELD_PROVENANCE.md measures it on the corpus served and
+              allows this surface, and `provinceLabel` never draws a
+              province read from a city's name as one the listing stated.
+              «گیربکس», «سوخت» and «نوع فروشنده» stay out: the first two are
+              carried and allowed on no surface of this page, and seller
+              type is still PENDING_LIVE_VALIDATION. All four were here
+              once, falling back to «ثبت‌نشده» — a sentence about the
+              LISTING — while no published corpus carried them.
 
               Do not add one back by hand: tests/test_corpus.py reads this
               file and fails on any `listing.X` the document does not allow
-              on this surface. They return when a real collection gives them
-              a coverage number and the status moves off PENDING. */}
+              on this surface. */}
         </dl>
       </section>
 

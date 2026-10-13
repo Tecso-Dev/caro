@@ -846,6 +846,53 @@ if _out8 is not None:
               f"heading {_got[0]!r} · cell {_got[1]!r}"
               + (" · the amount is on the page" if _shown else ""))
 
+
+# ---------------------------------------------------------------------------
+print("\n9 — the car page says the province, and how it was read")
+# ---------------------------------------------------------------------------
+# A province read from a city's name — «تهران، آذری» names Tehran the city —
+# is CARO's inference, and drawn alone it would read as the listing's own
+# statement. So the cell is read out of every car file section 4 drew, and
+# held to what the payload says: the province alone where it was stated, the
+# province and «از روی نام شهر» where the city gave it, «ثبت‌نشده» where
+# there is none. The expected text is written here again rather than taken
+# from the renderer, so the two are compared, not one with itself.
+_out9, why9 = node({"consts": {"module": "lib/format.ts",
+                               "names": ["PROVINCE_FROM_CITY_FA",
+                                         "PROVINCE_SOURCE_UNRECORDED_FA"]}})
+check("the province's phrases could be read from lib/format.ts",
+      _out9 is not None, why9)
+if _out9 is not None and _cout is not None:
+    _CITY9 = _out9["consts"]["PROVINCE_FROM_CITY_FA"]
+    _UNREC9 = _out9["consts"]["PROVINCE_SOURCE_UNRECORDED_FA"]
+
+    def _prov9(p, src):
+        if not p:
+            return "ثبت‌نشده"
+        if src == "stated":
+            return p
+        return f"{p} — {_CITY9 if src == 'city' else _UNREC9}"
+
+    _off9 = []
+    for (i, d), html in zip(_cars, _cout["markup"]):
+        m = re.search(r"<dt[^>]*>استان</dt><dd[^>]*>(.*?)</dd>", html, re.S)
+        got = _text(m.group(1)).strip() if m else None
+        want = _prov9(d.listing.province, d.listing.province_source)
+        if got != want:
+            _off9.append((i, got, want))
+    check(f"  every car file in {RUN} says it as the payload has it "
+          f"({len(_cars) - len(_off9)} of {len(_cars)})",
+          not _off9, f"e.g. {_off9[:2]}")
+    _kinds9 = {k: sum(1 for _, d in _cars
+                      if (d.listing.province_source if d.listing.province
+                          else "none") == k)
+               for k in ("stated", "city", "none")}
+    for _k, _label in (("stated", "a province the listing states"),
+                       ("city", "a province read from a city's name"),
+                       ("none", "a listing with no province")):
+        check(f"  the files reach {_label} ({_kinds9[_k]})", _kinds9[_k] > 0,
+              "none drawn — said, not passed")
+
 print()
 if FAILS:
     print(f"FAILED ({len(FAILS)}): " + ", ".join(FAILS))

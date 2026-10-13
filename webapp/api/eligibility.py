@@ -98,14 +98,15 @@ FIELDS: dict[str, Eligibility] = {
     "dealer_badge": Eligibility("SOURCE_BACKED"),
     "document_issue": Eligibility("DERIVED"),
     "seller_type": Eligibility("PENDING_LIVE_VALIDATION"),
-    # On 76 of 77 rows of run14 (FIELD_PROVENANCE.md). Nothing draws or
-    # chooses it yet: no screen has been designed for it, and which surface
-    # does is a round of its own, measured first. On run13, 34 of 74.
-    "province": Eligibility("SOURCE_BACKED"),
-    # `stated` on 44 rows of run14 and `city` on 32: a real run has produced
-    # both. Not a key in run13, which predates it. Every flag no, as
-    # province's.
-    "province_source": Eligibility("SOURCE_BACKED"),
+    # On 76 of 77 rows of run14 (FIELD_PROVENANCE.md). The car page draws
+    # it, with how it was known; no list shows it and nothing filters on it
+    # while the district hazard is unmeasured — a misread there drops a car
+    # from an answer without a word. On run13, 34 of 74.
+    "province": Eligibility("SOURCE_BACKED", detail=True),
+    # `stated` on 44 rows of run14 and `city` on 32. Drawn beside the
+    # province on the car page, so that a province read from a city's name
+    # is never shown as stated. Not a key in run13, which predates it.
+    "province_source": Eligibility("SOURCE_BACKED", detail=True),
     # A facet: «اتومات» is a red line a buyer states, and the search checks it
     # against this field (webapp/api/constraints.py). On run14 every row is
     # manual, so the check leaves every row out, which is the answer.

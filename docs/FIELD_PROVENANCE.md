@@ -91,8 +91,8 @@ for k in sorted({k for r in rows for k in r}):
 | `dealer_badge` | `SOURCE_BACKED` | 77/77 | 1 | no | no | no | no | `false` on every row; carries no information here |
 | `document_issue` | `DERIVED` | 1/77 | 1 | no | no | no | no | one row's text names a clean title, a `false`; no other row carries the key — see below |
 | `seller_type` | `PENDING_LIVE_VALIDATION` | 0/77 | 0 | no | no | no | no | inferred only from a business badge, never from a person (D26) |
-| `province` | `SOURCE_BACKED` | 76/77 | 18 | no | no | no | no | read off the page by position (D74); no surface draws or chooses it yet — see below |
-| `province_source` | `SOURCE_BACKED` | 76/77 | 2 | no | no | no | no | `stated` or `city`: whether the line names the province or a city sharing its name gave it — 44 and 32 here. Not a key in run13, which predates it |
+| `province` | `SOURCE_BACKED` | 76/77 | 18 | no | yes | no | no | read off the page by position (D74); the car page draws it with how it was known, and nothing else draws or chooses it — see below |
+| `province_source` | `SOURCE_BACKED` | 76/77 | 2 | no | yes | no | no | `stated` or `city`: whether the line names the province or a city sharing its name gave it — 44 and 32 here. Drawn beside the province, never apart from it. Not a key in run13, which predates it |
 | `gearbox` | `SOURCE_BACKED` | 77/77 | 1 | no | no | no | yes | the structured block's transmission, on every row since `72c2573` carried it across the boundary; `manual` on every row of run14, and the trims agree. `facet` because «اتومات» is a red line a buyer states and the search checks against it (`webapp/api/constraints.py`) — see below |
 | `fuel` | `SOURCE_BACKED` | 77/77 | 2 | no | no | no | no | on every row; nothing reads it yet |
 | `model_key` | `DERIVED` | — | — | yes | yes | no | no | make, model and trim joined into one key, rendered through `modelLabel`. Drawn by the detail page and by all three card surfaces — the evidence grid, `ListingCard` and `CompareTable` — which is why `card` is `yes`: `derived_title`, which this table meant for the card, is not a key in any published corpus and is not on the payload |
@@ -205,14 +205,23 @@ lines that rule could not read:
 So run13's 34 lean to small towns. Its pages were not kept, and its numbers
 stay as they are.
 
-Every flag is still `no`. On run13 the reason was coverage: a value missing
-where the market is largest is not one a filter may offer. On run14 that no
-longer holds, and the reason now is that no screen has been designed to draw
-the field: which surface does is a decision of its own, measured first. Two
-hazards stand. A district named like a province, after the city, is read as
-that province, stated, because a stated province wins: «تهران، گلستان» would
-give گلستان. None of the pages read by hand had one, and nothing else rules
-it out. And a new car's mileage is still not read from its line.
+The car page draws it, and says how it was known: «تهران» where the listing
+names its province, «تهران — از روی نام شهر» where the city gave it, and
+«ثبت‌نشده» where there is none. That is `detail`, and only `detail`. On run13
+every flag was `no` for coverage — a value missing where the market is
+largest is not one a filter may offer — and on run14 that no longer holds.
+What holds now is the first hazard below. On the car page a misread is one
+listing, labelled with how it was read and a click from its source; a list
+would show it beside others, and a search that read «در تهران» would drop a
+misread car from its answer without a word. So `card`, `gate` and `facet`
+stay `no` until the hazard is measured.
+
+Two hazards stand. A district named like a province, after the city, is read
+as that province, stated, because a stated province wins: «تهران، گلستان»
+would give گلستان. None of the pages read by hand had one, and nothing else
+rules it out; on run14 it could stand behind any of the 44 stated
+provinces, and the lines were not kept. And a new car's mileage is still not
+read from its line.
 
 ## Price: extraction quality is not plausibility
 
@@ -322,9 +331,9 @@ Card layout, detail layout, which fields share a row, the image question, and
 whether a field with a `PENDING_LIVE_VALIDATION` status is worth a run. It also
 does not close a schema: an optional field may exist in a schema while no
 renderer is allowed to draw it. That is where `province` and
-`province_source` stay, with coverage numbers beside them, until a round
-decides which surface draws them; and where `gearbox` and `fuel` stay for
-every surface but the one `gearbox` is judged for.
+`province_source` stay for every surface but the car page, until the
+district hazard is measured; and where `gearbox` and `fuel` stay for every
+surface but the one `gearbox` is judged for.
 
 Nothing above is evidence about Divar, Sheypoor or Khodro45. Divar's
 `CarListing` is a richer shape — it carries `city`, `gearbox`, `fuel` and

@@ -15,7 +15,7 @@
 
 import {
   PRICE_STATUS_UNUSABLE, type ConstraintKey, type EvidenceItem,
-  type MileageStatus,
+  type MileageStatus, type ProvinceSource,
 } from '@/lib/api';
 
 const FA = new Intl.NumberFormat('fa-IR', { useGrouping: true });
@@ -284,6 +284,25 @@ export const NOT_A_CAR_FA = 'به‌عنوان خودرو نمایش داده ن
 export function conditionLabel(c: string | null | undefined): string {
   if (!c) return 'ثبت‌نشده';
   return CONDITION_FA[c.toLowerCase()] ?? c;
+}
+
+/* A province, said with how it was known (FIELD_PROVENANCE.md). Where the
+ * listing names its province it is drawn alone. Where a city that shares its
+ * province's name gave it — «تهران، آذری» names Tehran the city — the page
+ * says so, so a province CARO inferred is never drawn as one the listing
+ * stated. A province with no recorded source says that instead, because
+ * drawn alone it would read as stated. */
+export const PROVINCE_FROM_CITY_FA = 'از روی نام شهر';
+export const PROVINCE_SOURCE_UNRECORDED_FA = 'منبعش ثبت‌نشده';
+
+export function provinceLabel(
+  p: string | null | undefined,
+  source: ProvinceSource | null | undefined,
+): string {
+  if (!p) return 'ثبت‌نشده';
+  if (source === 'stated') return p;
+  if (source === 'city') return `${p} — ${PROVINCE_FROM_CITY_FA}`;
+  return `${p} — ${PROVINCE_SOURCE_UNRECORDED_FA}`;
 }
 
 /** «پراید · EX» from a model_key, dropping the empty trim segment. */
