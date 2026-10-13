@@ -4897,3 +4897,94 @@ round. run14 is one snapshot, as unjudgeable for an estimator as the two
 before it (D55). And the corpus served has no automatic car, so the chip
 that showed «اتومات» checked against a field is gone until a corpus carries
 one.
+
+## D77 — The car page draws the province, with how it was read
+
+D76 left which surface draws the province to a round of its own, measured
+first. The owner said to go on 2026-10-13.
+
+**Measured before the choice,** with the predictions written first; every
+count held. The payload already carried `province`, filled from the
+listing's `city`, and nothing said how it was known; the car page drew
+neither. On run14 the province is on 76 of 77 rows, 44 stated and 32 read
+from a city that shares its province's name — Tehran 21, Isfahan 8, Qom 3.
+Of its 56 Prides, 14 are in Tehran, 12 in Isfahan, 29 elsewhere and 1 has
+none. The snapshot keeps the province and its source and not the line, so
+whether a district named like a province stands behind any stated row could
+not be measured from anything stored.
+
+I told the owner that misread was possible only behind the 27 stated rows
+whose province's capital does not share its name, and the predictions called
+those 27 the reads such a district could have produced. That was wrong. A
+district named like any province, after any city, is read as that province,
+stated, so it can stand behind any of the 44. He had not chosen the probe
+built on the 27, and the document and the commits say 44.
+
+**The decision.** The owner's, on two questions. Where the province is
+drawn, of four: the car page with its source; the car page and the lists; a
+search that reads «در تهران»; nowhere yet. He chose the first. How the
+district hazard is measured, of four: keep the line in the snapshot; a live
+probe of the 27 pages; both; not now. He chose the first.
+
+**What was built.** The payload carries `province_source`, a closed set —
+stated, city, none — on both sides of the wire; nothing upstream of the
+reader closes it, so the contract suite reads every published corpus as the
+site would and holds what it yields to the set, and follows the served
+corpus through the detail path, all 77 listings. The car page has a ninth
+cell: «تهران» where the listing names its province, «تهران — از روی نام شهر»
+where the city gave it, «ثبت‌نشده» where there is none, and a province with
+no recorded source would say «منبعش ثبت‌نشده», a pairing promotion never
+writes. The province and its source are `detail` and nothing more. On the
+car page a misread is one listing, labelled with how it was read and a click
+from its source; in a list it would sit beside others, and a search reading
+«در تهران» would drop a misread car from its answer without a word. The
+screens suite reads the cell out of all 76 car files and holds it to the
+payload. The line a province is read from, `location_raw`, crosses from the
+parse to the snapshot and stops there: it is a forbidden key in a published
+corpus, promotion does not copy it, and the survival report audits it to the
+snapshot and prints a dash for the corpus, where its absence is the decision
+rather than a loss.
+
+Five commits, on the owner's machine: `b723b1c`, `1235d45`, `81daa09`,
+`5c17caf` and `17982c2`.
+
+**Measured.** Every suite, mutation and build ran in a network namespace
+with no interface, and the browser in one with loopback alone; no request
+went to any source. Each commit is green on its own — 2103, 2110, 2111, 2118
+and 2118 assertions across 15 suites, 1665, 1667, 1668, 1675 and 1675 across
+12 without the extras — every count as predicted, suite by suite, with
+README and /about carrying each commit's own. The web build is green with
+its nine routes after the car page changed and at the end. Built and served
+against the real API, three car pages were looked at in a browser, 1280 and
+390 wide: `bama:h5vqo2ug` reads «تهران», `bama:czg8hq9p`
+«تهران — از روی نام شهر», `bama:4flyapjw` «ثبت‌نشده»; nine cells, three to a
+row on the wide screen and one on the narrow, and no horizontal scroll.
+Seven mutations on the round's last commit, each predicted to turn checks
+red in one suite:
+
+    province_source left unfilled in the payload        contract 1 *
+    a city-read province drawn alone                    screens  1
+    the document's province_source detail=no            corpus   2
+    FORBIDDEN_KEYS without location_raw                 corpus   1
+    to_fetch_outcome drops location_raw                 survival 4
+    promotion copies location_raw into the row          survival 1
+    the parse keeps no line                             ingest   2
+
+Six held. The first, marked, did not: it turned three checks red in two
+suites, where one in one was predicted — the screens section's reach checks
+read the source from the payload too, and caught its absence as well. The
+round was applied to fresh clones before it was sent, and on the owner's
+machine as `b723b1c` to `17982c2`: 2118 across 15 suites, the web build
+green with its nine routes.
+
+**Not measured.** The deployed site, which serves `a636ea6`. Whether a
+district named like a province stands behind any of run14's 44 stated rows:
+run14's lines were not kept, and the next collection's will be. Whether the
+line survives a real run to the snapshot: the survival report will say, on
+that collection.
+
+**What this does not settle.** The lists and the search still do not show or
+read the province, until the district hazard is measured on the lines. A new
+car's mileage stays unread. And a buyer still cannot ask for cars near him:
+the evidence for it is on the car page, and the question is not yet in the
+search.
