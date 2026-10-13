@@ -106,7 +106,7 @@ def a_listing(**over) -> CarListing:
         seller_raw=None, image_urls=(),
         price_status="usable", price_provenance="jsonld",
         mileage_status="plausible", seller_type="dealer",
-        price_currency_raw="IRR",
+        price_currency_raw="IRR", location_raw="رباط کریم، تهران",
     )
     base.update(over)
     return CarListing(**base)
@@ -218,6 +218,21 @@ check("  and the consumer reads unknown, never private",
       unk_back.seller_type == "unknown", unk_back.seller_type)
 
 # ---------------------------------------------------------------------------
+print("\nthe location line — to the snapshot, never to the corpus")
+# ---------------------------------------------------------------------------
+# Kept so a run's province reads can be audited against the lines they came
+# from (a district named like a province is read as that province), and
+# stopped there: the snapshot stays on the machine that ran it, and a
+# published row may not carry the line (`corpus.FORBIDDEN_KEYS`).
+_lrec, _lrow = through_the_chain(a_listing())[:2]
+check("the line reaches the snapshot record, verbatim",
+      _lrec.get("location_raw") == "رباط کریم، تهران",
+      repr(_lrec.get("location_raw")))
+check("  and the published row does not carry it",
+      _lrow is not None and "location_raw" not in _lrow,
+      "no row" if _lrow is None else str(sorted(_lrow)))
+
+# ---------------------------------------------------------------------------
 print("\nthe census — every field, crossing or named as lost")
 # ---------------------------------------------------------------------------
 
@@ -233,6 +248,7 @@ CROSSES = {
     "color": "color",
     "city": "province",                    # renamed, not dropped
     "province_source": "province_source",  # and how it was known, beside it
+    "location_raw": "location_raw",        # to the snapshot, and no further
     "seller_raw": "seller_fingerprint",    # salted on the way out (D-privacy)
     "body_condition": "body_condition",
     "condition_source": "condition_source",
@@ -442,6 +458,10 @@ def _row(report: str, label: str) -> list[str] | None:
 check("the report audits province, parsed as `city`, at all three stages",
       _row(_report, "province") == ["province", "100%", "100%", "100%", "0"],
       str(_row(_report, "province")))
+check("  and the location line to the snapshot, where it stops by decision",
+      _row(_report, "location_raw")
+      == ["location_raw", "100%", "100%", "—", "0"],
+      str(_row(_report, "location_raw")))
 
 # Divar's shape: a seller the parse holds raw, which only its salted hash
 # may leave. Bama's listings have none (`seller_raw=None`), so the fixture

@@ -2100,6 +2100,12 @@ for _line, _want in [("تهران، آذری", ("تهران", "city")),
     check(f"parse_detail_page on «{_line}»: province and source {_want}",
           (_car.city, _car.province_source) == _want,
           str((_car.city, _car.province_source)))
+    # The line goes with the province it gave, for the snapshot's audit; a
+    # page that gave none keeps none.
+    check(f"  and keeps «{_line}» as the line it was read from" if _want[0]
+          else "  and keeps no line, having read no province",
+          _car.location_raw == (_line if _want[0] else None),
+          repr(_car.location_raw))
 
 # A new car: «صفر کیلومتر» where the reading is, then the age slot, then the
 # location — the two new cars among date_watch's nineteen, as it stored them

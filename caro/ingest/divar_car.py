@@ -270,6 +270,15 @@ class CarListing:
     # any adapter produced was one its source stated.
     province_source: str | None = None
 
+    # The line the province was read from, as the page renders it — «تهران،
+    # آذری». Kept so that a run's province reads can be audited against the
+    # lines themselves: a district named like a province is read as that
+    # province, stated, and only the line can show it. It crosses to the
+    # snapshot and stops there; `corpus.FORBIDDEN_KEYS` refuses it in a
+    # published row. None where no line gave a province, and on Divar,
+    # whose `city` is a field of its own.
+    location_raw: str | None = None
+
     def to_fetch_outcome(self, source: str = "divar",
                          salt: str | None = None) -> FetchOutcome:
         return FetchOutcome(
@@ -282,6 +291,10 @@ class CarListing:
             province=self.city, mileage_km=self.mileage_km,
             province_source=(self.province_source
                              or ("stated" if self.city else "none")),
+            # To the snapshot, which stays on the machine that ran it, and no
+            # further: promotion does not copy it, and the corpus guard
+            # refuses it.
+            location_raw=self.location_raw,
             # Carried because `listing_from_record` reads all three off a
             # published row and nothing could ever supply them. See the block
             # on FetchOutcome for how that was found and what it cost.

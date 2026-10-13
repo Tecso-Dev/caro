@@ -268,6 +268,11 @@ SURVIVAL = [
                                                          "seller_fingerprint"),
     ("province_src",   "province_source",     "province_source",
                                                             "province_source"),
+    # One that stops at the snapshot on purpose: the line a province was read
+    # from, kept so the district hazard can be read on the lines themselves,
+    # and refused in a published row (`corpus.FORBIDDEN_KEYS`). `None` in the
+    # last column is that decision, and the report audits it to the snapshot.
+    ("location_raw",   "location_raw",        "location_raw",   None),
 ]
 
 
@@ -354,18 +359,24 @@ def survival(listings: list, snapshot_path) -> list[str]:
         for lid, x in parsed.items():
             here = _has(getattr(x, attr, None))
             in_rec = _has(matched.get(lid, {}).get(key))
-            in_row = _has(rows.get(lid, {}).get(rowkey))
+            in_row = (rowkey is not None
+                      and _has(rows.get(lid, {}).get(rowkey)))
             a += here
             b += in_rec
             c += in_row
             # Counted per listing, not as a difference between two rates. A
             # value that appears at one stage and vanishes at the next is the
-            # only thing that means anything here.
-            lost += here and not in_row
+            # only thing that means anything here. A field the corpus does
+            # not publish ends at the snapshot, and is lost if it does not
+            # reach that.
+            lost += here and not (in_row if rowkey is not None else in_rec)
         flag = "  <-- LOST" if lost else ""
         if lost:
-            losses.append((label, lost, a))
-        L.append(f"{label:<18}{a / n:>8.0%}{b / n:>10.0%}{c / n:>9.0%}"
+            losses.append((label, lost, a,
+                           "a published row" if rowkey is not None
+                           else "the snapshot"))
+        corpus = f"{c / n:>9.0%}" if rowkey is not None else f"{'—':>9}"
+        L.append(f"{label:<18}{a / n:>8.0%}{b / n:>10.0%}{corpus}"
                  f"{lost:>7}{flag}")
 
     if len(matched) < n:
@@ -377,9 +388,9 @@ def survival(listings: list, snapshot_path) -> list[str]:
         L += ["", "  ⚠ SILENT LOSS. The inventory above describes the PARSE. "
                   "A corpus is",
               "    what an estimator reads, and these values do not reach it:"]
-        for label, lost, a in losses:
+        for label, lost, a, stage in losses:
             L.append(f"      {label:<16}{lost} of {a} parsed value(s) do not "
-                     "reach a published row")
+                     f"reach {stage}")
         L += ["    Do not promote this run. A value lost here is not a fact "
               "about the",
               "    source — it is a boundary, and D51 is the entry about it."]

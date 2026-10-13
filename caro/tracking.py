@@ -91,6 +91,11 @@ class FetchOutcome:
     # `none`. Carried beside it so an inferred province is never read as one
     # the page stated. `None` means the adapter recorded neither.
     province_source: str | None = None
+    # The line the province was read from, verbatim. Operational: it is here
+    # so a snapshot can be audited against the province read from it, and it
+    # is never published (`corpus.FORBIDDEN_KEYS`). None where the adapter
+    # recorded no line.
+    location_raw: str | None = None
     seller_fingerprint: str | None = None
     mileage_km: int | None = None
     image_phashes: tuple[str, ...] = ()

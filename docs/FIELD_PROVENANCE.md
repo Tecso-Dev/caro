@@ -220,8 +220,11 @@ Two hazards stand. A district named like a province, after the city, is read
 as that province, stated, because a stated province wins: «تهران، گلستان»
 would give گلستان. None of the pages read by hand had one, and nothing else
 rules it out; on run14 it could stand behind any of the 44 stated
-provinces, and the lines were not kept. And a new car's mileage is still not
-read from its line.
+provinces, and the lines were not kept. From the next collection they are:
+the line a province is read from crosses to the operational snapshot as
+`location_raw`, and the corpus guard refuses it in a published row, so the
+hazard can be read on the lines themselves. And a new car's mileage is still
+not read from its line.
 
 ## Price: extraction quality is not plausibility
 

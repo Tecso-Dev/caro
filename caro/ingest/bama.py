@@ -666,10 +666,10 @@ class ParseTrace:
     # labelled | after_odometer | city_names_province
     #   | window_had_no_province | no_anchor
     location_source: str = "none"
-    # The line as rendered — «رباط کریم، تهران». The city half has nowhere to
-    # go yet: the corpus carries `province` and nothing else, and adding a
-    # field is a DATA_CONTRACT change rather than a parser change. Kept here
-    # so a run can at least report what it saw and threw away.
+    # The line as rendered — «رباط کریم، تهران». The record carries it too,
+    # as far as the snapshot: the corpus carries `province` and how it was
+    # known, and publishing the line would be a DATA_CONTRACT change, which
+    # the corpus guard refuses (`FORBIDDEN_KEYS`).
     location_raw: str | None = None
 
 
@@ -869,6 +869,8 @@ def parse_detail_page(url: str, html: str,
         city=loc_province,
         province_source=("city" if loc_source == "city_names_province"
                          else "stated" if loc_province else "none"),
+        # The line itself, for the snapshot only (see CarListing).
+        location_raw=loc_raw,
         seller_raw=None,          # the masked phone is never read
         # Everything the reconciliation was based on, kept verbatim.
         price_raw=(str(offers.get("price"))
