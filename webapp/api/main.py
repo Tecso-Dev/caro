@@ -176,6 +176,7 @@ def _listing_evidence(x) -> EvidenceItem:
                             if x.asking_price_toman is not None else None),
         gearbox=x.gearbox, fuel=x.fuel, color=x.color,
         condition=x.body_condition, province=x.city,
+        province_source=getattr(x, "province_source", None),
         seller_type=getattr(x, "seller_type", None),
         product_class=x.product_class,
         price_status=x.price_status, price_kind=x.price_kind,

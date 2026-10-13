@@ -118,6 +118,11 @@ export interface Envelope {
  *  for member. */
 export type MileageStatus = 'plausible' | 'suspicious' | 'impossible' | 'unknown';
 
+/* How a province was known: the listing names it (`stated`), a city that
+   shares its province's name gave it (`city`), or there is none. Held to
+   schemas.ProvinceSource by the contract suite, member for member. */
+export type ProvinceSource = 'stated' | 'city' | 'none';
+
 /** A listing as parsed. There is no estimate field here, by design (D50):
  *  a refusal returns these, so a refusal carrying an estimate cannot be
  *  constructed on either side of the wire. */
@@ -136,6 +141,9 @@ export interface EvidenceItem {
   color: string | null;
   condition: string | null;
   province: string | null;
+  /* How the province was known, so that a province read from a city's name
+     is never drawn as one the listing stated. Null on an appraisal row. */
+  province_source: ProvinceSource | null;
   seller_type: string | null;
   /* D52's gate: only `vehicle` is a car. Sent so the client can apply it —
      what the client should DO with a non-vehicle is not decided yet. */

@@ -149,6 +149,14 @@ class Envelope(BaseModel):
 # no passenger car can have. The contract suite holds this to Validity.
 MileageStatus = Literal["plausible", "suspicious", "impossible", "unknown"]
 
+# How a province was known (FIELD_PROVENANCE.md): `stated` where the page
+# names it, `city` where a city that shares its province's name gave it,
+# `none` where there is no province. `corpus_reader` derives the value for a
+# row published before the field existed — every province then was stated —
+# so a published corpus yields these three and nothing else; the contract
+# suite checks that against every corpus in data/corpora/.
+ProvinceSource = Literal["stated", "city", "none"]
+
 
 class EvidenceItem(BaseModel):
     """A listing as parsed. D50: there is no field here for an estimate.
@@ -172,6 +180,10 @@ class EvidenceItem(BaseModel):
     color: str | None = None
     condition: str | None = None
     province: str | None = None
+    # How it was known, beside it, so that no screen draws a province read
+    # from a city's name as one the listing stated. Null on an appraisal
+    # Row, which carries no province.
+    province_source: ProvinceSource | None = None
     seller_type: str | None = None
     # The gate, and the only one (D52): a client renders a listing as a car
     # only where this says `vehicle`. It is here because a gate the client is

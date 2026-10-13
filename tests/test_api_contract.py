@@ -551,7 +551,8 @@ def ts_union(name: str) -> set[str] | None:
 for ts_name, literal in (("CorpusKind", schemas.CorpusKind),
                          ("FaultCode", schemas.FaultCode),
                          ("ConstraintKey", schemas.ConstraintKey),
-                         ("MileageStatus", schemas.MileageStatus)):
+                         ("MileageStatus", schemas.MileageStatus),
+                         ("ProvinceSource", schemas.ProvinceSource)):
     got = ts_union(ts_name)
     want = set(typing.get_args(literal))
     if got is None:
@@ -1433,6 +1434,57 @@ for _mode in ("run99", "invalid", "real"):
     check(f"  {_mode}: no synthetic corpus is built for it",
           _states16.get(_mode, {}).get("synthetic") is False,
           str(_states16.get(_mode)))
+
+
+# ---------------------------------------------------------------------------
+print("\n17 — a listing says how its province was read")
+# ---------------------------------------------------------------------------
+# `province_source` is a closed set in the payload, and nothing upstream of
+# the reader closes it: promotion writes three values, and the reader derives
+# one of them for a row published before the field existed. A value outside
+# the set would fail validation on the way out, as a 500 on the page that
+# asked. So every published corpus is read here, as the site would read it.
+_PS = set(typing.get_args(schemas.ProvinceSource))
+_ps_seen = {}
+for _cp in sorted((ROOT / "data" / "corpora").glob("*.json")):
+    _ps_seen[_cp.stem] = {x.province_source for x in
+                          corpus_reader.listings_from_corpus(
+                              json.loads(_cp.read_text(encoding="utf-8")))}
+_ps_bad = {k: sorted(v - _PS) for k, v in _ps_seen.items() if v - _PS}
+check(f"every published corpus gives a source the payload can carry "
+      f"({', '.join(sorted(_ps_seen))})",
+      bool(_ps_seen) and not _ps_bad, str(_ps_bad or "found no corpus"))
+
+# And the detail path delivers both, as the reader holds them, for every
+# listing the served corpus has — the vehicles and the one that is not.
+_was, _was_run = corpus_reader.CORPORA, os.environ.get(corpus_mod.RUN_ENV)
+corpus_reader.CORPORA = ROOT / "data" / "corpora"
+os.environ.pop(corpus_mod.RUN_ENV, None)
+corpus_mod.active.cache_clear()
+try:
+    with contextlib.redirect_stdout(io.StringIO()):
+        _held17 = list(corpus_mod.active().listings)
+        _sent17 = {x.listing_id: api.listing(listing_id=x.listing_id)
+                   for x in _held17}
+finally:
+    corpus_reader.CORPORA = _was
+    if _was_run is None:
+        os.environ.pop(corpus_mod.RUN_ENV, None)
+    else:
+        os.environ[corpus_mod.RUN_ENV] = _was_run
+    corpus_mod.active.cache_clear()
+_off17 = [x.listing_id for x in _held17
+          if _sent17[x.listing_id].listing is None
+          or (_sent17[x.listing_id].listing.province,
+              _sent17[x.listing_id].listing.province_source)
+          != (x.city, x.province_source)]
+check(f"the detail path delivers the province and how it was read, for all "
+      f"{len(_held17)} listings of {RUN}",
+      bool(_held17) and not _off17, f"differs on {_off17[:5]}")
+_city17 = sum(1 for x in _held17 if x.province_source == "city")
+check(f"  and {RUN} holds provinces read from a city's name ({_city17}), "
+      f"so the two are told apart on real rows",
+      _city17 > 0, "none to tell apart — said, not passed")
 
 print()
 if FAILS:
