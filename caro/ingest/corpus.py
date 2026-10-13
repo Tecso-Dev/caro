@@ -31,9 +31,17 @@ SCHEMA = "caro.corpus/1"
 # semantic — "no free-form seller-authored text" — and these are instances of
 # it, not the definition. A new adapter introducing `notes` or `summary` is
 # covered by the content guard and belongs here the day it is written.
+#
+# One key here is not prose. `location_raw` is the location line as the page
+# renders it — «تهران، آذری» — kept in the operational snapshot so that a
+# run's province reads can be audited against the line they came from. It is
+# never published: a district is finer than anything the corpus carries, and
+# what the contract publishes is the province derived from the line, with
+# how it was derived (FIELD_PROVENANCE.md).
 FORBIDDEN_KEYS = frozenset({
     "description", "desc", "title", "km_line", "kmline", "km_text",
     "notes", "note", "summary", "raw_text", "body_text", "comment",
+    "location_raw",
 })
 
 # Keys that are hashes or derived values and must NOT be read as identifiers.

@@ -84,6 +84,11 @@ check("does NOT flag the derived values the contract allows",
       "these would be switched off within a week")
 check("  and km_line is in the forbidden set, since it carries page prose",
       "km_line" in FORBIDDEN_KEYS)
+check("  and location_raw is: the location line stays in the snapshot, and a "
+      "row that carries it is refused",
+      "location_raw" in FORBIDDEN_KEYS
+      and any(v.guard == "schema" for v in scan_keys(
+          {"listings": [{"listing_id": "x", "location_raw": "تهران، آذری"}]})))
 
 # ---------------------------------------------------------------------------
 print("\nredact — remove the identifier, keep the value beside it")
