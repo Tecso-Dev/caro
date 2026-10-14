@@ -184,12 +184,16 @@ but one (D75).
 
 The rule. `province` is read off the page by position, in the four lines
 after the odometer line — «کارکرد … کیلومتر», or a new car's «صفر کیلومتر».
-A province the line states is read in any part after the city; a two-part
-line whose city is one of the thirteen capitals that share their province's
-name — «تهران، آذری», «اصفهان، کهندژ» — gives that province, recorded as
-`province_source` `city`, never as stated (D74). On the nineteen listings
-whose lines date_watch stored (read 2026-10-10), the rule run13 was read by
-found eight; this one finds all nineteen.
+A province the line states is read in any part after the city; a line whose
+city is one of the thirteen capitals that share their province's name, with
+its district — «تهران، آذری», «اصفهان، کهندژ» — or alone — «کرمان» — gives
+that province, recorded as `province_source` `city`, never as stated (D74).
+The city stands alone because Bama leaves out a province named as its city;
+the rule read such a line as stated until the lines a collection kept on
+2026-10-14 showed the shape, and run14 was read by that rule — how many of
+its 44 stated rows are such a line, the lines it did not keep cannot say. On
+the nineteen listings whose lines date_watch stored (read 2026-10-10), the
+rule run13 was read by found eight; this one finds all nineteen.
 
 run13 was read by the narrower rule of `8e34dba` — the last comma-separated
 part of a line, after «کارکرد … کیلومتر» only — and carries a province on 34
