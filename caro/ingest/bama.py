@@ -599,10 +599,11 @@ def _labelled(lines: Sequence[str], label: str) -> str | None:
 #   so; it never yields the neighbouring line's contents.
 #
 #   STATED FIRST. A line that states its province wins wherever it stands in
-#   the window. Only when none does is the city asked: a two-part line whose
-#   city is one of the thirteen capitals that share their province's name.
-#   A province found that way says so — `city_names_province` here, and
-#   `province_source` `city` on the record.
+#   the window. Only when none does is the city asked: a line whose city is
+#   one of the thirteen capitals that share their province's name, with its
+#   district after it («تهران، آذری») or alone («کرمان» — Bama leaves out a
+#   province named as its city). A province found that way says so —
+#   `city_names_province` here, and `province_source` `city` on the record.
 _LOCATION_WINDOW = 4
 
 
@@ -625,7 +626,14 @@ def extract_location(lines: Sequence[str]) -> tuple[str | None, str | None, str]
     if label:
         # Kept because a page that grows the label back should be read from
         # it rather than by counting lines. Measured absent everywhere so far.
-        return label, province_of(label), "labelled"
+        # Read as a line in the window is: what it states, else its city.
+        prov = province_of(label)
+        if prov:
+            return label, prov, "labelled"
+        prov = province_from_city(label)
+        if prov:
+            return label, prov, "city_names_province"
+        return label, None, "labelled"
 
     for i, ln in enumerate(lines):
         if not _odometer_line(normalize(ln)):

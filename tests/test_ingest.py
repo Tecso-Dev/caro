@@ -1986,9 +1986,15 @@ for _name, _lines, _want_prov, _want_src in [
     # so the location is not at a fixed offset from the odometer.
     ("with the date line gone",
      _without(OBSERVED_LOCATION_BLOCK, "5 روز پیش"), "تهران", "after_odometer"),
-    ("province stated without a city",
+    # A capital named as its province, alone, is the city: Bama leaves out a
+    # province named as its city (run15, 2026-10-14). A province alone whose
+    # capital is named otherwise is still what the line states.
+    ("a capital named as its province, alone, is the city",
      _swap(OBSERVED_LOCATION_BLOCK, "رباط کریم، تهران", "تهران"),
-     "تهران", "after_odometer"),
+     "تهران", "city_names_province"),
+    ("a province alone, no capital's name, is stated",
+     _swap(OBSERVED_LOCATION_BLOCK, "رباط کریم، تهران", "فارس"),
+     "فارس", "after_odometer"),
     ("a city with no province is refused, not inferred",
      _swap(OBSERVED_LOCATION_BLOCK, "رباط کریم، تهران", "کرج"),
      None, "window_had_no_province"),
@@ -1998,8 +2004,13 @@ for _name, _lines, _want_prov, _want_src in [
     ("no odometer line is a different fact from no province",
      [ln for ln in OBSERVED_LOCATION_BLOCK if not ln.startswith("کارکرد")],
      None, "no_anchor"),
-    ("a label, if the page ever grows one back",
-     ["موقعیت", "اصفهان"] + OBSERVED_LOCATION_BLOCK, "اصفهان", "labelled"),
+    ("a label, if the page ever grows one back, read as a line is: a "
+     "capital alone by the city",
+     ["موقعیت", "اصفهان"] + OBSERVED_LOCATION_BLOCK, "اصفهان",
+     "city_names_province"),
+    ("  and a label that states its province, stated",
+     ["موقعیت", "رباط کریم، تهران"] + OBSERVED_LOCATION_BLOCK, "تهران",
+     "labelled"),
 ]:
     _raw, _prov, _src = extract_location(_lines)
     check(f"{_name} → {_want_prov or 'refused'}", _prov == _want_prov,
@@ -2016,7 +2027,7 @@ check("thirty-one provinces, no more and no fewer",
 for _txt, _want in [
     ("رباط کریم، تهران", "تهران"),
     ("مشهد، خراسان رضوی", "خراسان رضوی"),
-    ("تهران", "تهران"),
+    ("تهران", None),               # the city alone: province_from_city's
     ("کرج", None),                 # a city, and البرز is not inferred from it
     ("350,000,000", None),
     ("کارکرد 500,000 کیلومتر", None),
@@ -2072,12 +2083,24 @@ for _txt, _want in [
     ("گلستان، مرکز", None),           # a province's name in the city's place
     ("البرز، مرکز", None),
     ("تهران، آذری، شرقی", None),      # three parts: not this rule's shape
-    ("تهران", None),                  # one part: province_of states it
+    ("تهران", "تهران"),               # the city alone, its province left out
+    ("فارس", None),                   # a province alone is no city's
     ("رباط کریم، تهران", None),       # the city is not one of the thirteen
 ]:
     check(f"province_from_city({_txt!r:30}) = {_want!r}",
           province_from_city(_txt) == _want,
           f"got {province_from_city(_txt)!r}")
+
+# A lone name: three real lines of run15 (2026-10-14), read out of its
+# snapshot — «کرمان» on three listings, «زنجان» and «یزد» on one each. Every
+# one of its 74 lines is «city، province، district», the province left out
+# where it is named as the city and the district where there is none, so
+# each of these is a city and states no province; and none of the other 43
+# lines run15 read as stated is a province alone.
+for _txt in ("کرمان", "زنجان", "یزد"):
+    check(f"«{_txt}» alone: no province stated, the city's own",
+          (province_of(_txt), province_from_city(_txt)) == (None, _txt),
+          repr((province_of(_txt), province_from_city(_txt))))
 
 _c = _swap(OBSERVED_LOCATION_BLOCK, "رباط کریم، تهران", "تهران، آذری")
 check("a page whose city names its province: found, and said to be by the city",
@@ -2094,6 +2117,7 @@ check("  and «کرج» alone is still refused, as before",
 
 for _line, _want in [("تهران، آذری", ("تهران", "city")),
                      ("رباط کریم، تهران", ("تهران", "stated")),
+                     ("کرمان", ("کرمان", "city")),
                      ("کرج", (None, "none"))]:
     _car = parse_detail_page(
         LU, ld_page(body=f"<p>{_line}</p><p>500,000,000</p><p>تومان</p>"))

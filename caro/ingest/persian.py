@@ -226,12 +226,19 @@ def province_of(text: str | None) -> str | None:
     module asserting a geography it does not hold.
 
     The whole string is also tried, for a page that states the province with
-    no city in front of it.
+    no city in front of it — but not when it is one of the thirteen capitals
+    named as their province. Bama leaves the province out of the line where
+    it is named as the city — «تهران، آذری», never «تهران، تهران، آذری» — and
+    the district where there is none, so «کرمان» alone is the city of Kerman
+    and states nothing: run15's lines (2026-10-14) hold it three times, and
+    «زنجان» and «یزد» once each, and none of the other 43 lines run15 read as
+    stated is a province alone. That province is known from the city, which
+    is `province_from_city`'s to say.
     """
     if not text:
         return None
     s = normalize(text)
-    if s in _PROVINCE_BY_NORM:
+    if s in _PROVINCE_BY_NORM and s not in _CAPITAL_BY_NORM:
         return _PROVINCE_BY_NORM[s]
     parts = [p.strip() for p in re.split(r"[،,]", s) if p.strip()]
     for part in reversed(parts[1:]):
@@ -241,16 +248,18 @@ def province_of(text: str | None) -> str | None:
 
 
 def province_from_city(text: str | None) -> str | None:
-    """The province a two-part line's city gives, when that city is one of
-    the thirteen capitals named as their province is; otherwise None.
+    """The province a line's city gives, when that city is one of the
+    thirteen capitals named as their province is; otherwise None.
 
-    «تهران، آذری» is the city of Tehran and a district of it. The line states
-    no province, and the city does not need one stated: Tehran is in Tehran.
-    So: a line of exactly two parts, its first part, one of the thirteen.
-    «کرج، گلشهر» stays unread — Karaj is in البرز, and knowing that would be
-    holding a geography — and so does a first part that names a province
-    whose capital has another name («گلستان، …», «البرز، …»): the first part
-    is a city, and no city of that name is that province's capital.
+    «تهران، آذری» is the city of Tehran and a district of it, and «کرمان» the
+    city of Kerman with no district: Bama leaves the province out where it is
+    named as the city (`province_of`). Neither line states a province, and
+    the city does not need one stated: Tehran is in Tehran. So: a line of one
+    part or two, its first part, one of the thirteen. «کرج، گلشهر» and «کرج»
+    stay unread — Karaj is in البرز, and knowing that would be holding a
+    geography — and so does a first part that names a province whose capital
+    has another name («گلستان، …», «البرز، …»): the first part is a city, and
+    no city of that name is that province's capital.
 
     The caller records a province found this way as coming from the city,
     never as stated (`province_source`).
@@ -258,6 +267,6 @@ def province_from_city(text: str | None) -> str | None:
     if not text:
         return None
     parts = [p.strip() for p in re.split(r"[،,]", normalize(text)) if p.strip()]
-    if len(parts) != 2:
+    if len(parts) not in (1, 2):
         return None
     return _CAPITAL_BY_NORM.get(parts[0])
