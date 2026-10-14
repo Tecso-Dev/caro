@@ -4988,3 +4988,52 @@ read the province, until the district hazard is measured on the lines. A new
 car's mileage stays unread. And a buyer still cannot ask for cars near him:
 the evidence for it is on the car page, and the question is not yet in the
 search.
+
+## D78 — The site serves main again, seen from the outside
+
+The site had served `a636ea6` since 2026-09-27. The deployment of 2026-10-05
+was refused (D65), and nothing decided after D64 had reached it. On
+2026-10-14 `main` was deployed from `Tecso-Dev/caro` by the person whose
+Vercel account holds the project, a friend of the owner. The steps written
+for him were these: the Vercel GitHub App on `Tecso-Dev` with access to
+`caro`; the project connected to `Tecso-Dev/caro`, with `main` its
+production branch; `CARO_INBOX=off` for production and previews, with
+`CARO_RUN` and `CARO_ADMIN_TOKEN` unset; a deployment of `main`; and the
+pages to look at after it. Which of them he took is not recorded. I first
+wrote the steps for the owner's own account, reading D64's
+«the one the author already deploys to» as saying the project was his. It is
+not, and they were rewritten before anything was done.
+
+**Measured,** from the outside on 2026-10-14, in the owner's browser and by
+fetching two pages:
+
+    /                        the five chips under the search box, the
+                             Quik one without «اتومات»
+    /about                   77 decisions, 2118 assertions, 15 suites
+    the corpus badge         REAL DATA · ۷۷: data/corpora/run14.json,
+                             77 rows, the gate not passed, the evidence
+                             identity «run14 · SHA-256 00ad…402c»
+    /search, the Quik chip   77 considered, 64 appraisable, 5 matched,
+                             4 held apart for an unrecorded odometer,
+                             NOT SERVED
+
+`/about`'s three numbers stand together on `bd8d56d` and on no earlier
+commit, so the site serves the last commit pushed. The badge's digest is the
+published file's own (D75). The five matched and the four held apart are the
+ones the round measured on run14 here (D76), as far as the rows show them —
+year, odometer and price.
+
+**Not measured.** The contact page's inbox. The page draws its form until
+`/api/contact/status` answers, so a fetch of the page shows the form
+whatever the setting, and the status was not read: whether `CARO_INBOX=off`
+is set on this deployment is not known. The car page's province cell on the
+live site: the tree deployed is the one whose screens suite reads the cell
+out of every car file (D77), and no live car page was looked at. How the
+next deployment is made, by a push or by hand. The cause of the
+«Not authorized» of 2026-10-05. And whether the site can be reached from
+Iran, set aside in D64.
+
+**What this does not settle.** Until it is known how deployments are made, a
+commit is on the site only once the site has been checked for it. And if the
+inbox is not off, the contact form is drawn and every message is refused
+with a 503 — the state D64 switched off.
