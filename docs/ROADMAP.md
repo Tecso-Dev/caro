@@ -18,7 +18,7 @@ intent → explain the best choice**.
 | normalize messy data | ✅ **built.** Persian numerals and amount words, toman and rial, mileage, Jalali and Gregorian years, make/model aliases, trim, gearbox, fuel, colour, and body condition from free text. |
 | rank by user intent | ⚠️ **built, not served on real data.** `caro/ranking.py` parses Persian intent, filters, relaxes and scores. No estimator has cleared the acceptance gate on a real corpus (D43), so the site shows evidence, not a ranking. |
 | explain the best choice | ✅ **built.** |
-| deployed | ⚠️ **behind `main`.** https://caro-rho.vercel.app — one Vercel project of two services (D64) — serves `a636ea6`. The deploy after it was refused; see «Deploying» below. |
+| deployed | ✅ **at `main`, 2026-10-14.** https://caro-rho.vercel.app — one Vercel project of two services (D64) — serves `bd8d56d`, and run14 with it, as seen from outside (D78). How the next deployment is made is not recorded; see «Deploying» below. |
 
 ## Next — small, open, recorded
 
@@ -73,14 +73,14 @@ intent → explain the best choice**.
 4. **Authenticator-based login.** Not built. The admin view opens today with
    `CARO_ADMIN_TOKEN`, and with the token unset it does not open at all.
 
-5. **Deploying.** Neither way works today. On push: not connected — the
-   Vercel GitHub App has to be installed where the repository now lives,
-   `Tecso-Dev`. By hand: refused on 2026-10-05, the CLI (62.2.0) answering
-   «Error: Not authorized» in the deploy clone. Until one of them works the
-   site serves `a636ea6`, which predates D65: nothing decided since is on
-   it, and its contact page still sends people to the old repository's
-   Issues. Issues is on at `Tecso-Dev/caro`, where the next deployment
-   sends them (D68).
+5. **Deploying.** The Vercel project is in another account than the
+   owner's, and its holder deployed `main` from `Tecso-Dev/caro` on
+   2026-10-14: the site serves `bd8d56d` (D78). Whether a push to `main`
+   now deploys on its own, or each deployment is made by hand, is not
+   recorded; until it is, a commit is on the site only once the site has
+   been checked for it. Not checked on that deployment: the contact page's
+   inbox — `CARO_INBOX=off`, with Issues at `Tecso-Dev/caro` in its place
+   (D68) — and the car page's province cell.
 
 6. **Calibrate the confidence policy.** The bands are judgement. With real
    data they should be revisited against observed decision quality and
