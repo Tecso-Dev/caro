@@ -146,3 +146,7 @@ endpoints return, the car page in each state its two requests can leave it
 in among them. Both run under `tests/run_all.py`, and both need what the API
 needs; the second also needs node and `webapp/web/node_modules`. Without
 them a suite is skipped by name, and never counted as passed.
+
+`.github/workflows/ci.yml` runs every suite and the site's type check, lint and
+build on each push to `main` and each pull request. It fails when a suite is
+skipped, since skipped is not passed.
