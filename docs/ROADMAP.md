@@ -46,11 +46,12 @@ intent → explain the best choice**.
    - Sheypoor and Khodro45: adapters, under the same rules.
    - `province` where the market is. run16, the corpus served, carries it
      on all 73 rows: 42 stated, 31 by a city that shares its province's
-     name, where run14 had 76 of 77 and run13 34 of 74. The car page draws
-     it, with how it was read. Every line of run16 was read before it was
-     published, and no district named like a province stands behind any of
-     its 42 stated rows (D80). Lists and search do not draw it; whether they
-     do is the owner's to decide, on a corpus whose lines were read.
+     name, where run14 had 76 of 77 and run13 34 of 74. Every line of run16
+     was read before it was published, and no district named like a
+     province stands behind any of its 42 stated rows (D80). The car page
+     and the lists — search's tables and compare's evidence rows — draw it,
+     with how it was read (D81). The search does not read it yet: a query
+     that says «در تهران» is the next round, as the owner decided.
    - Longitudinal collection. Time-dependent and unrecoverable: a day not
      collected is gone. A second discovery run is a new sample, not a
      series: on run11's pin, 26 days later, 3 of its 76 listings were drawn
