@@ -728,12 +728,16 @@ if _c7 is not None:
             _want = _expect7(_km, _ms)
             _seen, _bad = [], []
             if _i in _srows:
-                # A match: name, year, odometer, price, link. Held apart:
-                # name, why, year, odometer, price, link — and the why is the
-                # odometer's own grade, since the cap is all it was asked.
+                # A match: name, year, odometer, price, then what follows.
+                # Held apart: name, why, year, odometer, price, then what
+                # follows — and the why is the odometer's own grade, since
+                # the cap is all it was asked. Which kind a row is comes from
+                # the payload. It came from counting the row's cells, which
+                # holds only while no cell is added after the price.
                 _c = _cells(_srows[_i])
-                _odo = _c[3] if len(_c) == 6 else _c[2]
-                _why = _c[1] if len(_c) == 6 else None
+                _held = _i in {x.id for x in _search7.evidence_unchecked}
+                _odo = _c[3] if _held else _c[2]
+                _why = _c[1] if _held else None
                 _seen.append("search")
                 if _odo != _want or (_why is not None and _why != _want):
                     _bad.append(f"search: {_odo!r} / why {_why!r}")
