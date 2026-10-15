@@ -537,6 +537,20 @@ if _eout is not None and _fout is not None:
     PHRASE = _fout["consts"]["UNCHECKED_FA"]
     ODO = _fout["consts"]["ODOMETER_FA"]
 
+    def _stated5(intent) -> list[str]:
+        """The constraints a query stated, by the keys UNCHECKED_FA names:
+        the reading `webapp/api/constraints.judge` makes of an intent,
+        written again here so that the two are compared."""
+        keys = []
+        if (intent.budget_max_toman is not None
+                or intent.budget_min_toman is not None):
+            keys.append("budget")
+        if intent.year_min is not None:
+            keys.append("year")
+        if intent.max_mileage_km is not None:
+            keys.append("mileage")
+        return keys + [k for k in intent.deal_breakers if k in PHRASE]
+
     def _why5(item, key: str) -> str:
         """What a row apart must say for `key`. On the odometer, the grade
         the reading carries (D67): a number that is there and not believed is
@@ -564,10 +578,20 @@ if _eout is not None and _fout is not None:
                              for k in keys)]
         check("    each row apart says what is missing",
               not _named, f"not said for {_named}")
+        # Held to what the query stated. A car with no odometer reading may
+        # match a query that asks nothing of the odometer — a match is checked
+        # against the constraints stated and no others (D65) — and its row
+        # then says «کارکرد ثبت‌نشده», as every surface says it of a car with
+        # no reading (D67). That is UNCHECKED_FA's phrase for the mileage
+        # too, so forbidding every phrase in every match failed on the first
+        # served corpus with such a car among the matches: run16's
+        # bama:0o9rpjba, a 1405 Pride, under «پراید» (2026-10-15). What a
+        # match may never say is that a constraint the buyer stated went
+        # unchecked.
         _quiet = [i for i, row in got_m.items()
-                  if any(p in row for p in PHRASE.values())]
-        check("    and no match carries such a phrase (the control)",
-              not _quiet, f"on {_quiet}")
+                  if any(PHRASE[k] in row for k in _stated5(r.intent))]
+        check("    and no match carries such a phrase for a constraint "
+              "stated (the control)", not _quiet, f"on {_quiet}")
         check("    the heading that says «منطبق» is over matches alone",
               (MATCHED in sec.get("matched", "")) == (r.evidence_total > 0)
               and MATCHED not in sec.get("apart", "")
