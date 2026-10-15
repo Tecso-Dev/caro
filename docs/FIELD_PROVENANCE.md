@@ -214,21 +214,27 @@ names its province, «تهران — از روی نام شهر» where the city 
 «ثبت‌نشده» where there is none. That is `detail`, and only `detail`. On run13
 every flag was `no` for coverage — a value missing where the market is
 largest is not one a filter may offer — and on run14 that no longer holds.
-What holds now is the first hazard below. On the car page a misread is one
+What held them was the first hazard below, measured since on the lines of a
+collection that is not the corpus served. On the car page a misread is one
 listing, labelled with how it was read and a click from its source; a list
 would show it beside others, and a search that read «در تهران» would drop a
 misread car from its answer without a word. So `card`, `gate` and `facet`
-stay `no` until the hazard is measured.
+stay `no` until a corpus whose lines were read is served, and the owner
+decides on them (D79).
 
 Two hazards stand. A district named like a province, after the city, is read
 as that province, stated, because a stated province wins: «تهران، گلستان»
-would give گلستان. None of the pages read by hand had one, and nothing else
-rules it out; on run14 it could stand behind any of the 44 stated
-provinces, and the lines were not kept. From the next collection they are:
-the line a province is read from crosses to the operational snapshot as
-`location_raw`, and the corpus guard refuses it in a published row, so the
-hazard can be read on the lines themselves. And a new car's mileage is still
-not read from its line.
+would give گلستان. The line a province is read from crosses to the
+operational snapshot as `location_raw`, and the corpus guard refuses it in a
+published row, so the hazard is read on the lines themselves. run15,
+collected on 2026-10-14 and not published, is the first collection that kept
+them: none of its 48 stated rows stands on such a district — on 24 the
+line's first part is the capital of the province read, and the other 24 were
+read by hand — and no district on its 74 lines is named as a province is
+(D79). On run14, the corpus served, the hazard can still stand behind 30 of
+its 44 stated rows: 14 were drawn again in run15, none on such a district,
+and the other 30 were not. And a new car's mileage is still not read from
+its line.
 
 ## Price: extraction quality is not plausibility
 
