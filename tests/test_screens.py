@@ -951,6 +951,82 @@ if _out9 is not None and _cout is not None:
           _d9.listing is not None and _d9.listing.province is None
           and _got9 == _prov9(None, "none"), why or "")
 
+
+# ---------------------------------------------------------------------------
+print("\n10 — the lists say the province, and how it was read")
+# ---------------------------------------------------------------------------
+# Search's two tables and compare's evidence rows draw the province in a
+# cell of its own (D81), in the car page's words, read here with the same
+# expectation as section 9. Search is drawn with what it really answers on
+# the served corpus for section 5's queries; compare with three listings of
+# the served corpus, one stated, one read from a city's name, and one with
+# its province taken off — served from a temporary artifact, as section 9
+# draws it, since a corpus read by the rule of f82efec may hold none.
+def _pcell(row_html: str) -> str | None:
+    m = re.search(r'<td[^>]*data-cell="province"[^>]*>(.*?)</td>', row_html,
+                  re.S)
+    return _text(m.group(1)).strip() if m else None
+
+
+if _out9 is not None and _cout is not None:
+    _sout10, why = node({"component": "components/SearchEvidence.tsx",
+                         "export": "SearchEvidence",
+                         "props": [{"data": as_json(r)} for _, r in _found5]})
+    _seen10, _off10, _kinds10 = 0, [], {"stated": 0, "city": 0}
+    if _sout10 is not None:
+        for (_q, _r), html in zip(_found5, _sout10["markup"]):
+            _items = {x.id: x for x in list(_r.evidence)
+                      + list(_r.evidence_unchecked)}
+            for _sec in ("matched", "apart"):
+                for _i, _row in _rows(_sections(html).get(_sec, "")).items():
+                    _x = _items[_i]
+                    _want = _prov9(_x.province, _x.province_source)
+                    _seen10 += 1
+                    if _pcell(_row) != _want:
+                        _off10.append((_q[:20], _i, _pcell(_row), _want))
+                    if _x.province and _x.province_source in _kinds10:
+                        _kinds10[_x.province_source] += 1
+    check(f"every row search draws says its province as the payload has it "
+          f"({_seen10 - len(_off10)} of {_seen10})",
+          _sout10 is not None and _seen10 > 0 and not _off10,
+          why or f"e.g. {_off10[:2]}")
+    for _k, _label in (("stated", "a province the listing states"),
+                       ("city", "a province read from a city's name")):
+        check(f"  the rows reach {_label} ({_kinds10[_k]})", _kinds10[_k] > 0,
+              "none drawn — said, not passed")
+
+    _art10 = json.loads(ART.read_text(encoding="utf-8"))["listings"]
+    _pick10 = [next(dict(x) for x in _art10
+                    if x.get("product_class") == "vehicle"
+                    and x.get("province_source") == src)
+               for src in ("stated", "city", "city")]
+    _pick10[2].pop("province", None)
+    _pick10[2]["province_source"] = "none"
+    _pick10[2]["listing_id"] = _pick10[2]["listing_id"] + "-none"
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / f"{RUN}.json").write_text(json.dumps(
+            {"schema": SCHEMA, "run_id": RUN, "source": "bama.ir",
+             "collected_on": "2026-10-15", "listings": _pick10},
+            ensure_ascii=False), encoding="utf-8")
+        with serving(Path(d)):
+            _cmp10 = api.compare(schemas.CompareRequest(
+                ids=[x["listing_id"] for x in _pick10], q="پراید"))
+    _cout10, why = render("components/CompareTable.tsx", "EvidenceRows",
+                          [{"evidence": [as_json(x) for x in _cmp10.evidence]}])
+    _crow10 = _rows(_cout10["markup"][0]) if _cout10 else {}
+    _coff10 = [(x.id, _pcell(_crow10.get(x.id, "")),
+                _prov9(x.province, x.province_source))
+               for x in _cmp10.evidence
+               if _pcell(_crow10.get(x.id, ""))
+               != _prov9(x.province, x.province_source)]
+    check(f"compare's evidence rows say it too, for a listing of each kind "
+          f"({len(_cmp10.evidence) - len(_coff10)} of "
+          f"{len(_cmp10.evidence)})",
+          len(_cmp10.evidence) == 3 and not _coff10
+          and {x.province_source for x in _cmp10.evidence}
+          == {"stated", "city", "none"},
+          why or f"e.g. {_coff10[:2]}")
+
 print()
 if FAILS:
     print(f"FAILED ({len(FAILS)}): " + ", ".join(FAILS))

@@ -985,6 +985,19 @@ if _doc_rows:
               f"number", "mileage_status" in _u,
               "it reads mileage_km and never mileage_status")
 
+    # The province has a rule of the same shape (D77, D81): it is never
+    # drawn without how it was known, so that a province read from a city's
+    # name is never drawn as one the listing stated. Asserted on every
+    # surface that reads it, the car page included.
+    for _name, _var in [(_RENDERER.name, "listing")] + list(_CARDS):
+        _path = ROOT / "webapp" / "web" / "components" / _name
+        _u = _consumed(_path, _var)
+        if "province" not in _u:
+            continue
+        check(f"  {_name} reads how the province was known wherever it reads "
+              f"the province", "province_source" in _u,
+              "it reads province and never province_source")
+
     # The price's rule can be read off a surface the same way, which the
     # check above it does not do: it asserts that the two fields arrive. A
     # component that reads the amount and neither field the rule names draws
