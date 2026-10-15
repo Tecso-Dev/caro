@@ -47,10 +47,12 @@ intent → explain the best choice**.
    - `province` where the market is. run14, the corpus served, carries it
      on 76 of 77 rows: 44 stated, 32 by a city that shares its province's
      name, where run13 had 34 of 74. The car page draws it, with how it was
-     read. Lists and search do not until the district hazard is measured —
-     a district named like a province is read as that province, stated —
-     and the next collection keeps the line each province is read from in
-     its snapshot for that (FIELD_PROVENANCE.md).
+     read. run15 (2026-10-14), a snapshot not published, is the first
+     collection that kept each line: no district named like a province
+     stands behind any of its 48 stated rows, and the five that were a
+     capital alone are read by the city since `f82efec` (D79). Lists and
+     search do not draw it; whether they do is decided on run16, collected
+     on that reader with the owner's leave.
    - Longitudinal collection. Time-dependent and unrecoverable: a day not
      collected is gone. A second discovery run is a new sample, not a
      series: on run11's pin, 26 days later, 3 of its 76 listings were drawn
