@@ -888,10 +888,40 @@ if _out9 is not None and _cout is not None:
                           else "none") == k)
                for k in ("stated", "city", "none")}
     for _k, _label in (("stated", "a province the listing states"),
-                       ("city", "a province read from a city's name"),
-                       ("none", "a listing with no province")):
+                       ("city", "a province read from a city's name")):
         check(f"  the files reach {_label} ({_kinds9[_k]})", _kinds9[_k] > 0,
               "none drawn — said, not passed")
+
+    # A listing with no province. run14 held one, the province spelled as the
+    # source spells it, and the files above reached it; a corpus read by the
+    # rule of f82efec may hold none — run16 has a province on every row. So
+    # the case is drawn from a temporary artifact, as section 7 draws the
+    # odometer's grades no real corpus holds: a vehicle of the served corpus
+    # with its province taken off, as promotion writes such a row — no
+    # `province`, and `province_source` `none`. Counted in `_kinds9` it
+    # would only say what the corpus holds; drawn, it says what the page does.
+    _row9 = next(dict(x) for x in json.loads(
+        ART.read_text(encoding="utf-8"))["listings"]
+        if x.get("product_class") == "vehicle")
+    _row9.pop("province", None)
+    _row9["province_source"] = "none"
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / f"{RUN}.json").write_text(json.dumps(
+            {"schema": SCHEMA, "run_id": RUN, "source": "bama.ir",
+             "collected_on": "2026-10-15", "listings": [_row9]},
+            ensure_ascii=False), encoding="utf-8")
+        with serving(Path(d)):
+            _d9 = api.listing(_row9["listing_id"])
+    _nout9, why = render("components/CarDetail.tsx", "ListingFile", [
+        {"id": _row9["listing_id"], "listing": as_json(_d9.listing),
+         "corpus": as_json(_d9.corpus), "scored": None, "refused": REFUSED}])
+    _m9 = (re.search(r"<dt[^>]*>استان</dt><dd[^>]*>(.*?)</dd>",
+                     _nout9["markup"][0], re.S) if _nout9 else None)
+    _got9 = _text(_m9.group(1)).strip() if _m9 else None
+    check(f"  and a listing with no province, drawn from a temporary "
+          f"artifact, says «{_prov9(None, 'none')}» (got «{_got9}»)",
+          _d9.listing is not None and _d9.listing.province is None
+          and _got9 == _prov9(None, "none"), why or "")
 
 print()
 if FAILS:
