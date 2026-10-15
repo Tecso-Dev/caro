@@ -14,11 +14,11 @@ intent → explain the best choice**.
 
 | Requirement | State |
 |---|---|
-| crawl offers | ⚠️ **one source.** Three `BamaAdapter` runs on one pin are published, and the API serves the third by default, `data/corpora/run14.json` (2026-10-11): 77 listings, 64 of them appraisable. run11 (2026-09-10) and run13 (2026-10-06) stay published. `DivarCarAdapter` is built and tested offline, and its live path has never run. Sheypoor and Khodro45 have no adapter. |
+| crawl offers | ⚠️ **one source.** Four `BamaAdapter` runs on one pin are published, and the API serves the fourth by default, `data/corpora/run16.json` (2026-10-15): 73 listings, 63 of them appraisable. run11 (2026-09-10), run13 (2026-10-06) and run14 (2026-10-11) stay published. `DivarCarAdapter` is built and tested offline, and its live path has never run. Sheypoor and Khodro45 have no adapter. |
 | normalize messy data | ✅ **built.** Persian numerals and amount words, toman and rial, mileage, Jalali and Gregorian years, make/model aliases, trim, gearbox, fuel, colour, and body condition from free text. |
 | rank by user intent | ⚠️ **built, not served on real data.** `caro/ranking.py` parses Persian intent, filters, relaxes and scores. No estimator has cleared the acceptance gate on a real corpus (D43), so the site shows evidence, not a ranking. |
 | explain the best choice | ✅ **built.** |
-| deployed | ✅ **at `main`, 2026-10-14.** https://caro-rho.vercel.app — one Vercel project of two services (D64) — serves `bd8d56d`, and run14 with it, as seen from outside (D78). How the next deployment is made is not recorded; see «Deploying» below. |
+| deployed | ✅ **from each push to `main`.** https://caro-rho.vercel.app — one Vercel project of two services (D64) — served `1ebbf4a` within about three minutes of its push on 2026-10-15, as seen from outside (D80); see «Deploying» below. |
 
 ## Next — small, open, recorded
 
@@ -44,15 +44,13 @@ intent → explain the best choice**.
      point. `CARO_SELLER_SALT` must be set. Expect to be blocked; the adapter
      stops and says so, and that is the design.
    - Sheypoor and Khodro45: adapters, under the same rules.
-   - `province` where the market is. run14, the corpus served, carries it
-     on 76 of 77 rows: 44 stated, 32 by a city that shares its province's
-     name, where run13 had 34 of 74. The car page draws it, with how it was
-     read. run15 (2026-10-14), a snapshot not published, is the first
-     collection that kept each line: no district named like a province
-     stands behind any of its 48 stated rows, and the five that were a
-     capital alone are read by the city since `f82efec` (D79). Lists and
-     search do not draw it; whether they do is decided on run16, collected
-     on that reader with the owner's leave.
+   - `province` where the market is. run16, the corpus served, carries it
+     on all 73 rows: 42 stated, 31 by a city that shares its province's
+     name, where run14 had 76 of 77 and run13 34 of 74. The car page draws
+     it, with how it was read. Every line of run16 was read before it was
+     published, and no district named like a province stands behind any of
+     its 42 stated rows (D80). Lists and search do not draw it; whether they
+     do is the owner's to decide, on a corpus whose lines were read.
    - Longitudinal collection. Time-dependent and unrecoverable: a day not
      collected is gone. A second discovery run is a new sample, not a
      series: on run11's pin, 26 days later, 3 of its 76 listings were drawn
@@ -77,12 +75,13 @@ intent → explain the best choice**.
 
 5. **Deploying.** The Vercel project is in another account than the
    owner's, and its holder deployed `main` from `Tecso-Dev/caro` on
-   2026-10-14: the site serves `bd8d56d` (D78). Whether a push to `main`
-   now deploys on its own, or each deployment is made by hand, is not
-   recorded; until it is, a commit is on the site only once the site has
-   been checked for it. Not checked on that deployment: the contact page's
-   inbox — `CARO_INBOX=off`, with Issues at `Tecso-Dev/caro` in its place
-   (D68) — and the car page's province cell.
+   2026-10-14 (D78). A push to `main` now deploys: `1ebbf4a` was on the
+   site within about three minutes of its push on 2026-10-15, as
+   `.github/workflows/ci.yml` says the hosts build from each push (D80) —
+   unless the holder deployed it by hand in those minutes, which was not
+   asked. Not checked: the contact page's inbox — `CARO_INBOX=off`, with
+   Issues at `Tecso-Dev/caro` in its place (D68) — and the car page's
+   province cell on the live site.
 
 6. **Calibrate the confidence policy.** The bands are judgement. With real
    data they should be revisited against observed decision quality and
