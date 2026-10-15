@@ -97,19 +97,24 @@ FIELDS: dict[str, Eligibility] = {
     "product_class_source": Eligibility("SOURCE_BACKED", detail=True),
     "dealer_badge": Eligibility("SOURCE_BACKED"),
     "document_issue": Eligibility("DERIVED"),
-    "seller_type": Eligibility("PENDING_LIVE_VALIDATION"),
-    # On 76 of 77 rows of run14 (FIELD_PROVENANCE.md). The car page draws
+    # `dealer` on the two rows of run16 that carry a business badge, the
+    # only value a badge can give: a car with none is never `private` (D26).
+    # Out of PENDING_LIVE_VALIDATION now that a real run has produced it;
+    # every flag stays no — no screen has been designed to draw it.
+    "seller_type": Eligibility("SOURCE_BACKED"),
+    # On all 73 rows of run16 (FIELD_PROVENANCE.md). The car page draws
     # it, with how it was known; no list shows it and nothing filters on it
-    # while the district hazard is unmeasured — a misread there drops a car
-    # from an answer without a word. On run13, 34 of 74.
+    # until the owner decides — a misread there would drop a car from an
+    # answer without a word. On run14, 76 of 77; on run13, 34 of 74.
     "province": Eligibility("SOURCE_BACKED", detail=True),
-    # `stated` on 44 rows of run14 and `city` on 32. Drawn beside the
+    # `stated` on 42 rows of run16 and `city` on 31. Drawn beside the
     # province on the car page, so that a province read from a city's name
     # is never shown as stated. Not a key in run13, which predates it.
     "province_source": Eligibility("SOURCE_BACKED", detail=True),
     # A facet: «اتومات» is a red line a buyer states, and the search checks it
-    # against this field (webapp/api/constraints.py). On run14 every row is
-    # manual, so the check leaves every row out, which is the answer.
+    # against this field (webapp/api/constraints.py). On run16 one row is
+    # automatic, a Quik; on run14 every row was manual, and the check left
+    # every row out, which was the answer.
     "gearbox": Eligibility("SOURCE_BACKED", facet=True),
     "fuel": Eligibility("SOURCE_BACKED"),
     # The key the payload carries, `make|model|trim`, rendered through

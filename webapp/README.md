@@ -74,10 +74,10 @@ Services is in beta on Vercel and may need enabling for the account. Then:
 2. set `CARO_INBOX=off`, so the contact page shows GitHub Issues instead of a
    form. Left unset, the form is drawn and every message is refused with a
    503, because a function's disk does not keep what is written;
-3. leave `CARO_RUN` unset to serve run14, and `CARO_ADMIN_TOKEN` unset — with
+3. leave `CARO_RUN` unset to serve run16, and `CARO_ADMIN_TOKEN` unset — with
    the inbox off there is nothing for it to open;
-4. deploy a preview, and look at `/`, `/search`, `/car/bama:czg8hq9p`,
-   `/compare` and `/api/listing/bama:czg8hq9p` before promoting it.
+4. deploy a preview, and look at `/`, `/search`, `/car/bama:q571duyy`,
+   `/compare` and `/api/listing/bama:q571duyy` before promoting it.
 
 The API installs numpy and `webapp/requirements.txt` through the service's
 `installCommand`, which keeps fastapi out of the package's dependencies.
