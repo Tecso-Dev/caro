@@ -5152,3 +5152,116 @@ other than a capital with a district — neither seen. And how many of run14's
 `f82efec`, and is not published. run16 waits for the owner's leave. The
 lists and the search still do not show or read the province; that is decided
 on run16. A new car's mileage stays unread.
+
+## D80 — run16 is served, every line read before it was published
+
+D79 left publishing and serving to run16, collected on the fixed reader with
+the owner's leave. He gave it on 2026-10-15, and decided, of three — publish
+and serve it, publish it alone, keep it a snapshot — the first.
+
+**The run,** 2026-10-15 at 10:38Z, on `1ebbf4a`, the predictions written
+first; all eleven held. The gate read robots.txt as on 2026-10-10: http 200,
+592 bytes, the same sha256, no url refused. Thirteen category pages, 98
+links, 74 unique listings: 73 answered with a listing, and one answered and
+parsed to nothing. 53 Prides, 10 Tibas and 10 Quiks; one automatic, a 1401
+Quik; three with no mileage, all of 1405. A province on all 73, 42 stated
+and 31 by the city, three of those a capital alone, read so from the first
+by `f82efec`. The line is on every row, and the reader, run again on every
+line, gives back the province and its source on all 73. None of the 42
+stated rows stands on a district named like a province: on 22 the line's
+first part is the capital of the province read, and the other 20 were read
+by hand here, not against a source — each a city or county of the province
+its line names. Beside run15, a day earlier, 34 listings are in both, every
+one with the same line, and one changed source: `bama:hvrfjqui`, «زنجان»,
+stated then and by the city now. Beside run14, 32 are in both, and two of
+them are lone capitals run14 served as stated: `bama:hvrfjqui`, and
+`bama:x5vie8zr`, «کرمان».
+
+**Published.** Promoted on the owner's machine: 74 records in, 73 published,
+the one fetch that returned no listing refused by its status, both guards
+clean; 60,788 bytes, sha256
+`71f196566d09a713886e476f18b4af5ad03e708bd292d74d0ee9bbcb13f7acc1`; no row
+carries `location_raw`. Two rows carry a business badge, the first a
+published corpus holds, and `seller_type` says `dealer` on both.
+
+**Measured before serving it.** Added alone, run16 changed nothing: 2128
+assertions across 15 suites. With `DEFAULT_RUN = "run16"` besides, 30 checks
+went red in two suites, where 27 were predicted: the provenance chain's 26
+measured rows, their denominators 77 against 73; section 9's reach for a
+listing with no province, which run16 does not hold; and three not
+predicted. Section 5's control forbade every unchecked phrase in every
+match, and went red on `bama:0o9rpjba`, a 1405 Pride with no reading,
+matched by «پراید», the Snapp example and the family one — none of which
+asks anything of the odometer — and drawn with «کارکرد ثبت‌نشده», as every
+surface draws a car with no reading (D67): the phrase UNCHECKED_FA also
+gives the mileage. run14's cars with no reading were four Quiks of 1405,
+priced past the other examples' budgets and held apart where the mileage was
+asked, and an assignment, so no served corpus had put one among the matches
+before.
+
+**The decisions.** The owner's, on two questions. Of holding the control to
+the constraints a query stated, giving a match with no reading a phrase of
+its own, or keeping such a car out of the matches, he chose the first: a
+match is checked against the constraints stated and no others (D65), and
+what it may never say is that one of those went unchecked. And of
+`seller_type` leaving PENDING_LIVE_VALIDATION for SOURCE_BACKED with every
+flag `no`, or staying, the first: a real run has produced the only value a
+badge can give.
+
+**What was built.** Five commits, on the owner's machine. `abe5809`
+publishes run16 byte for byte. `b8bf604` draws section 9's listing with no
+province from a temporary artifact, as section 7 draws the odometer grades
+no real corpus holds. `4928ef6` holds section 5's control to the constraints
+stated, read from the intent as `constraints.judge` reads it and written
+again in the suite, so that the two are compared. `948bff7` serves run16:
+FIELD_PROVENANCE measured on it by its own procedure, `seller_type` out of
+pending in the document and in `eligibility.py`, `document_issue` a dash
+again, `gearbox` with two values, and the deploy checklist on
+`bama:q571duyy`, a listing in run14 and run16 and unchanged between them.
+`80ccb6b` brings the roadmap to run16.
+
+**Measured.** Every suite, mutation and build here ran in a network
+namespace with no interface. Each commit is green on its own — 2128, 2128,
+2128, 2129 and 2129 assertions across 15 suites, the one more being section
+5 checking an answer past k, and 1685 across 12 without the extras at every
+step — and the web build is green with its nine routes, the type check clean
+and lint with no error and its one warning. Five mutations on the round's
+tip, each predicted with the checks it would turn red; the last is counted
+out of 2128, run14 giving section 5 one answer fewer past k:
+
+                                                        red   green
+    section 5's control back to every phrase              3    2126
+    the budget's phrase drawn in every match              5 *  2124
+    a listing with no province said as «—»                1    2128
+    seller_type pending again                             1    2128
+    DEFAULT_RUN back to run14                            26    2102
+
+Four held. The second, marked, turned five checks red where four were
+predicted: the cell it added also changed the row section 7 reads. The round
+was applied to fresh clones before it was sent, and on the owner's machine
+as `abe5809` to `80ccb6b`: all 2129 assertions, and the corpus in the
+repository byte for byte the file he promoted. He pushed it to both
+repositories.
+
+**The site.** The owner's screenshots of /about at 10:29Z on 2026-10-15
+showed 79 decisions, 2128 assertions and 15 suites, which stand together on
+`1ebbf4a` alone, committed at 10:26Z and pushed after it. And about five
+minutes after `80ccb6b` was committed and pushed, /about, fetched from here,
+said 2129 assertions and 79 decisions: a tree that serves run16. Twice,
+then, the site was built from a push to `main` within minutes, as
+`.github/workflows/ci.yml`, merged from the project holder's pull request on
+2026-10-14, says the hosts do. Whether he deployed either by hand in those
+minutes was not asked.
+
+**Not measured.** The header's chip and the car page's province cell on the
+live site: the page fetched here draws neither until its script runs, and no
+screenshot of them was taken. The CI workflow's runs on GitHub, which cannot
+be read from here. The Railway that `ci.yml` names as building the API,
+where D64 recorded one Vercel project of two services. Why one page answered
+and parsed to nothing, in run15 and in run16 alike.
+
+**What this does not settle.** Whether lists and search draw the province is
+the owner's to decide, now on a corpus whose every line was read. A new
+car's mileage stays unread, so a 1405 with none is a match wherever the
+odometer was not asked about. And run16 is one snapshot, as unjudgeable for
+an estimator as those before it (D55).
