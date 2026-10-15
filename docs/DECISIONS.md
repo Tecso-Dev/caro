@@ -5037,3 +5037,118 @@ Iran, set aside in D64.
 commit is on the site only once the site has been checked for it. And if the
 inbox is not off, the contact form is drawn and every message is refused
 with a 503 — the state D64 switched off.
+
+## D79 — No district behind a stated province on run15, and a capital alone is the city
+
+D77 left the district hazard to be read on the lines of the next collection.
+The owner chose it on 2026-10-14, of the ways offered: run15 on the pin of
+run11, run13 and run14, on his machine, a snapshot and nothing promoted or
+published, the predictions written first and a script that only reads the
+snapshot to read the lines.
+
+**The run,** 2026-10-14 at 00:31Z, on `08688d9`. The gate read robots.txt:
+http 200, 592 bytes, the sha256 of 2026-10-10, no url refused. Ten category
+pages, 90 links, 75 unique listings: 74 answered with a listing, and one
+answered 200 and parsed to nothing. 54 Prides, 10 Tibas and 10 Quiks, all
+manual; the five with no mileage are of 1405, and each has a province. The
+province is on all 74, 48 stated and 26 by the city — تهران on 26, 20 of
+them by the city, اصفهان on 10, eighteen provinces in all. The line it was
+read from is on all 74; the reader, run again on every line, gives back the
+province and its source; and the survival report carries `location_raw` to
+the snapshot on all 74 and prints a dash for the corpus.
+
+**The hazard, measured.** None of the 48 stated rows stands on a district
+named like a province. On 24 the line's first part is the capital of the
+province read, by a table of the thirty-one capitals that the script holds
+and the repository does not. The other 24 were read by hand here, not
+against a source: each first part is a city or county of the province its
+line names — رباط کریم and ورامین in تهران, کاشان and نایین in اصفهان, آمل
+and نوشهر in مازندران, and so on. Every one of the 74 lines is
+«city، province، district», the province left out where it is named as the
+city and the district where there is none:
+
+                                                        lines   read as
+    a capital named as its province, and a district        26   city
+    a capital named as its province, alone                  5   stated
+    another capital, its province and a district           12   stated
+    another capital and its province                        7   stated
+    any other city and its province                        24   stated
+
+A district stands on 38 lines, and none is named as a province is; had one
+been, the line would have been read as that province, stated, and the script
+would have flagged it — «تهران، …» by its first part, «شیراز، فارس، …» by a
+second province's name. One district holds a province's name among other
+words, «شیراز، فارس، شهرک گلستان», and is read as فارس, rightly, because
+parts are matched whole. Of run14's 44 stated rows, 14 were drawn again,
+none on such a district; the other 30 were not drawn, and cannot be read.
+
+**What it turned up.** The five lone names — «کرمان» three times, «زنجان»
+and «یزد» — were read as stated. By the shape every other line keeps, each
+is the city with its province left out, and none of the other 43 stated
+lines is a province alone; the province was known from the city, which is
+what `city` means. The province was right and the label said more than the
+line, where D77 made the label so that a province known from a city's name
+is never shown as stated. The tests held the old reading on purpose, a lone
+«تهران» marked as a line that states its province. The owner decided on two
+questions. Of fixing the reader, documenting the label, or neither yet, he
+chose the first. And of keeping run15 a snapshot until run16 is collected on
+the fixed reader, publishing and serving run15 as collected, or publishing
+it alone, he chose the first.
+
+**Predictions.** Written before the run: the robots file; the pages, links,
+unique listings and the one unanswered, each within its range; the models;
+no automatic car; five new cars, each with a province; the survival row; the
+province on all 74, stated at 64.9% within 48 to 65 and by the city at 35.1%
+within 33 to 50; the line on every row with a province; the reader again,
+giving back every row; three-part lines, 12 within 5 to 15; and no row
+flagged, the outcome put at 65%. Four did not hold. The listings run15
+shares with run14 were 28, where 38 to 56 came from a decay fitted to three
+earlier pairs — fewer than the 37 run13 and run14 shared at five days, so
+the overlap is not a function of the gap alone. run14's stated rows drawn
+again were 14 for 20 to 34, from the same miss. The lone names were 5 for 0
+to 2. And the rows the capitals confirm were 24 for 8 to 22, the five lone
+names among them.
+
+**What was built.** Two commits, on the owner's machine: `f82efec` and
+`bf8746c`. `province_of` no longer reads one of the thirteen capitals named
+as their province as a whole line, and `province_from_city` reads the city
+alone as well as the city and its district. A province alone whose capital
+is named otherwise is still stated, and the labelled path, never seen live,
+reads its line as the window does. FIELD_PROVENANCE says so. Snapshots and
+published corpora stay as they were collected, as run14 did after `d12c592`
+(D75).
+
+**Measured.** Every suite, mutation and build here ran in a network
+namespace with no interface. Predicted before the change and held: the code
+alone turned 4 checks red, all in ingest, and the new and changed checks
+alone turned 8 of 2128 red on the old code, the eight named. Each commit is
+green on its own, 2128 assertions across 15 suites and 1685 across 12
+without the extras, and the web build is green with its nine routes. Five
+mutations, each predicted with the checks it would turn red, all held, every
+red check in ingest:
+
+                                                        red   green
+    province_of reads the thirteen whole again            7    2121
+    province_from_city reads two parts only again        10    2118
+    province_of reads no line whole                       2    2126
+    province_from_city takes any province alone           1    2127
+    the labelled path asks province_of only again         2    2126
+
+The repository's own `extract_location`, at `08688d9` and at the round's
+tip, on run15's 48 stated lines as the script printed them: stated on all 48
+at the first; at the second, the same on 43 and the five lone names by the
+city. The round was applied to fresh clones before it was sent, and on the
+owner's machine as `f82efec` and `bf8746c`, pushed to both repositories.
+There all 2128 assertions passed across 15 suites, and the script, run again
+on run15's snapshot, said 69 rows give back the province and its source and
+5 do not: the five lone names, recorded stated and read now by the city.
+
+**Not measured.** run14's other 30 stated rows. Why one page answered and
+parsed to nothing. A shape beyond the 74 lines — a province alone, or a city
+other than a capital with a district — neither seen. And how many of run14's
+44 stated rows are a capital alone: its lines were not kept.
+
+**What this does not settle.** run15 is a snapshot, read by the rule before
+`f82efec`, and is not published. run16 waits for the owner's leave. The
+lists and the search still do not show or read the province; that is decided
+on run16. A new car's mileage stays unread.
