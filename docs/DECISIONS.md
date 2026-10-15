@@ -5265,3 +5265,91 @@ the owner's to decide, now on a corpus whose every line was read. A new
 car's mileage stays unread, so a 1405 with none is a match wherever the
 odometer was not asked about. And run16 is one snapshot, as unjudgeable for
 an estimator as those before it (D55).
+
+## D81 — The lists draw the province, with how it was read
+
+D80 left to the owner whether the lists and the search draw the province, on
+run16, whose every line was read before it was published. He decided on
+2026-10-15, of four ways offered: the lists first, in a round of their own,
+and the search after, in the next.
+
+**What was built.** Four commits, on the owner's machine. `3c595c2` has
+section 7 of the screens suite tell a row held apart from a match by the
+payload's `evidence_unchecked`, no longer by how many cells it has: with a
+cell added after the price, it would take every match for a row held apart
+and every row apart for a match, as an added cell misled it in D80.
+`d6ef331` draws the province in a cell of its own in the lists an ungated
+corpus serves — search's matched and held-apart tables, and compare's
+evidence rows — in the car page's words: «تهران» where the listing names it,
+«تهران — از روی نام شهر» where a city's name gave it, «ثبت‌نشده» where there
+is none (D77). Drawn so, the card guard turned four checks red, as
+predicted, and `province` and `province_source` may now be drawn on a card,
+in `eligibility.py` and in FIELD_PROVENANCE; `gate` and `facet` stay `no`.
+`ListingCard` and compare's ranked view draw rows that carry no province,
+and only a gated corpus serves them; they are as they were. `46490a8` reads
+the cell out of search's tables for section 5's queries on the served
+corpus, 63 rows, 34 stated and 29 by the city, and out of compare's evidence
+rows for one listing of each kind, the one with no province from a temporary
+artifact, as section 9 draws it; and the corpus suite holds that every
+surface that reads the province reads how it was known — the car page,
+search's tables and compare. `f080aab` brings the roadmap to the lists.
+
+**Measured.** Every suite, mutation and build here ran in a network
+namespace with no interface. Each commit is green on its own — 2129, 2133,
+2140 and 2140 assertions across 15 suites, and 1685, 1689, 1692 and 1692
+across 12 without the extras — and the web build is green with its nine
+routes, the type check clean and lint with no error and its one warning.
+Five mutations on the round's tip, each predicted with the checks it would
+turn red, all held; the first two are counted out of 2139, because a list
+that no longer reads the source has one check fewer in the card guard:
+
+                                                        red   green
+    search's tables pass no source to the label           2    2137
+    compare's rows draw the province bare                 2    2137
+    eligibility.py: the province off the card again       1    2139
+    FIELD_PROVENANCE: the province off the card again     3    2137
+    section 7 tells a row's kind by its cells again       7    2133
+
+**In a browser.** The tip, built and served here with loopback alone, drawn
+1280 and 390 pixels wide. Search for «پراید» draws 8 of its 53 matches and
+holds none apart, and each row's province cell says what the API's row and
+the corpus say, 8 of 8 at both widths. Compare of `bama:d1hd97vo`,
+`bama:qbgkl0kr` and `bama:q571duyy`, not served, draws three evidence rows:
+«تهران», «هرمزگان» and «تهران — از روی نام شهر». Neither page scrolls
+sideways at either width; at 390 the table scrolls in its own box, so a
+phone shows the province after a swipe, and a label read by the city wraps
+to three lines. Of seven predictions six held. The seventh said no page
+would log an error, and each logged one: the site's stylesheet from Google
+Fonts, which a namespace with no network cannot reach; /about, which the
+round did not touch, logs the same.
+
+**The site.** The round was applied to fresh clones before it was sent, and
+on the owner's machine as `3c595c2` to `f080aab`, at 23:31Z on 2026-10-15:
+all 2140 assertions. He pushed it to both repositories, and both `main`s
+were `f080aab` when read here, each commit's tree the one verified. His
+screenshot of search at 23:32Z showed the table without the province, from
+before the site was built. At 23:36Z a browser on his machine read /about —
+80 decisions, 2140 assertions, 15 suites — and in the next minute search for
+«پراید», its 8 rows and their labels those drawn here; compare's three; the
+car page of `bama:q571duyy`, «تهران — از روی نام شهر»; and the header's
+chip, «REAL DATA · ۷۳». The chip and the car page's cell are the two D80
+left unmeasured on the live site. A third time, the site was built from a
+push to `main` within minutes. And a fetch from here, at about 23:34Z and
+again at about 23:42Z, said 79 decisions and 2129 assertions, /about as it
+stood on `80ccb6b`: a copy kept somewhere between, not what the site served,
+since the browser read 80 and 2140 between the two. A page fetched from here
+is not, alone, what the site serves.
+
+**Not measured.** The layout on the live site: the browser that read it
+there was not showing the page, and laid it out at no width. The CI
+workflow's runs on GitHub, which cannot be read from here. The Railway that
+`ci.yml` names as building the API, where D64 recorded one Vercel project of
+two services. Why one page answered and parsed to nothing, in run15 and in
+run16 alike.
+
+**What this does not settle.** The search does not read the province: a
+query that says «در تهران» is the next round, as the owner decided. When it
+does, a listing with no province must be held apart, not dropped from the
+answer without a word (D65), and run16 holds a province on every row, so
+that case stands on a temporary artifact until a corpus brings one. A new
+car's mileage stays unread.
