@@ -103,14 +103,16 @@ FIELDS: dict[str, Eligibility] = {
     # every flag stays no — no screen has been designed to draw it.
     "seller_type": Eligibility("SOURCE_BACKED"),
     # On all 73 rows of run16 (FIELD_PROVENANCE.md). The car page draws
-    # it, with how it was known; no list shows it and nothing filters on it
-    # until the owner decides — a misread there would drop a car from an
-    # answer without a word. On run14, 76 of 77; on run13, 34 of 74.
-    "province": Eligibility("SOURCE_BACKED", detail=True),
+    # it, with how it was known, and so do the lists an ungated corpus
+    # serves — search's tables and compare's evidence rows (D81). Nothing
+    # filters on it yet: a misread there would drop a car from an answer
+    # without a word. On run14, 76 of 77; on run13, 34 of 74.
+    "province": Eligibility("SOURCE_BACKED", card=True, detail=True),
     # `stated` on 42 rows of run16 and `city` on 31. Drawn beside the
-    # province on the car page, so that a province read from a city's name
-    # is never shown as stated. Not a key in run13, which predates it.
-    "province_source": Eligibility("SOURCE_BACKED", detail=True),
+    # province wherever the province is drawn, so that a province read from
+    # a city's name is never shown as stated. Not a key in run13, which
+    # predates it.
+    "province_source": Eligibility("SOURCE_BACKED", card=True, detail=True),
     # A facet: «اتومات» is a red line a buyer states, and the search checks it
     # against this field (webapp/api/constraints.py). On run16 one row is
     # automatic, a Quik; on run14 every row was manual, and the check left

@@ -94,8 +94,8 @@ for k in sorted({k for r in rows for k in r}):
 | `dealer_badge` | `SOURCE_BACKED` | 73/73 | 2 | no | no | no | no | `true` on two rows, the two `seller_type` reads as dealers, and `false` on the rest |
 | `document_issue` | `DERIVED` | — | — | no | no | no | no | not a key in run16: no row's text names a phrase the parser knows; run14 carried it on one row — see below |
 | `seller_type` | `SOURCE_BACKED` | 2/73 | 1 | no | no | no | no | inferred only from a business badge, never from a person (D26): `dealer` on the two rows that carry one, the first value a real run has produced |
-| `province` | `SOURCE_BACKED` | 73/73 | 23 | no | yes | no | no | read off the page by position (D74); the car page draws it with how it was known, and nothing else draws or chooses it — see below |
-| `province_source` | `SOURCE_BACKED` | 73/73 | 2 | no | yes | no | no | `stated` or `city`: whether the line names the province or a city sharing its name gave it — 42 and 31 here. Drawn beside the province, never apart from it. Not a key in run13, which predates it |
+| `province` | `SOURCE_BACKED` | 73/73 | 23 | yes | yes | no | no | read off the page by position (D74); the car page and the lists draw it with how it was known, and nothing chooses it — see below |
+| `province_source` | `SOURCE_BACKED` | 73/73 | 2 | yes | yes | no | no | `stated` or `city`: whether the line names the province or a city sharing its name gave it — 42 and 31 here. Drawn beside the province, never apart from it. Not a key in run13, which predates it |
 | `gearbox` | `SOURCE_BACKED` | 73/73 | 2 | no | no | no | yes | the structured block's transmission, on every row since `72c2573` carried it across the boundary; `automatic` on one row of run16, a Quik, and `manual` on the rest. `facet` because «اتومات» is a red line a buyer states and the search checks against it (`webapp/api/constraints.py`) — see below |
 | `fuel` | `SOURCE_BACKED` | 73/73 | 3 | no | no | no | no | on every row; nothing reads it yet |
 | `model_key` | `DERIVED` | — | — | yes | yes | no | no | make, model and trim joined into one key, rendered through `modelLabel`. Drawn by the detail page and by all three card surfaces — the evidence grid, `ListingCard` and `CompareTable` — which is why `card` is `yes`: `derived_title`, which this table meant for the card, is not a key in any published corpus and is not on the payload |
@@ -220,15 +220,16 @@ stay as they are.
 
 The car page draws it, and says how it was known: «تهران» where the listing
 names its province, «تهران — از روی نام شهر» where the city gave it, and
-«ثبت‌نشده» where there is none. That is `detail`, and only `detail`. On run13
-every flag was `no` for coverage — a value missing where the market is
-largest is not one a filter may offer — and on run14 that no longer holds.
-What held them was the first hazard below, measured now on the lines of the
-corpus served. On the car page a misread is one listing, labelled with how
-it was read and a click from its source; a list would show it beside others,
-and a search that read «در تهران» would drop a misread car from its answer
-without a word. So `card`, `gate` and `facet` stay `no` until the owner
-decides on them (D79, D80).
+«ثبت‌نشده» where there is none; and since D81 so do the lists an ungated
+corpus serves, search's two tables and compare's evidence rows, in the same
+words. That is `detail` and `card`. On run13 every flag was `no` for
+coverage — a value missing where the market is largest is not one a filter
+may offer — and on run14 that no longer held. What held them was the first
+hazard below, measured on the lines of run16, the corpus served. In a list a
+misread is one row among others, labelled with how it was read; a search
+that read «در تهران» would drop a misread car from its answer without a
+word, so `gate` and `facet` stay `no` until that search is built and
+measured, the round after this one.
 
 Two hazards stand. A district named like a province, after the city, is read
 as that province, stated, because a stated province wins: «تهران، گلستان»

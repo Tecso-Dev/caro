@@ -9,7 +9,8 @@ import {
 } from '@/lib/api';
 import {
   NOT_A_CAR_FA, askingPrice, classLabel, faNum, faPlain, fixed,
-  isAppraisalRow, isVehicleClass, km, modelLabel, odometer, toman,
+  isAppraisalRow, isVehicleClass, km, modelLabel, odometer, provinceLabel,
+  toman,
 } from '@/lib/format';
 import TechDetail from '@/components/TechDetail';
 
@@ -60,7 +61,8 @@ const METRICS: Metric[] = [
  * guard renders it with the API's real answer. A row that is not a car
  * stays in the table — compare was asked about it, and dropping it without
  * a word is what the API used to do — and says what it is in its first
- * cell, in the same sentence the detail page uses. */
+ * cell, in the same sentence the detail page uses. Its province is said as
+ * the detail page says it, with how it was known (D81). */
 export function EvidenceRows({ evidence }: { evidence: EvidenceItem[] }) {
   return (
     <div className="border border-line bg-surface rounded-[3px]
@@ -68,7 +70,7 @@ export function EvidenceRows({ evidence }: { evidence: EvidenceItem[] }) {
       <table className="w-full border-collapse text-[13px] min-w-[520px]">
         <thead>
           <tr className="text-ink-3 text-[11.5px]">
-            {['خودرو', 'مدل', 'کارکرد', 'قیمت پیشنهادی'].map((h) => (
+            {['خودرو', 'مدل', 'کارکرد', 'قیمت پیشنهادی', 'استان'].map((h) => (
               <th key={h} className="text-right font-normal px-4 py-2.5
                                      border-b border-line">{h}</th>
             ))}
@@ -94,6 +96,10 @@ export function EvidenceRows({ evidence }: { evidence: EvidenceItem[] }) {
               <td className="px-4 py-2.5 border-b border-line fig">
                 {askingPrice(r.asking_price_toman,
                              r.price_status, r.price_kind)}
+              </td>
+              <td className="px-4 py-2.5 border-b border-line"
+                  data-cell="province">
+                {provinceLabel(r.province, r.province_source)}
               </td>
             </tr>
           ))}

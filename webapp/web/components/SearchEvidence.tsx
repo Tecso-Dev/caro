@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { EvidenceItem, SearchResponse, UncheckedItem } from '@/lib/api';
 import {
   UNCHECKED_FA, askingPrice, faNum, faPlain, isAppraisalRow, modelLabel,
-  odometer, odometerWhy,
+  odometer, odometerWhy, provinceLabel,
 } from '@/lib/format';
 
 /* The evidence a refusal can still show, in two tables that never mix.
@@ -15,6 +15,10 @@ import {
  *             under the heading that says «منطبق»; the cell beside its name
  *             says what is missing — beside it, so that a phone, which shows
  *             a table's first columns and scrolls for the rest, shows it.
+ *
+ * Each row says its province as the car page does, with how it was known —
+ * «تهران — از روی نام شهر» where a city's name gave it — so that a province
+ * the listing did not state is never drawn as one it did (D77, D81).
  *
  * The API decides which is which (`webapp/api/constraints.py`); this only
  * draws what it was sent. Each table is the first k of its kind, and the line
@@ -47,6 +51,9 @@ function Facts({ r }: { r: EvidenceItem }) {
       </td>
       <td className={`${TD} fig`}>
         {askingPrice(r.asking_price_toman, r.price_status, r.price_kind)}
+      </td>
+      <td className={TD} data-cell="province">
+        {provinceLabel(r.province, r.province_source)}
       </td>
     </>
   );
@@ -91,7 +98,7 @@ function Table({ head, children }:
   );
 }
 
-const FACTS = ['مدل', 'کارکرد', 'قیمت پیشنهادی'];
+const FACTS = ['مدل', 'کارکرد', 'قیمت پیشنهادی', 'استان'];
 
 export function SearchEvidence({ data }: { data: Evidence }) {
   const matched: EvidenceItem[] = data.evidence;
