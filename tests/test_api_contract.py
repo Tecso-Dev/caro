@@ -1389,6 +1389,13 @@ _shape13: dict[str, str] = {}
 _cells13 = {"met": 0, "unknown": 0, "broken": 0}
 _both13: list[str] = []         # a match AND a car apart, on «پراید در تهران»
 _two13: list[str] = []          # a car apart on the price AND the province
+# «خلیج فارس» holds the name of a province and is not one. Asked of every
+# corpus beside «پراید» alone: the same cars, no province stated, the phrase
+# in view.
+_GULFQ13 = "پراید خلیج فارس"
+_gulfn13: list[str] = []        # runs where «پراید» alone finds something
+_gulfoff13: list[str] = []      # runs where the Gulf changes the answer
+_gulfhid13: list[str] = []      # runs where it is not left in view
 
 for _run13 in sorted(p.stem for p in _CORP13.glob("*.json")):
     _recs13 = {x["listing_id"]: x for x in json.loads(
@@ -1418,6 +1425,17 @@ for _run13 in sorted(p.stem for p in _CORP13.glob("*.json")):
                                           _got13.evidence_unchecked_total),
                                    (_met13, _unk13)))
         _ans13 = {q: api.search(q=q, k=_K13) for q in _PROVQ13}
+        _gulf13 = api.search(q=_GULFQ13, k=_K13)
+        _plain13 = api.search(q="پراید", k=_K13)
+    if _plain13.evidence_total + _plain13.evidence_unchecked_total:
+        _gulfn13.append(_run13)
+    if (_gulf13.intent.provinces
+            or [x.id for x in _gulf13.evidence] != [x.id for x in _plain13.evidence]
+            or (_gulf13.evidence_total, _gulf13.evidence_unchecked_total)
+            != (_plain13.evidence_total, _plain13.evidence_unchecked_total)):
+        _gulfoff13.append(_run13)
+    if "خلیج فارس" not in _gulf13.intent.unparsed:
+        _gulfhid13.append(_run13)
     check(f"  {_run13} ({_held13} of {len(_veh13)} cars carry a province): "
           f"«در X» for {len(_NAMES13)} names × {len(_MODELS13)} models, "
           f"{_n13} answers, each (matched, apart) the count the artifact gives",
@@ -1448,6 +1466,13 @@ check("  a car with neither a price nor a province is shown apart naming "
       f"both, the price first, on {', '.join(_two13) or 'no corpus'}",
       bool(_two13), "the order the constraints are judged in is not reached "
       "on a real car — said, not passed")
+check(f"  «{_GULFQ13}» is not the province فارس: on {', '.join(_gulfn13)} it "
+      "gives the answer «پراید» gives, and the intent states no province",
+      len(_gulfn13) == len(_shape13) and not _gulfoff13,
+      f"differs on {_gulfoff13}; «پراید» finds something on {_gulfn13} of "
+      f"{list(_shape13)} — a corpus where it finds nothing cannot show it")
+check("  and the phrase is left in view under «نفهمیدیم», on each",
+      not _gulfhid13, f"not listed on {_gulfhid13}")
 
 
 # ---------------------------------------------------------------------------

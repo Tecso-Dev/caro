@@ -54,13 +54,16 @@ intent → explain the best choice**.
    reader takes a full province name, with a locative («در», «توی», «ساکن»,
    «استان») or without, and declines what is not a place the car should be
    in: a negation before or after the name («غیر از تهران», «تهران
-   نباشه»), a nearness («نزدیک», «اطراف»), a plate («پلاک»), and «خراسان»
-   or «آذربایجان» alone, which begin several names. What it declines stays
-   under «نفهمیدیم». It was built and checked on constructed phrasings: no
-   log of what buyers write exists, so how they write a place is not
-   measured. Known, and left:
-   - «فارس» is read as the province wherever it stands, «خلیج فارس»
-     included.
+   نباشه»), a nearness («نزدیک», «اطراف»), a plate («پلاک»), «خراسان» or
+   «آذربایجان» alone, which begin several names, and «خلیج فارس», which
+   holds one. What it declines stays under «نفهمیدیم». It was built and
+   checked on constructed phrasings: no log of what buyers write exists, so
+   how they write a place is not measured. Known, and left:
+   - A province's name inside a longer name that is not a place is read as
+     the province, with the assumption shown: «کرمان موتور», «یزد خودرو»,
+     «گیلان خودرو». «خلیجفارس» with no space is not matched at all, and
+     «خلیجِ فارس» typed with a kasra is read as the province, since a
+     diacritic is not stripped.
    - A city (مشهد, شیراز, کرج) is not read (D74), and in a clause that names
      a model it is dropped without a word, because such a clause is taken
      as understood whole. That is the clause rule's fault, not the

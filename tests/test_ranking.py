@@ -253,6 +253,8 @@ for q, want in [     # a locative before the name: read, nothing left, nothing a
     (f"{_Q} در مرکزی", ("مرکزی",)),
     (f"{_Q} در گلستان", ("گلستان",)),
     (f"{_Q} استان مرکزی", ("مرکزی",)),
+    (f"{_Q} در فارس", ("فارس",)),
+    (f"{_Q} استان فارس", ("فارس",)),
     (f"{_Q} در تهران یا اصفهان", ("تهران", "اصفهان")),
     (f"{_Q} در تهران و البرز", ("تهران", "البرز")),
     (f"{_Q} در تهران، اصفهان", ("تهران", "اصفهان")),
@@ -278,6 +280,7 @@ for q, want, notes in [   # no locative: read, and said to be an assumption
     (f"{_Q} سیستان و بلوچستان", ("سیستان و بلوچستان",),
      [_note("سیستان و بلوچستان")]),
     (f"{_Q} تهران در تهران", ("تهران",), [_note("تهران")]),
+    (f"{_Q} فارس", ("فارس",), [_note("فارس")]),
 ]:
     got_p, left, said = _where(q)
     check(f"«{q}» → {list(want)}, read as an assumption the panel shows",
@@ -312,6 +315,10 @@ for q, phrase in [   # named, and not read: listed as not understood
     (f"{_Q} در خراسان", "در خراسان"),
     (f"{_Q} در آذربایجان", "در آذربایجان"),
     (f"{_Q} خراسان", "خراسان"),
+    (f"{_Q} خلیج فارس", "خلیج فارس"),            # holds a province's name
+    (f"{_Q} در خلیج فارس", "در خلیج فارس"),
+    (f"{_Q} خلیج{_ZWNJ}فارس", "خلیج فارس"),
+    (f"{_Q} غیر از خلیج فارس", "غیر از خلیج فارس"),
 ]:
     sp = P.parse(q)
     left = [t.strip() for t in sp.unparsed]
@@ -341,6 +348,11 @@ check("  one name read and one not, in the same group: the first is listed",
       _sx.provinces == ("تهران",)
       and [t.strip() for t in _sx.unparsed] == ["در خراسان"],
       f"{_sx.provinces} {_sx.unparsed}")
+_sg = P.parse(f"{_Q} در تهران و خلیج فارس")
+check("  beside a name that is read, «خلیج فارس» is listed and the name is read",
+      _sg.provinces == ("تهران",)
+      and [t.strip() for t in _sg.unparsed] == ["خلیج فارس"],
+      f"{_sg.provinces} {_sg.unparsed}")
 check("  a model is not needed: «در تهران» alone sets the province and "
       "leaves nothing behind",
       _where("در تهران") == (("تهران",), [], []))

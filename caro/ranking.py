@@ -222,6 +222,9 @@ _LOW_MILEAGE_CUE = re.compile(
 #                 words («قفل مرکزی»).
 #   not read      «خراسان» and «آذربایجان» alone: each begins the names of
 #                 several provinces, so none of them is meant.
+#   not read      «خلیج فارس»: it holds a province's name and is not one. It is
+#                 declined wherever it stands, with what stands before it --
+#                 «در خلیج فارس», «غیر از خلیج فارس» -- the way a family is.
 #
 # What the corpus says to the constraint is `webapp/api/constraints.judge`'s
 # to say; this decides only what the buyer asked.
@@ -230,9 +233,13 @@ _PROVINCE_BY_TEXT.update({normalize_fa(seen): meant
                           for seen, meant in PROVINCE_SPELLINGS.items()})
 _PROVINCE_FAMILIES = frozenset({"خراسان", "آذربایجان"})
 _PLAIN_WORDS = frozenset({"مرکزی", "گلستان"})
+# A name that holds a province's and is not a province. It is matched as one
+# name, so the «فارس» inside it is never read on its own.
+_NOT_PROVINCES = frozenset({"خلیج فارس"})
 _PLACE = re.compile(
     r"(?<!\w)(?:" + "|".join(re.escape(n) for n in sorted(
-        [*_PROVINCE_BY_TEXT, *_PROVINCE_FAMILIES], key=len, reverse=True))
+        [*_PROVINCE_BY_TEXT, *_PROVINCE_FAMILIES, *_NOT_PROVINCES],
+        key=len, reverse=True))
     + r")(?!\w)")
 
 _PLACE_WORD = r"(?:(?:در|توی|تو|استان|شهر)\s+){0,2}"
@@ -300,7 +307,7 @@ def read_provinces(text: str) -> PlaceReading:
 
         read = []
         for s, e, name in g:
-            if name in _PROVINCE_FAMILIES or (
+            if name in _PROVINCE_FAMILIES or name in _NOT_PROVINCES or (
                     name in _PLAIN_WORDS and mode != "in"):
                 declined.append(q[begin:e].strip()
                                 if s == first and mode == "in" else name)
