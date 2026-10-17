@@ -69,6 +69,7 @@ export const UNCHECKED_FA: Record<ConstraintKey, string> = {
   budget: 'قیمت نقدی ثبت‌نشده',
   year: 'سال ساخت ثبت‌نشده',
   mileage: 'کارکرد ثبت‌نشده',
+  province: 'استان ثبت‌نشده',
   accident: 'وضعیت بدنه ثبت‌نشده',
   unclear_documents: 'وضعیت سند ثبت‌نشده',
   manual: 'نوع گیربکس ثبت‌نشده',

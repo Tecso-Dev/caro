@@ -210,6 +210,7 @@ def _intent(spec) -> Intent:
         models=list(spec.model_hints),
         year_min=spec.year_min,
         max_mileage_km=spec.max_mileage_km,
+        provinces=list(spec.provinces),
         use_case=spec.use_case,
         risk_profile=spec.risk_profile,
         deal_breakers=list(spec.deal_breakers),

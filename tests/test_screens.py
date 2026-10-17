@@ -1027,6 +1027,50 @@ if _out9 is not None and _cout is not None:
           == {"stated", "city", "none"},
           why or f"e.g. {_coff10[:2]}")
 
+
+# ---------------------------------------------------------------------------
+print("\n11 — the panel says the province the buyer named")
+# ---------------------------------------------------------------------------
+# A province is a constraint like the others (D82). The intent panel lists it
+# under «آنچه از جمله‌ی تو فهمیدیم» when one was named, and says nothing of it
+# otherwise: a line for a constraint never stated would claim a reading that
+# was not made. A listing held apart for want of one says so with
+# `UNCHECKED_FA`, a `Record` over `ConstraintKey` that the build holds to the
+# union and this section holds to the other phrases.
+def _intent11(**kw) -> schemas.Intent:
+    # The parser always names a risk profile, so the panel always has a line
+    # to draw; an intent without one would draw its empty sentence instead.
+    return schemas.Intent(
+        query="t", risk_profile="balanced", weights=schemas.Weights(
+            value=0.35, risk=0.25, running_cost=0.15, liquidity=0.10,
+            mileage=0.10, recency=0.05), **kw)
+
+
+_p11, why = node({"component": "components/IntentPanel.tsx",
+                  "export": "default",
+                  "props": [{"intent": as_json(_intent11(
+                                provinces=["تهران", "اصفهان"]))},
+                            {"intent": as_json(_intent11())}],
+                  "consts": {"module": "lib/format.ts",
+                             "names": ["UNCHECKED_FA"]}})
+check("IntentPanel could be drawn for an intent with provinces and for one "
+      "without", _p11 is not None, why)
+if _p11 is not None:
+    def _facts11(html: str) -> dict[str, str]:
+        return {_text(k).strip(): _text(v).strip() for k, v in re.findall(
+            r"<dt[^>]*>(.*?)</dt>\s*<dd[^>]*>(.*?)</dd>", html, re.S)}
+
+    _two11, _none11 = (_facts11(h) for h in _p11["markup"])
+    check("  a province named is listed under «استان», any-of, in the order "
+          "named", _two11.get("استان") == "تهران، اصفهان", str(_two11))
+    check("  none named: no line for it, and the rest of the panel is drawn",
+          "استان" not in _none11 and "پروفایل ریسک" in _none11, str(_none11))
+    _phrase11 = _p11["consts"]["UNCHECKED_FA"]
+    check("  a listing apart for want of one has a phrase of its own",
+          "استان" in _phrase11.get("province", "")
+          and list(_phrase11.values()).count(_phrase11.get("province")) == 1,
+          str(_phrase11.get("province")))
+
 print()
 if FAILS:
     print(f"FAILED ({len(FAILS)}): " + ", ".join(FAILS))

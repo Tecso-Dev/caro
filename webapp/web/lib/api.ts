@@ -162,10 +162,11 @@ export interface EvidenceItem {
 
 /** The constraints a listing can fail to be checked against — the names
  *  `webapp/api/constraints.py` judges them under: three stated as numbers,
- *  then the red lines under their `DEAL_BREAKER_CUES` names. The contract
- *  suite holds this union to the Python Literal member for member. */
+ *  the province, then the red lines under their `DEAL_BREAKER_CUES` names.
+ *  The contract suite holds this union to the Python Literal member for
+ *  member. */
 export type ConstraintKey =
-  | 'budget' | 'year' | 'mileage'
+  | 'budget' | 'year' | 'mileage' | 'province'
   | 'accident' | 'unclear_documents' | 'manual' | 'repaint';
 
 /** A listing that breaks none of the buyer's constraints and could not be
@@ -209,6 +210,7 @@ export interface Intent {
   models: string[];
   year_min: number | null;
   max_mileage_km: number | null;
+  provinces: string[];
   use_case: string | null;
   risk_profile: string | null;
   deal_breakers: string[];

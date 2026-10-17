@@ -1041,11 +1041,14 @@ from webapp.api import constraints                                  # noqa: E402
 
 def _L(price=500_000_000, *, status="display_confirmed", kind="cash",
        year=1398, km=100_000, ms="plausible", cond="intact", docs=False,
-       gearbox="automatic", trim=None):
+       gearbox="automatic", trim=None, city=None, source=None):
+    # `city` is what the reader calls the corpus's `province`; `source` is
+    # `province_source`, which the judge does not read.
     return SimpleNamespace(asking_price_toman=price, price_status=status,
                            price_kind=kind, year_jalali=year, mileage_km=km,
                            mileage_status=ms, body_condition=cond,
-                           document_issue=docs, gearbox=gearbox, trim=trim)
+                           document_issue=docs, gearbox=gearbox, trim=trim,
+                           city=city, province_source=source)
 
 
 def _u(x, spec):
@@ -1113,7 +1116,8 @@ check("every red line the parser can record has a rule",
       f"no rule: {sorted(set(DEAL_BREAKER_CUES) - set(constraints.RED_LINES))}")
 check("  and every name a listing can be unchecked on is one the client knows",
       set(typing.get_args(schemas.ConstraintKey))
-      == {"budget", "year", "mileage"} | set(constraints.RED_LINES),
+      == {"budget", "year", "mileage", "province"}
+      | set(constraints.RED_LINES),
       str(sorted(typing.get_args(schemas.ConstraintKey))))
 check("«تصادفی نباشه»: an accident is left out, a stated body is a match, "
       "silence is named",
@@ -1145,6 +1149,56 @@ check("  a red line with no rule is not met, it is unknown",
       constraints.judge(_L(), IntentSpec(raw_query="t",
                                          deal_breakers=("no_such_rule",)))
       == {"no_such_rule": "unknown"})
+
+
+# A province the buyer names. From the one field that answers it; several are
+# any-of; a province known from the city's name meets it as a stated one does
+# (the table beside the answer says which, D81); and silence is unknown, never
+# met.
+_PROV = IntentSpec(raw_query="t", provinces=("تهران",))
+_PROV2 = IntentSpec(raw_query="t", provinces=("تهران", "اصفهان"))
+check("«در تهران»: a listing in Tehran meets it, one elsewhere is left out, "
+      "one with no province is named",
+      _u(_L(city="تهران"), _PROV) == []
+      and _u(_L(city="اصفهان"), _PROV) is None
+      and _u(_L(city=None), _PROV) == ["province"])
+check("  an empty string is no province",
+      _u(_L(city=""), _PROV) == ["province"])
+check("  several named are any-of: either meets it, a third is left out",
+      _u(_L(city="تهران"), _PROV2) == []
+      and _u(_L(city="اصفهان"), _PROV2) == []
+      and _u(_L(city="یزد"), _PROV2) is None
+      and _u(_L(city=None), _PROV2) == ["province"])
+check("  a province known from the city's name meets it as a stated one does",
+      _u(_L(city="تهران", source="city"), _PROV) == []
+      and _u(_L(city="تهران", source="stated"), _PROV) == []
+      and _u(_L(city="اصفهان", source="city"), _PROV) is None)
+check("  it is judged when stated and not otherwise",
+      constraints.judge(_L(city="تهران"), IntentSpec(raw_query="t")) == {}
+      and constraints.judge(_L(city="تهران"), _PROV) == {"province": "met"})
+check("  beside the other constraints it is named in the order judged: "
+      "after the odometer, before the red lines",
+      _u(_L(None, status="absent", kind="negotiable", year=None, city=None,
+            cond=None),
+         IntentSpec(raw_query="t", budget_max_toman=600_000_000,
+                    year_min=1395, provinces=("تهران",),
+                    deal_breakers=("accident",)))
+      == ["budget", "year", "province", "accident"])
+check("  and one broken constraint leaves a listing out, a province or not",
+      _u(_L(city=None, km=400_000),
+         IntentSpec(raw_query="t", max_mileage_km=150_000,
+                    provinces=("تهران",))) is None
+      and _u(_L(city="اصفهان", km=None, ms="unknown"),
+             IntentSpec(raw_query="t", max_mileage_km=150_000,
+                        provinces=("تهران",))) is None)
+check("IntentSpec states no province unless one is stated, and the payload "
+      "says so",
+      IntentSpec(raw_query="t").provinces == ()
+      and api._intent(IntentSpec(raw_query="t")).provinces == [])
+check("  and carries the provinces stated, in the order stated",
+      api._intent(IntentSpec(raw_query="t",
+                             provinces=("اصفهان", "تهران"))).provinces
+      == ["اصفهان", "تهران"])
 
 
 # The red lines read off the artifact's own field names, so that the rule is

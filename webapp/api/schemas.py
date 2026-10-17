@@ -207,11 +207,11 @@ class EvidenceItem(BaseModel):
 
 # The constraints a listing can fail to be checked against, by the names
 # `webapp/api/constraints.py` judges them under: the three the buyer states as
-# numbers, then the red lines under their `DEAL_BREAKER_CUES` names. A Literal
-# for the same reason `FaultCode` is one: the client draws a sentence for each
-# member, and a member it has no sentence for would reach the screen as a bare
-# token.
-ConstraintKey = Literal["budget", "year", "mileage",
+# numbers, the province, then the red lines under their `DEAL_BREAKER_CUES`
+# names. A Literal for the same reason `FaultCode` is one: the client draws a
+# sentence for each member, and a member it has no sentence for would reach the
+# screen as a bare token.
+ConstraintKey = Literal["budget", "year", "mileage", "province",
                         "accident", "unclear_documents", "manual", "repaint"]
 
 
@@ -272,6 +272,9 @@ class Intent(BaseModel):
     models: list[str] = Field(default_factory=list)
     year_min: int | None = None
     max_mileage_km: int | None = None
+    # The provinces named as where the car should be; any one meets it. Empty
+    # when none was stated.
+    provinces: list[str] = Field(default_factory=list)
     use_case: str | None = None
     risk_profile: str | None = None
     deal_breakers: list[str] = Field(default_factory=list)

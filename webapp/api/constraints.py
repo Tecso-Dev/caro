@@ -87,6 +87,18 @@ def asking_price(x) -> int | None:
 # The ranked path has no rule for the last two, and lets an unknown through
 # all four. It ranks nothing on a real corpus yet (D43), and it is not
 # changed here.
+#
+# A province the buyer names is the one constraint that is not a number and
+# not a red line. It is judged from the one field that answers it, the
+# province the listing carries — `city` on the object the reader returns, the
+# corpus's `province` — and a province known from the city's name meets it as
+# a stated one does: «تهران، آذری» is in Tehran (D74). The table beside the
+# answer says which it was («از روی نام شهر», D81), so the match is never
+# presented as more than it is. Several named are any-of. A listing with no
+# province is `unknown`, which is the common case on run13, where 34 of 74 rows
+# carry one: the answer there is the few that meet it and the many held apart,
+# not the few alone. The ranked path has no rule for this either — `Row`
+# carries no province — and it is the same pinned omission.
 _LADDER_ABOVE_INTACT = frozenset(
     {"minor_paint", "multi_paint", "replaced_part", "accident"})
 
@@ -182,6 +194,11 @@ def judge(x, spec) -> dict[str, Verdict]:
         m = odometer(x)
         out["mileage"] = ("unknown" if m is None
                           else "broken" if m > spec.max_mileage_km else "met")
+
+    if spec.provinces:
+        p = getattr(x, "city", None)
+        out["province"] = ("unknown" if not p
+                           else "met" if p in spec.provinces else "broken")
 
     for line in spec.deal_breakers:
         rule = RED_LINES.get(line)

@@ -237,6 +237,11 @@ class IntentSpec:
     model_hints: tuple[str, ...] = ()
     year_min: int | None = None
     max_mileage_km: int | None = None
+    # Where the buyer said the car should be: the provinces named, any one of
+    # which meets it. Empty when none was stated. The search over listings
+    # judges it (webapp/api/constraints.py); the ranked path does not — an
+    # appraisal Row carries no province, and `_passes` has nothing to compare.
+    provinces: tuple[str, ...] = ()
     use_case: str = "unspecified"
     deal_breakers: tuple[str, ...] = ()
     weights: Weights = field(default_factory=Weights)

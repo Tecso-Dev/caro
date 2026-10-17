@@ -63,6 +63,10 @@ export default function IntentPanel({ intent }: { intent: Intent }) {
   if (intent.max_mileage_km != null) {
     known.push(['سقف کارکرد', `${faNum(intent.max_mileage_km)} کیلومتر`]);
   }
+  if (intent.provinces.length) {
+    // Several are any-of: a car in any of them meets it.
+    known.push(['استان', intent.provinces.join('، ')]);
+  }
   if (intent.use_case && intent.use_case !== 'unspecified') {
     known.push(['کاربرد', USE_CASE_FA[intent.use_case] ?? intent.use_case]);
   }
