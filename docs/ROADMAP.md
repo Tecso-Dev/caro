@@ -67,10 +67,31 @@ intent → explain the best choice**.
    - A city (مشهد, شیراز, کرج) is not read (D74), and in a clause that names
      a model it is dropped without a word, because such a clause is taken
      as understood whole. That is the clause rule's fault, not the
-     reader's, and it wants a round of its own: what the parser leaves
-     unparsed, judged by what remains of the sentence and not by clause.
+     reader's. Measured (D83): of 350 phrasings of 35 cities, 10 are listed
+     under «نفهمیدیم» and 340 are dropped without a word. Of two rules
+     tried on what the parser leaves, the owner chose the cue rule: a cue
+     the reader already knows («در», «توی», «ساکن», «نزدیک», «غیر از») is
+     listed with the word after it. It shows the city in 220 of the 350,
+     and not when it stands bare or after a budget. Not built; it comes in
+     a round of its own, with its predictions written first.
    - «تهرانپارس» adds the model `pars`, because the alias is matched as a
-     substring. It was so before this round.
+     substring; «پارس‌آباد» does the same, «شاهین‌شهر» adds `shahin` and
+     «شهریار» sets a commute use. Neither rule shows these cities. It was
+     so before D82; item 4 has the rest.
+
+4. **What the parser drops without a word** (D83). Three ways, found while
+   the cities were measured and tried on the real parser, nothing more. A
+   distance with no «کارکرد» before it is not read and not listed, a cap
+   («۲۰۶ زیر ۱۰۰ هزار کیلومتر») or a bare figure («پراید ۵۰ هزار کیلومتر»).
+   The budget clause takes everything after its amount up to the next «،»,
+   so a word after the amount goes with it, and
+   «پراید تا ۳۰۰ میلیون در مشهد» loses the city. A cue or a model alias is
+   matched inside a longer word: «محدوده» sets a flexible budget, «بارفروش»
+   a cargo use, «پارس‌آباد» the model `pars`. The owner asked for all three
+   to be measured next, and what comes first is that: how many inputs each
+   touches, and what mending it does to the 51 queries the suites hand the
+   parser, with the predictions written beforehand. None is changed before
+   then.
 
 ## Next — the product gaps
 
