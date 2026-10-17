@@ -104,10 +104,14 @@ FIELDS: dict[str, Eligibility] = {
     "seller_type": Eligibility("SOURCE_BACKED"),
     # On all 73 rows of run16 (FIELD_PROVENANCE.md). The car page draws
     # it, with how it was known, and so do the lists an ungated corpus
-    # serves — search's tables and compare's evidence rows (D81). Nothing
-    # filters on it yet: a misread there would drop a car from an answer
-    # without a word. On run14, 76 of 77; on run13, 34 of 74.
-    "province": Eligibility("SOURCE_BACKED", card=True, detail=True),
+    # serves — search's tables and compare's evidence rows (D81). A facet
+    # since D82: «در تهران» is a constraint a buyer states, and the search
+    # judges it against this field (webapp/api/constraints.py) — a listing
+    # in the province meets it, one in another is left out, and one with
+    # none is held apart and named, not dropped. On run14, 76 of 77; on
+    # run13, 34 of 74.
+    "province": Eligibility("SOURCE_BACKED", card=True, detail=True,
+                            facet=True),
     # `stated` on 42 rows of run16 and `city` on 31. Drawn beside the
     # province wherever the province is drawn, so that a province read from
     # a city's name is never shown as stated. Not a key in run13, which

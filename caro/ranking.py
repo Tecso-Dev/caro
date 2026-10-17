@@ -42,6 +42,7 @@ from typing import Protocol, Sequence
 import numpy as np
 
 from caro.appraisal import QUANTILES, MarketEstimator, NotBenchmarked, Row
+from caro.ingest.persian import PROVINCE_SPELLINGS, PROVINCES
 
 # ---------------------------------------------------------------------------
 # Persian text normalisation
@@ -186,6 +187,142 @@ DEAL_BREAKER_CUES: dict[str, tuple[str, ...]] = {
 # really are vague.
 _LOW_MILEAGE_CUE = re.compile(
     r"(?:کم\s*کارکرد(?:ه|ی)?|کم\s*کار|کارکرد\s*کم(?:ی)?)\b")
+
+
+# ---------------------------------------------------------------------------
+# Where the car should be
+# ---------------------------------------------------------------------------
+#
+# A province named in the query is a constraint (D82). The names are the ones
+# the corpus carries -- `PROVINCES`, and the one spelling `PROVINCE_SPELLINGS`
+# holds -- read as whole words, and nothing else. No city is read: the
+# vocabulary is not a geography (D74), so «مشهد» stays what it was, a word the
+# parser did not map.
+#
+# This reading is hazardous as no other cue here is, because a wrong one
+# inverts and says nothing: «غیر از تهران» taken for Tehran would answer with
+# nothing but Tehran's cars, under a panel that says «استان: تهران». So a name
+# is read only where it is a place the buyer wants the car to be in, and each
+# phrase that names a province and is not read stays on the page, under
+# «بخش‌هایی که نفهمیدیم».
+#
+#   read          a locative before it -- در · توی · تو · ساکن · استان, with
+#                 «شهر» or «استان» between: «در تهران», «ساکن استان یزد»
+#   read, and     nothing before it: «پراید تهران», «پراید، تهران». The panel
+#   assumed       says «تهران» را استان تهران گرفتیم, to be corrected.
+#   several       joined by « و », « یا » or «،», they are one group and take
+#                 the first one's reading: «در تهران یا اصفهان». Any one meets
+#                 it.
+#   not read      a negation before -- غیر (از) · به جز · بجز · نه · خارج از ·
+#                 بدون -- or after -- نباشه · نیست · نمی‌خوام; a nearness
+#                 -- نزدیک (به) · اطراف · حوالی · حومه; or a plate -- «پلاک
+#                 تهران» says where a car was registered, not where the
+#                 listing is, and no corpus field carries a plate.
+#   not read      «مرکزی» and «گلستان» with no locative: they are ordinary
+#                 words («قفل مرکزی»).
+#   not read      «خراسان» and «آذربایجان» alone: each begins the names of
+#                 several provinces, so none of them is meant.
+#
+# What the corpus says to the constraint is `webapp/api/constraints.judge`'s
+# to say; this decides only what the buyer asked.
+_PROVINCE_BY_TEXT: dict[str, str] = {normalize_fa(p): p for p in PROVINCES}
+_PROVINCE_BY_TEXT.update({normalize_fa(seen): meant
+                          for seen, meant in PROVINCE_SPELLINGS.items()})
+_PROVINCE_FAMILIES = frozenset({"خراسان", "آذربایجان"})
+_PLAIN_WORDS = frozenset({"مرکزی", "گلستان"})
+_PLACE = re.compile(
+    r"(?<!\w)(?:" + "|".join(re.escape(n) for n in sorted(
+        [*_PROVINCE_BY_TEXT, *_PROVINCE_FAMILIES], key=len, reverse=True))
+    + r")(?!\w)")
+
+_PLACE_WORD = r"(?:(?:در|توی|تو|استان|شهر)\s+){0,2}"
+_NEGATED_BEFORE = re.compile(
+    r"(?:^|\s)(?:غیر(?:\s+از)?|به\s*جز|بجز|نه|خارج\s+از|بدون)\s+"
+    + _PLACE_WORD + r"$")
+_NEAR_BEFORE = re.compile(
+    r"(?:^|\s)(?:نزدیکی?(?:\s+به)?|اطراف|حوالی|حومه)\s+" + _PLACE_WORD + r"$")
+_PLATE_BEFORE = re.compile(
+    r"(?:^|\s)پلاک(?:\s*:\s*|\s+)(?:(?:استان|شهر)\s+)?$")
+_IN_BEFORE = re.compile(
+    r"(?:^|\s)(?:(?:در|توی|تو|ساکن)\s+(?:(?:استان|شهر)\s+)?|استان\s+)$")
+_NEGATED_AFTER = re.compile(
+    r"\s*(?:نباش(?:ه|د|ن|ند)?|نیست(?:ن)?|نمی\s*خوا(?:م|هم|یم)"
+    r"|نخوا(?:م|هم|یم))(?!\w)")
+_BETWEEN_NAMES = re.compile(r"\s*(?:،|,|و|یا)?\s*")
+
+
+@dataclass(frozen=True)
+class PlaceReading:
+    """What `read_provinces` made of a query.
+
+    `understood` is text of the normalised query the parser acted on, handed
+    to the clause rule as a cue is; `declined` is text that names a province
+    and was not taken, which the parser lists as not understood by hand,
+    because a clause that names a model is otherwise taken as understood
+    whole.
+    """
+    provinces: tuple[str, ...] = ()
+    understood: tuple[str, ...] = ()
+    declined: tuple[str, ...] = ()
+    assumptions: tuple[str, ...] = ()
+
+
+def read_provinces(text: str) -> PlaceReading:
+    q = normalize_fa(text)
+    groups: list[list[tuple[int, int, str]]] = []
+    for m in _PLACE.finditer(q):
+        hit = (m.start(), m.end(), m.group(0))
+        if groups and _BETWEEN_NAMES.fullmatch(q[groups[-1][-1][1]:hit[0]]):
+            groups[-1].append(hit)
+        else:
+            groups.append([hit])
+
+    provinces: list[str] = []
+    understood: list[str] = []
+    declined: list[str] = []
+    assumptions: list[str] = []
+    for g in groups:
+        first, end = g[0][0], g[-1][1]
+        before = q[:first]
+        mode, begin = "bare", first
+        for kind, rx in (("not", _NEGATED_BEFORE), ("not", _NEAR_BEFORE),
+                         ("not", _PLATE_BEFORE), ("in", _IN_BEFORE)):
+            m = rx.search(before)
+            if m:
+                mode, begin = kind, m.start()
+                break
+        after = _NEGATED_AFTER.match(q, end)
+        if after and mode != "not":
+            mode, end = "not", after.end()
+        if mode == "not":
+            declined.append(q[begin:end].strip())
+            continue
+
+        read = []
+        for s, e, name in g:
+            if name in _PROVINCE_FAMILIES or (
+                    name in _PLAIN_WORDS and mode != "in"):
+                declined.append(q[begin:e].strip()
+                                if s == first and mode == "in" else name)
+            else:
+                read.append((s, e, _PROVINCE_BY_TEXT[name]))
+        if not read:
+            continue
+        for _, _, province in read:
+            if province not in provinces:
+                provinces.append(province)
+        understood.append(q[begin if mode == "in" else read[0][0]:read[-1][1]]
+                          .strip())
+        if mode == "bare":
+            for s, e, province in read:
+                note = f"«{q[s:e]}» را استان {province} گرفتیم"
+                if note not in assumptions:
+                    assumptions.append(note)
+
+    return PlaceReading(
+        provinces=tuple(provinces), understood=tuple(understood),
+        declined=tuple(dict.fromkeys(declined)),
+        assumptions=tuple(assumptions))
 
 
 # ---------------------------------------------------------------------------
@@ -370,6 +507,9 @@ class RuleIntentParser:
         for k in breakers:
             acted.extend(c for c in DEAL_BREAKER_CUES[k] if c in q)
 
+        place = read_provinces(q)
+        acted.extend(place.understood)
+
         risk = ("risk_averse" if ("accident" in breakers or
                                   use_case == "family_first_car")
                 else "risk_tolerant" if use_case == "resale_flip"
@@ -384,6 +524,7 @@ class RuleIntentParser:
             assumptions.append(
                 f"وزن‌ها از پیش‌فرض «{USE_CASE_FA.get(use_case, use_case)}» "
                 "شروع شد — قابل تغییر است")
+        assumptions.extend(place.assumptions)
 
         # What is left for «بخش‌هایی که نفهمیدیم»: the clauses between
         # commas, once the clauses that set a number are taken out, less any
@@ -414,11 +555,21 @@ class RuleIntentParser:
                                      for als in MODEL_ALIASES.values()
                                      for al in als)
                          and not any(s < b and e > a for s, e in spans))[:4]
+        # A phrase that names a province and was not taken is listed by hand:
+        # «پراید غیر از تهران» is a clause that names a model, so the rule
+        # above has already counted it understood. One the clauses already
+        # list is not listed twice, and one that holds a listed clause
+        # replaces it.
+        for d in place.declined:
+            if not any(d in u for u in unparsed):
+                unparsed = tuple(u for u in unparsed
+                                 if u.strip() not in d) + (d,)
 
         return IntentSpec(
             raw_query=query, budget_max_toman=budget_max,
             budget_min_toman=budget_min, budget_hard=hard,
             model_hints=models, year_min=year_min, max_mileage_km=max_km,
+            provinces=place.provinces,
             use_case=use_case, deal_breakers=breakers,
             weights=w.normalized(), risk_profile=risk,
             assumptions=tuple(assumptions), unparsed=unparsed)

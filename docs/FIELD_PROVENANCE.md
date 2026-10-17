@@ -94,7 +94,7 @@ for k in sorted({k for r in rows for k in r}):
 | `dealer_badge` | `SOURCE_BACKED` | 73/73 | 2 | no | no | no | no | `true` on two rows, the two `seller_type` reads as dealers, and `false` on the rest |
 | `document_issue` | `DERIVED` | — | — | no | no | no | no | not a key in run16: no row's text names a phrase the parser knows; run14 carried it on one row — see below |
 | `seller_type` | `SOURCE_BACKED` | 2/73 | 1 | no | no | no | no | inferred only from a business badge, never from a person (D26): `dealer` on the two rows that carry one, the first value a real run has produced |
-| `province` | `SOURCE_BACKED` | 73/73 | 23 | yes | yes | no | no | read off the page by position (D74); the car page and the lists draw it with how it was known, and nothing chooses it — see below |
+| `province` | `SOURCE_BACKED` | 73/73 | 23 | yes | yes | no | yes | read off the page by position (D74); the car page and the lists draw it with how it was known. `facet` because «در تهران» is a constraint a buyer states and the search judges it against this field (`webapp/api/constraints.py`, D82) — see below |
 | `province_source` | `SOURCE_BACKED` | 73/73 | 2 | yes | yes | no | no | `stated` or `city`: whether the line names the province or a city sharing its name gave it — 42 and 31 here. Drawn beside the province, never apart from it. Not a key in run13, which predates it |
 | `gearbox` | `SOURCE_BACKED` | 73/73 | 2 | no | no | no | yes | the structured block's transmission, on every row since `72c2573` carried it across the boundary; `automatic` on one row of run16, a Quik, and `manual` on the rest. `facet` because «اتومات» is a red line a buyer states and the search checks against it (`webapp/api/constraints.py`) — see below |
 | `fuel` | `SOURCE_BACKED` | 73/73 | 3 | no | no | no | no | on every row; nothing reads it yet |
@@ -159,7 +159,7 @@ applies to a filter.
 So UI eligibility has two conditions, not one: enough coverage to be honest,
 and enough distinct values to be useful. On run16 that admits `model` (3),
 `trim` (22), `year_jalali` (20), `color` (7), `condition` (5),
-`asking_price_toman` (50) and `mileage_km` (56) as facets, and excludes
+`asking_price_toman` (50), `mileage_km` (56) and `province` (23) as facets, and excludes
 `make`, `dealer_badge`, `condition_source`, `mileage_status` and
 `product_class_source` — several of which are still worth showing.
 
@@ -224,12 +224,17 @@ names its province, «تهران — از روی نام شهر» where the city 
 corpus serves, search's two tables and compare's evidence rows, in the same
 words. That is `detail` and `card`. On run13 every flag was `no` for
 coverage — a value missing where the market is largest is not one a filter
-may offer — and on run14 that no longer held. What held them was the first
-hazard below, measured on the lines of run16, the corpus served. In a list a
-misread is one row among others, labelled with how it was read; a search
-that read «در تهران» would drop a misread car from its answer without a
-word, so `gate` and `facet` stay `no` until that search is built and
-measured, the round after this one.
+may offer — and on run14 that no longer held. What held them after that was
+the first hazard below, measured on the lines of run16, the corpus served.
+In a list a misread is one row among others, labelled with how it was read;
+a search that reads «در تهران» would drop a misread car from its answer
+without a word. So `facet` is `yes` since D82, after that search was built
+and measured: the buyer chooses it by writing it; a listing whose province
+is known only from its city's name meets it, and the table says so; and a
+listing with no province is held apart and named, never dropped — which is
+run13, where 40 of 74 rows carry none and «پراید در تهران» finds 3 and holds
+31 apart. `gate` stays `no`: a gate is applied to every query, and this one
+only to the query that states it.
 
 Two hazards stand. A district named like a province, after the city, is read
 as that province, stated, because a stated province wins: «تهران، گلستان»
@@ -240,8 +245,10 @@ collected on 2026-10-14 and not published, is the first collection that kept
 them, and run16 the second: none of run15's 48 stated rows stands on such a
 district, and none of run16's 42 — on 22 the line's first part is the
 capital of the province read, and the other 20 were read by hand — and no
-district on either's lines is named as a province is (D79, D80). And a new
-car's mileage is still not read from its line.
+district on either's lines is named as a province is (D79, D80). Since D82
+the search judges the province, so such a row would meet «در گلستان» and be
+left out of «در تهران»; none is known. And a new car's mileage is still not
+read from its line.
 
 ## Price: extraction quality is not plausibility
 
@@ -352,10 +359,8 @@ is a check of the title.
 Card layout, detail layout, which fields share a row, the image question, and
 whether a field with a `PENDING_LIVE_VALIDATION` status is worth a run. It also
 does not close a schema: an optional field may exist in a schema while no
-renderer is allowed to draw it. That is where `province` and
-`province_source` stay for every surface but the car page, until the
-district hazard is measured; and where `gearbox` and `fuel` stay for every
-surface but the one `gearbox` is judged for.
+renderer is allowed to draw it. That is where `gearbox` and `fuel` stay for
+every surface but the one `gearbox` is judged for.
 
 Nothing above is evidence about Divar, Sheypoor or Khodro45. Divar's
 `CarListing` is a richer shape — it carries `city`, `gearbox`, `fuel` and

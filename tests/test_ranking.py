@@ -6,6 +6,9 @@ price? Everything else in CARO is machinery in service of that number.
 Run: PYTHONPATH=. python3 tests/test_ranking.py
 """
 
+import re
+import pathlib
+
 import numpy as np
 
 from caro.appraisal import GlobalQuantiles, MarketEstimator, Row
@@ -14,8 +17,9 @@ from caro.ranking import (
     diversify, normalize_fa, parse_amount, retrieve, winrate_vs_price_sort,
     LEDGER_INPUTS, CONDITION_RISK, IMPUTED_MARK, decision_ledger,
     features_from_listing, risk_from_condition, _passes,
-    USE_CASE_CUES, USE_CASE_FA,
+    USE_CASE_CUES, USE_CASE_FA, read_provinces,
 )
+from caro.ingest.persian import PROVINCES
 from caro.synthetic import build, true_utility
 
 FAILS: list[str] = []
@@ -210,6 +214,160 @@ check("an inferred budget is still disclosed as an inference",
           P.parse("یه ماشین خوب میخوام حدود ۱ میلیارد").assumptions))
 check("  and an explicit budget clause is not labelled a guess",
       not any("سقف بودجه" in a for a in P.parse("تا ۳ میلیارد").assumptions))
+
+
+# ---------------------------------------------------------------------------
+print("\na province is read where it is a place the car should be in (D82)")
+# A province named in a query is a constraint. The reading is the hazardous
+# one: a wrong read inverts and says nothing, so a name is read only where it
+# is a place the buyer wants the car to be in, and a phrase that names one and
+# is not read is listed under «نفهمیدیم» -- by hand, since a clause that names
+# a model is otherwise taken as understood whole. Every phrasing is made here;
+# no log of what buyers write exists, so these test the rules, not the buyers.
+_Q = "پراید"
+_ZWNJ, _AR_YEH = "\u200c", "\u064a"
+
+
+def _where(q):
+    sp = P.parse(q)
+    return sp.provinces, [t.strip() for t in sp.unparsed], list(sp.assumptions)
+
+
+for q, want in [     # a locative before the name: read, nothing left, nothing assumed
+    (f"{_Q} در تهران", ("تهران",)),
+    (f"{_Q} توی اصفهان", ("اصفهان",)),
+    (f"{_Q} تو یزد", ("یزد",)),
+    (f"{_Q} ساکن مازندران", ("مازندران",)),
+    (f"{_Q} استان گیلان", ("گیلان",)),
+    (f"{_Q} در استان تهران", ("تهران",)),
+    (f"{_Q} در شهر تهران", ("تهران",)),
+    (f"{_Q} در سیستان و بلوچستان", ("سیستان و بلوچستان",)),
+    (f"{_Q} در چهارمحال و بختیاری", ("چهارمحال و بختیاری",)),
+    (f"{_Q} در کهگیلویه و بویراحمد", ("کهگیلویه و بویراحمد",)),
+    (f"{_Q} در کهکیلویه و بویراحمد", ("کهگیلویه و بویراحمد",)),
+    (f"{_Q} در آذربایجان شرقی", ("آذربایجان شرقی",)),
+    (f"{_Q} در آذربایجان{_ZWNJ}شرقی", ("آذربایجان شرقی",)),
+    (f"{_Q} در خراسان رضوی", ("خراسان رضوی",)),
+    (f"پرا{_AR_YEH}د در اصفهان", ("اصفهان",)),
+    (f"{_Q} در مرکزی", ("مرکزی",)),
+    (f"{_Q} در گلستان", ("گلستان",)),
+    (f"{_Q} استان مرکزی", ("مرکزی",)),
+    (f"{_Q} در تهران یا اصفهان", ("تهران", "اصفهان")),
+    (f"{_Q} در تهران و البرز", ("تهران", "البرز")),
+    (f"{_Q} در تهران، اصفهان", ("تهران", "اصفهان")),
+    (f"{_Q} در تهران باشه", ("تهران",)),
+    (f"{_Q} پلاک ملی در تهران", ("تهران",)),
+    ("در تهران", ("تهران",)),
+]:
+    got_p, left, said = _where(q)
+    check(f"«{q}» → {list(want)}, nothing left, nothing assumed",
+          got_p == want and not left and not said,
+          f"{got_p} {left} {said}")
+
+def _note(written, province=None):
+    return f"«{written}» را استان {province or written} گرفتیم"
+
+for q, want, notes in [   # no locative: read, and said to be an assumption
+    (f"{_Q} تهران", ("تهران",), [_note("تهران")]),
+    (f"{_Q}، تهران", ("تهران",), [_note("تهران")]),
+    (f"{_Q} تهران یا اصفهان", ("تهران", "اصفهان"),
+     [_note("تهران"), _note("اصفهان")]),
+    (f"{_Q} کهکیلویه و بویراحمد", ("کهگیلویه و بویراحمد",),
+     [_note("کهکیلویه و بویراحمد", "کهگیلویه و بویراحمد")]),
+    (f"{_Q} سیستان و بلوچستان", ("سیستان و بلوچستان",),
+     [_note("سیستان و بلوچستان")]),
+    (f"{_Q} تهران در تهران", ("تهران",), [_note("تهران")]),
+]:
+    got_p, left, said = _where(q)
+    check(f"«{q}» → {list(want)}, read as an assumption the panel shows",
+          got_p == want and not left and said == notes,
+          f"{got_p} {left} {said}")
+
+for q, phrase in [   # named, and not read: listed as not understood
+    (f"{_Q} غیر از تهران", "غیر از تهران"),
+    (f"{_Q} به جز تهران", "به جز تهران"),
+    (f"{_Q} بجز تهران", "بجز تهران"),
+    (f"{_Q} خارج از تهران", "خارج از تهران"),
+    (f"{_Q} نه تهران", "نه تهران"),
+    (f"{_Q} غیر از در تهران", "غیر از در تهران"),
+    (f"{_Q} غیر از تهران و اصفهان", "غیر از تهران و اصفهان"),
+    (f"{_Q} نزدیک تهران", "نزدیک تهران"),
+    (f"{_Q} نزدیک به تهران", "نزدیک به تهران"),
+    (f"{_Q} اطراف تهران", "اطراف تهران"),
+    (f"{_Q} حوالی تهران", "حوالی تهران"),
+    (f"{_Q} حومه تهران", "حومه تهران"),
+    (f"{_Q} پلاک تهران", "پلاک تهران"),
+    (f"{_Q} پلاک: تهران", "پلاک: تهران"),
+    (f"{_Q} پلاک اصفهان", "پلاک اصفهان"),
+    (f"{_Q} تهران نباشه", "تهران نباشه"),
+    (f"{_Q} تهران نباشد", "تهران نباشد"),
+    (f"{_Q} تهران نیست", "تهران نیست"),
+    (f"{_Q} تهران نمی{_ZWNJ}خوام", "تهران نمی خوام"),
+    (f"{_Q} تهران نمیخوام", "تهران نمیخوام"),
+    (f"{_Q} در تهران نباشه", "در تهران نباشه"),
+    (f"{_Q} قفل مرکزی", "مرکزی"),
+    (f"{_Q} شهرک گلستان", "گلستان"),
+    (f"{_Q} مرکزی", "مرکزی"),
+    (f"{_Q} در خراسان", "در خراسان"),
+    (f"{_Q} در آذربایجان", "در آذربایجان"),
+    (f"{_Q} خراسان", "خراسان"),
+]:
+    sp = P.parse(q)
+    left = [t.strip() for t in sp.unparsed]
+    check(f"«{q}» → not read; «{phrase}» is listed as not understood",
+          sp.provinces == () and left == [phrase]
+          and sp.model_hints == ("pride",),
+          f"{sp.provinces} {left} {sp.model_hints}")
+
+for q in [f"{_Q} در مشهد", f"{_Q} در شیراز", f"{_Q} در کرج",
+          f"{_Q} تهرانی", f"{_Q} تهرانپارس"]:
+    check(f"«{q}» → no province: a city, or a word that only holds a name",
+          P.parse(q).provinces == (), str(P.parse(q).provinces))
+
+# What a province beside other constraints does to them, and they to it.
+_sb = P.parse(f"{_Q} زیر ۸۰۰ میلیون در تهران")
+check("a province beside a budget: both are read, nothing is left",
+      _sb.provinces == ("تهران",) and _sb.budget_max_toman == 800_000_000
+      and not _sb.unparsed, f"{_sb.provinces} {_sb.budget_max_toman} {_sb.unparsed}")
+_sn = P.parse(f"{_Q} زیر ۸۰۰ میلیون غیر از تهران")
+check("  a negation inside the budget's own clause is still listed, and the "
+      "budget still read",
+      _sn.provinces == () and _sn.budget_max_toman == 800_000_000
+      and [t.strip() for t in _sn.unparsed] == ["غیر از تهران"],
+      f"{_sn.provinces} {_sn.unparsed}")
+_sx = P.parse(f"{_Q} در خراسان و تهران")
+check("  one name read and one not, in the same group: the first is listed",
+      _sx.provinces == ("تهران",)
+      and [t.strip() for t in _sx.unparsed] == ["در خراسان"],
+      f"{_sx.provinces} {_sx.unparsed}")
+check("  a model is not needed: «در تهران» alone sets the province and "
+      "leaves nothing behind",
+      _where("در تهران") == (("تهران",), [], []))
+
+# Every name the corpus can carry, not the ones picked above.
+check("all 31 provinces are read after «در»",
+      all(P.parse(f"{_Q} در {p}").provinces == (p,) for p in PROVINCES),
+      str([p for p in PROVINCES if P.parse(f"{_Q} در {p}").provinces != (p,)]))
+check("  and not read after «غیر از», each listed whole",
+      all(P.parse(f"{_Q} غیر از {p}").provinces == ()
+          and [t.strip() for t in P.parse(f"{_Q} غیر از {p}").unparsed]
+          == [f"غیر از {p}"] for p in PROVINCES))
+check("  with no cue, all but the two ordinary words are read",
+      all(P.parse(f"{_Q} {p}").provinces
+          == (() if p in ("مرکزی", "گلستان") else (p,)) for p in PROVINCES))
+_rp = read_provinces("پراید در سیستان و بلوچستان")
+check("read_provinces hands the parser the whole phrase as understood, so a "
+      "name with « و » in it is not cut",
+      _rp.provinces == ("سیستان و بلوچستان",)
+      and _rp.understood == ("در سیستان و بلوچستان",)
+      and not _rp.declined and not _rp.assumptions, str(_rp))
+_chips = re.findall(r"'([^']+)'", re.search(
+    r"const EXAMPLES = \[(.*?)\];",
+    (pathlib.Path(__file__).resolve().parent.parent / "webapp" / "web"
+     / "components" / "SearchBox.tsx").read_text(encoding="utf-8"), re.S)[1])
+check(f"none of the {len(_chips)} examples under the search box names a "
+      "province", bool(_chips) and all(P.parse(c).provinces == ()
+                                       for c in _chips), str(_chips))
 
 
 # ---------------------------------------------------------------------------
