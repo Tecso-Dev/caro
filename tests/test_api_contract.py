@@ -449,11 +449,17 @@ with corpus_dir(valid_artifact(product_class="vehicle")):
     check("the refusal is schema-valid", ok, why)
     check("  served is false and a fault says why",
           r.status.served is False and r.fault is not None)
+    # Neither expression may assume the fault is there. A check's detail is
+    # evaluated whether or not it passes, so `r.fault.code` on a corpus that
+    # is ranked (no fault) raised in the middle of the suite, and everything
+    # after section 6 -- section 18 among it -- never ran.
     check("  the fault is the gate, not a corpus fault",
-          r.fault.code == "ESTIMATOR_NOT_GATED", r.fault.code)
+          r.fault is not None and r.fault.code == "ESTIMATOR_NOT_GATED",
+          str(r.fault.code if r.fault else None))
     check("  the parsed intent survives", r.intent.query != "")
     check("  and `still_available` is not a promise — evidence is present",
-          "evidence" in r.fault.still_available and len(r.evidence) > 0)
+          r.fault is not None and "evidence" in r.fault.still_available
+          and len(r.evidence) > 0)
     # The endpoint returns a model; FastAPI turns it into a 200. Nothing here
     # raises, and that is the assertion: an HTTPException would be a 500.
     check("  nothing raised on the way out", True)
