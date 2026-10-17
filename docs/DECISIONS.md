@@ -5593,3 +5593,258 @@ it, which is pinned; the pin turns red the day a `Row` carries a province,
 decide first (the roadmap, item 2). A city is not read: «پراید در مشهد»
 narrows nothing, and the roadmap's third item says what else the reader
 leaves.
+
+## D83 — The Gulf is not a province, and the cities are measured
+
+D82 closed with three things found and not fixed. Section 6 of the contract
+suite stops with an `AttributeError` when a published corpus is ranked, so
+that section 18 never runs in the full suite. «پراید خلیج فارس» reads «فارس»
+as the province, since the name is read wherever it stands. And a city, in a
+clause that names a model, is dropped without a word. The owner decided on
+2026-10-17, of the ways offered for each: the crash gets a commit of its
+own, in the test only; the Gulf becomes a name the reader knows holds a
+province's and is not one; and the cities are measured first, with nothing
+in the tree changed. After the measurement he chose, of the two rules tried
+on them, the cue rule — a cue the reader already knows is listed with the
+word after it — to be built in the next round, after its predictions are
+written, and asked for three things the measurement turned up to be measured
+next, before anything is built for them. None of the four is in this entry's
+commits.
+
+**What was built.** Two commits, on the owner's machine. `3695f0c` guards
+the two expressions in section 6 that read the fault of a refusal:
+`r.fault.code`, which is also the detail of its check and so is evaluated
+whether the check passes or not, and `r.fault.still_available`. They are
+guarded the way the file's other uses of `.fault` already were, and no check
+is added or removed. `6300b82` makes «خلیج فارس» a name the reader knows
+holds a province's and is not one. It stands in the alternation of names,
+longest first, so the «فارس» inside it is never matched alone, and it is
+declined where the families «خراسان» and «آذربایجان» are, whatever stands
+before it, and listed under «نفهمیدیم» with what stands before it:
+«خلیج فارس», «در خلیج فارس», «غیر از خلیج فارس». «فارس», «در فارس» and
+«استان فارس» are read as before. Its tests are, in `test_ranking`, four rows
+of «named, and not read», three of «read» that must stay and one group
+beside a name that is read, and in the contract suite two checks over the
+four published runs. The roadmap drops its bullet that the Gulf is read, and
+says what still is.
+
+**Measured.** Every suite, mutation and build here ran in a network
+namespace with no interface. Each commit is green on its own, the suites and
+the web build with its nine routes, and so is the Gulf commit applied alone
+on the base, without the first. Counted for this entry on the base and on
+each pushed commit, the totals and the two suites that moved:
+
+                                 base   3695f0c   6300b82
+    15 suites                    2311      2311      2321
+    12 without the extras        1767      1767      1775
+    test_api_contract             318       318       320
+    test_ranking                  200       200       208
+
+**The crash.** Reproduced first, on `88beef9`, with the one mutation that
+builds a published corpus gated: 6 checks red and 93 green, and then
+`AttributeError: 'NoneType' object has no attribute 'code'` at line 453,
+with section 18 never reached. With both expressions guarded the suite runs
+to its last line: 254 green and 58 red, in sections 2, 3, 5, 6, 11, 13, 15
+and 18, the last of them section 18's «no published corpus is ranked», with
+the message that says to decide first. Each guard is needed: with the old
+expression of 453 put back the suite stops at 453, and with the old
+expression of 456 put back it stops there, one more check red before it. The
+check still bites: with the API's gate code renamed, the two checks of the
+gate are red, before the fix and after it, and nothing crashes. Without the
+mutation the count is unchanged, 2311.
+
+**The Gulf.** Fifteen phrasings of the Gulf and what stands near it, made
+here, were run on the base and on `6300b82`. The nine that hold «خلیج فارس»
+changed. Eight of them were read as the province فارس, with «فارس» را استان
+فارس گرفتیم in the panel — «غیر از خلیج فارس» and «ساحل خلیج فارس» among
+them, and the two with a second name, «در تهران و خلیج فارس» and
+«خلیج فارس و تهران» — and none is. The ninth, «خلیج فارس نباشه», was never
+read, and is now listed whole where it listed «فارس نباشه»; the commit
+message counts the nine together. The six that do not hold it did not
+change: «فارس», «در فارس», «استان فارس», «فارسی», and the two spellings
+left, «خلیجفارس» with no space, which matches nothing, and «خلیجِ فارس» with
+a kasra, which is read as the province, since a diacritic is not stripped.
+The five manufacturers' names that hold a province's, «کرمان موتور»,
+«یزد خودرو», «گیلان خودرو», «مازندران خودرو» and «کرمان خودرو», are read as
+the province, bare, with the assumption shown, before and after: the same
+kind as the Gulf, not asked for, and left. The 51 distinct queries the
+suites hand the parser parse to the same intent in every field, 51 of 51,
+the rows of D82's battery are the same, and «پراید در X» for the 31
+provinces reads 31 of 31. On the four published runs «پراید خلیج فارس» gives
+the answer «پراید» gives, states no province, and leaves the phrase under
+«نفهمیدیم». Applied alone on the base the commit gives 2321 across 15 suites
+and 1775 across 12.
+
+**Mutations.** Five, one change to the code each, run on the tip of the Gulf
+commit. The predictions file named each, and the suite that should turn red,
+before it ran. All five turned something red, and the table says where:
+
+    on the tip of 6300b82                         ranking  contract
+    the Gulf is not among the names                     5         2
+    the Gulf is found and read as the province          4         2
+    the Gulf is read after a locative                   2         0
+    the Gulf is declined and not listed                 3         1
+    Fars alone is declined too                          5         4
+
+The third is red in `test_ranking` alone: the contract suite's one check has
+no locative in it, so a Gulf read after «در» is seen there only by the unit
+tests.
+
+**The cities.** Measured with nothing in the tree changed. A copy of
+`ranking.py`, with one line added in memory to keep what the parser computes
+on the way and throws away, returned the parser's own intent on 531 inputs
+of 531. Two rules were tried over what the parser leaves, both written down
+before either ran. The residue rule lists every run of adjacent words left
+in a clause once the model names, the spans the parser acted on, the
+province names and the digits are blanked, less a stoplist built from the 51
+queries alone: six words that are no request, «ماشین», «برای», «یه», «با»,
+«دارد» and «میخوام». The cue rule lists a cue the province reader already
+knows — «در», «توی», «تو», «ساکن», «اطراف», «حوالی», «حومه», «بجز», «پلاک»,
+«نزدیک», «نزدیکی», «غیر», «به جز», «خارج از» — with the one or two words
+after it, past «استان» or «شهر», that are not digits, model names, acted
+spans or provinces. Thirty-five cities, none a province's name, in ten
+placements beside «پراید» made 350 phrasings: «در X», bare, «ساکن X», after
+a comma, «توی X», «نزدیک X», «غیر از X», after a budget as in
+«تا ۳۰۰ میلیون در X», first before «پراید», and alone before a comma. The
+list first held 36. «همدان» is a province's name, which the reader reads,
+and the first run, of 360, counted 12 under «نفهمیدیم», two of them
+«نزدیک همدان» and «غیر از همدان», which the reader declines. It was found
+after that run and before any prediction was scored; the run was repeated on
+the 35, which are the numbers here, and the first output is kept.
+
+Today the city is under «نفهمیدیم» in 10 of the 350: five names of more than
+six characters, in the two placements where the city is a clause of its own.
+The other 340 are dropped without a word: 245 because the clause names a
+model and is taken as understood whole, 60 because the clause is six
+characters or fewer, and 35 because the budget clause takes everything after
+its amount, the city with it. The residue rule shows the city in 315 of the
+350 (90%): the 10 seen today and 305 more, in every placement but the
+budget's. The cue rule shows it in 220 (62.9%): the 10 seen today and the
+210 of the six placements that hold a cue, where the three that leave the
+city bare and the one after a budget add nothing. Four names that hold
+something the parser acts on as a substring — «شاهین‌شهر», which adds the
+model `shahin`, «پارس‌آباد» and «تهرانپارس», which add `pars`, and «شهریار»,
+which sets a commute use — made 40 phrasings in which neither rule shows the
+city, 0 of 40; the residue rule lists a fragment, «شهر», «آباد» or «ار», and
+every one of the 40 changes the intent in a field the buyer did not write.
+
+    the city is listed as not understood       n  as is  residue   cue
+    35 cities in 10 placements               350     10      315   220
+    4 names that hold an alias or a cue       40      0        0     0
+
+What each rule adds elsewhere is counted on the 51 queries the suites hand
+the parser, and on 60 ordinary sentences made here, with no city in them and
+none used to build the stoplist:
+
+    queries that gain an item               n  residue   cue
+    the 51 the suites hand the parser      51        6     0
+    60 ordinary sentences, no city         60       44     3
+
+With an empty stoplist the residue rule adds an item to 16 of the 51. With
+the six words it adds one to 6: «خوب» twice, «قطعات ارزون», «کم کارکرد»,
+«مشکی», and «زیر» with «هزار کیلومتر» from
+«۲۰۶ زیر ۱۰۰ هزار کیلومتر، بودجه ۹۰۰ میلیون», which is a request the parser
+dropped (under «Found, and not fixed»). The cue rule adds nothing to the 51.
+On the 60 sentences the residue rule lists something on 44 (73%), 48 items,
+0.8 a sentence. By hand, 11 of the 48 are function words, politeness or the
+rest of a request the parser did read — «سلام» twice, «توی», «در», «یا»,
+«اگه امکانش هست», «قیمت», «در شهر», «نفره», «مناسب» and «توی بودجه ام باشه»
+— and the others are requests the parser ignores: a colour, a trim, a body
+type, a condition. The cue rule lists something on 3 (5%), «در حد نو»,
+«در حال حاضر» and «توی بودجه ام», and a stoplist of three words, «حد», «حال»
+and «بودجه», would silence them. None of what either rule adds names a
+place, since the 111 queries hold no city. What the numbers inform is
+therefore less the cities than what the page says of the rest of a sentence:
+the residue rule gives up the contract that a clause which names a model is
+understood whole, and the cue rule keeps it and adds a cue. Against the
+assertions that stand, the residue rule turns 6 red, all in `test_ranking` —
+it lists «خوب», «قطعات ارزون», «باشه» and «پلاک ملی» where the tests say
+nothing is left, and a second word beside «مرکزی» and «گلستان» — and the cue
+rule turns 1, «پراید پلاک ملی در تهران», whose «پلاک ملی» it lists. The
+other 14 suites are green under both.
+
+**Found, and not fixed.** Three more ways the parser drops words without a
+word, each tried on the real parser and measured no further. A distance with
+no «کارکرد» before it is not read and not listed:
+«۲۰۶ زیر ۱۰۰ هزار کیلومتر», «پراید کمتر از ۵۰ هزار کیلومتر» and
+«پراید ۵۰ هزار کیلومتر» all give no `max_mileage_km` and nothing under
+«نفهمیدیم», where «۲۰۶ کارکرد زیر ۱۰۰ هزار کیلومتر» gives 100000, because
+the regex wants the word before «زیر», «تا» or «کمتر از»; `test_ranking`
+calls the first of the four, with its budget, an explicit km cap, and pins
+the budget alone. The budget clause takes everything after its cue up to the
+next «،» once it holds an amount, so a word after the amount goes with it:
+«تیبا تا ۲۰۰ میلیون سفید» gives the budget and nothing under «نفهمیدیم», and
+«پراید تا ۳۰۰ میلیون در مشهد» gives 2 matches and 3 apart on run16 with the
+city nowhere on the page. And a cue or an alias is matched inside a longer
+word: «محدوده» holds «حدود» and makes the budget flexible, «شهریار» makes a
+commute, «بارفروش» a cargo use, «سودان» a resale and «بچه‌دار» a first
+family car, each with its assumption on the page, and the aliases do the
+same in «شاهین‌شهر», «پارس‌آباد» and «تهرانپارس». On run16 a city the parser
+drops changes nothing: «پراید در مشهد», «پراید در شیراز» and «پراید کرج»
+each answer with the 53 matches of «پراید» alone, no province, nothing under
+«نفهمیدیم». From CI, not read for more than the notices: run 10's
+annotations announce that the `ubuntu-latest` label moves to Ubuntu 26 from
+2026-10-19, and warn that actions on Node 20 are forced to Node 24.
+
+**Predictions.** The file written before anything was run or changed made
+21: the crash's six, the Gulf's seven and the cities' eight. Eighteen held.
+Three held in part. The five Gulf mutations were each to turn red in both
+suites; four did, and the Gulf read after a locative turned red in
+`test_ranking` alone, for the reason above. The stoplist built from the 51
+was to hold about 13 words (8 to 22) and holds 6. On the 60 held-out
+sentences the residue rule was to list something on 52 (87%; 75 to 95%), 1.7
+items a sentence (1.2 to 2.6), and listed on 44 (73%), 0.8 a sentence: fewer
+than stated, with a shorter stoplist. The point values missed, inside their
+ranges: 58 checks red under the gated mutation where 35 (12 to 90) were
+stated; the residue rule with no stoplist on 16 of the 51 where 19 (14 to
+26), and with the six words on 6 where 9 (5 to 14); the cue rule on 3 of the
+60 (5%) where 5 (8%; 3 to 15%). Two predictions were amended before anything
+ran: the count under the gated mutation, written before section 13's loops
+had been listed, and the count on the 51, from a loose reading. And one
+input was wrong: the file said no city on the list is a province's name, and
+«همدان» is.
+
+**The site.** The entry before this one, D82's own commit `88beef9`, was
+pushed at 21:42Z on 2026-10-17: its run, number 9, was created at 21:42:58Z
+and finished green in 1 m 21 s, and a browser on the owner's machine read
+/about between 21:43:50Z and 21:44:11Z — 82 decisions, 2311 assertions, 15
+suites — at most 1 m 13 s after the push. The two commits here were applied
+to fresh clones before they were sent, at 22:17Z: each commit's tree the
+verified one, each green on its own, the script refusing on a modified tree,
+on a `git am` in progress and on a tree outside the chain, and resuming
+after the first commit. On the owner's machine they ran as `3695f0c` and
+`6300b82` at 22:24Z, all 2321 assertions, the build's nine routes with no
+error, two commits ahead of `origin/main`. He pushed them to both
+repositories, and both `main`s were `6300b82` when read here at 22:29Z, tree
+`fd6adac`, two commits ahead of `88beef9`, each authored and committed by
+him alone, six files with 69 lines added and 16 removed and no change of
+mode. The `ci` workflow's run on `6300b82`, number 10, was created at
+22:26:46Z and finished green in 1 m 12 s; the push of two commits made one
+run, on the last, and all ten runs the workflow has had are green. The site
+had it at the first read, 3 m 23 s after the run was created: the same
+browser read /about at 22:30Z, 82 decisions, 2321 assertions and 15 suites.
+«پراید خلیج فارس» read 73 checked, 63 appraisable and 53 matching, as
+«پراید» alone does, with no «استان» in the panel and «خلیج فارس» under
+«بخش‌هایی که نفهمیدیم»; «پراید در فارس» read 2 matching and «استان: فارس».
+
+**Not measured.** How buyers write a place: the cities, the placements and
+the 60 sentences are made here, and what they show is what a rule does, not
+what a buyer writes. Whether a person is helped or put off by the extra
+lines of the residue rule: no one has read a page with them. How often a cue
+is followed by a word that is no place, beyond the 3 of 60 found: the 60 are
+few. The live site beyond /about and the three searches read. The CI run's
+log, whose count was not read, only its status, and what the move of
+`ubuntu-latest` to Ubuntu 26 does to it. And, from D81, the Railway that
+`ci.yml` names as building the API, where D64 recorded one Vercel project of
+two services.
+
+**What this does not settle.** A city is still dropped without a word:
+«پراید در مشهد» narrows nothing and the page says nothing of it. The cue
+rule, when it is built, will add the city in the six placements that hold a
+cue and in none of the others: not the bare ones, and not the one after a
+budget, where the budget clause takes the city first, the second of the
+three findings above. It adds none of the four names that hold an alias or a
+cue. It does not change the ranked path, which reads no province and is
+pinned (D82). The Gulf is declined; its spelling with no space and with a
+kasra is not, and a province's name inside a manufacturer's is still read as
+the province.
