@@ -6,6 +6,7 @@ price? Everything else in CARO is machinery in service of that number.
 Run: PYTHONPATH=. python3 tests/test_ranking.py
 """
 
+import dataclasses
 import re
 import pathlib
 
@@ -435,6 +436,54 @@ def replace_row(r: Row) -> Row:
                first_seen_ordinal=0, model_key=r.model_key,
                year_jalali=r.year_jalali, mileage_km=r.mileage_km,
                asking_price_toman=r.asking_price_toman, features={})
+
+
+# ---------------------------------------------------------------------------
+print("\nthe ranked path reads no province -- pinned (D82)")
+# ---------------------------------------------------------------------------
+# A province is judged over listings (webapp/api/constraints.py). The ranked
+# path works on appraisal Rows, which carry none, and `_passes` has no rule
+# for one, so a spec that names a province is not narrowed there: the same
+# candidates, the same ladder. That is the state the owner left it in, as the
+# red lines are left (D66), and it is written down here so that it changes by
+# a decision and not by accident. It shows only where the ranking is served --
+# the SYNTHETIC corpus today -- and the intent panel lists «استان» there all
+# the same (test_api_contract section 18).
+#
+# These turn red the day a Row carries a province or `_passes` reads one.
+# Replace them then with what the rule does, measured. Editing them until they
+# pass would say the opposite of what they are for.
+_TEHRAN = ("تهران",)
+_row_fields = [f.name for f in dataclasses.fields(Row)]
+check("an appraisal Row carries no province",
+      not [n for n in _row_fields if "province" in n or n == "city"],
+      str(_row_fields))
+_wide = IntentSpec(raw_query="", budget_max_toman=10_000_000_000)
+_wide_p = dataclasses.replace(_wide, provinces=_TEHRAN)
+check("  `_passes` answers the same with one named, row by row",
+      [_passes(r, _wide) for r in POOL] == [_passes(r, _wide_p) for r in POOL]
+      and any(_passes(r, _wide_p) for r in POOL),
+      "the answers differ, or nothing passes and nothing was compared")
+
+# A spec that makes the ladder walk and still leaves cars: a 206 up to 900
+# million, from 1395, under 120,000 km is one car at first and three after the
+# budget and the odometer have each been loosened.
+_walk = IntentSpec(raw_query="", budget_max_toman=900_000_000,
+                   model_hints=("206",), year_min=1395, max_mileage_km=120_000)
+_a, _used_a, _rep_a = retrieve(POOL, _walk)
+_b, _used_b, _rep_b = retrieve(POOL,
+                               dataclasses.replace(_walk, provinces=_TEHRAN))
+check(f"  `retrieve` leaves the same {len(_a)} candidates through the same "
+      f"{len(_rep_a.steps)} relaxation steps",
+      _rep_a.relaxed and len(_a) > 0
+      and [r.listing_id for r in _a] == [r.listing_id for r in _b]
+      and _rep_a.steps == _rep_b.steps,
+      f"without: {[r.listing_id for r in _a]} {_rep_a.steps} · with: "
+      f"{[r.listing_id for r in _b]} {_rep_b.steps}")
+check("  and hands the province back as stated: not relaxed, not dropped",
+      _used_b.provinces == _TEHRAN
+      and dataclasses.replace(_used_b, provinces=()) == _used_a,
+      str(_used_b.provinces))
 
 
 

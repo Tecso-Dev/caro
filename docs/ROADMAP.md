@@ -5,7 +5,7 @@ was recorded, and what comes first. An open item goes into code only after it
 has been measured; the measurement comes first and the decision is made on
 it, in its own commit.
 
-Last revised 2026-10-11.
+Last revised 2026-10-17.
 
 ## Where it stands against the brief
 
@@ -35,6 +35,40 @@ intent → explain the best choice**.
    shortlist, the relaxation ladder, and the comparison with price-sort. No
    commit makes the ranked path evidence-aware before then.
 
+2. **The ranked path's province — blocked with the first** (D43, D82). A
+   query that names a province is a constraint on the evidence path
+   (`webapp/api/constraints.py`). `_passes` has no rule for it, because an
+   appraisal `Row` carries no province, so wherever the ranking is served a
+   spec that names one is not narrowed. Today that is the SYNTHETIC corpus
+   alone, where the intent panel lists «استان» as understood and the
+   shortlist is the one without it. It is left as it is, as the red lines
+   are, and pinned: `tests/test_ranking.py` turns red the day a `Row`
+   carries a province or `_passes` reads one, and `tests/test_api_contract.py`
+   section 18 the day a published corpus is ranked. It reopens with the
+   first item: an estimator clears the gate on a real corpus, the rows
+   ranking scores carry a province, and what an unknown province does there
+   — held apart, as on the evidence path, or let through — is measured and
+   decided before it is written.
+
+3. **Reading the place a buyer writes — what is not covered** (D82). The
+   reader takes a full province name, with a locative («در», «توی», «ساکن»,
+   «استان») or without, and declines what is not a place the car should be
+   in: a negation before or after the name («غیر از تهران», «تهران
+   نباشه»), a nearness («نزدیک», «اطراف»), a plate («پلاک»), and «خراسان»
+   or «آذربایجان» alone, which begin several names. What it declines stays
+   under «نفهمیدیم». It was built and checked on constructed phrasings: no
+   log of what buyers write exists, so how they write a place is not
+   measured. Known, and left:
+   - «فارس» is read as the province wherever it stands, «خلیج فارس»
+     included.
+   - A city (مشهد, شیراز, کرج) is not read (D74), and in a clause that names
+     a model it is dropped without a word, because such a clause is taken
+     as understood whole. That is the clause rule's fault, not the
+     reader's, and it wants a round of its own: what the parser leaves
+     unparsed, judged by what remains of the sentence and not by clause.
+   - «تهرانپارس» adds the model `pars`, because the alias is matched as a
+     substring. It was so before this round.
+
 ## Next — the product gaps
 
 1. **Data.**
@@ -50,8 +84,13 @@ intent → explain the best choice**.
      was read before it was published, and no district named like a
      province stands behind any of its 42 stated rows (D80). The car page
      and the lists — search's tables and compare's evidence rows — draw it,
-     with how it was read (D81). The search does not read it yet: a query
-     that says «در تهران» is the next round, as the owner decided.
+     with how it was read (D81). The search reads it (D82): «پراید در
+     تهران» is a constraint like the budget, so a car in another province
+     is left out, one with none is held apart and named, and the panel
+     lists «استان: تهران». On run16 that is 18 matches and none apart; on
+     run13, 3 matches and 31 cars apart; on run11, which holds no province,
+     no match and every Pride apart. The ranked path does not read it (item
+     2 above).
    - Longitudinal collection. Time-dependent and unrecoverable: a day not
      collected is gone. A second discovery run is a new sample, not a
      series: on run11's pin, 26 days later, 3 of its 76 listings were drawn

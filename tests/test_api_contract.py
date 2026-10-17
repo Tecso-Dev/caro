@@ -1653,6 +1653,49 @@ check(f"  and {RUN} holds provinces read from a city's name ({_city17}), "
       f"so the two are told apart on real rows",
       _city17 > 0, "none to tell apart — said, not passed")
 
+
+# ---------------------------------------------------------------------------
+print("\n18 — the ranked path reads no province, and no published corpus is ranked")
+# ---------------------------------------------------------------------------
+# D82 left it so. `_passes` in caro/ranking.py compares no province, because an
+# appraisal Row carries none (pinned in test_ranking). Where the ranking IS
+# served — the SYNTHETIC corpus, which the gate passes — a buyer who writes
+# «در تهران» is shown «استان: تهران» as understood and the shortlist the
+# sentence without it gives. On the published corpora the ranking is not
+# served at all (D43) and the province is judged on the evidence path alone
+# (section 13). So the gap is reachable by exactly one change: a published
+# corpus that is ranked. The second check turns red the day that happens, and
+# says what to decide first.
+with corpus_dir(None):
+    _q18 = "۲۰۶ زیر ۸۰۰ میلیون"
+    _plain18 = api.search(q=_q18, k=6)
+    _named18 = api.search(q=f"{_q18} در تهران", k=6)
+check("on the corpus the ranking is served on, a province is listed as "
+      "understood and does not narrow the shortlist",
+      _named18.status.served and _named18.status.gated
+      and _named18.intent.provinces == ["تهران"]
+      and _plain18.intent.provinces == []
+      and len(_named18.items) > 0
+      and [i.id for i in _named18.items] == [i.id for i in _plain18.items]
+      and (_named18.candidates, _named18.relaxed, _named18.relaxation_fa)
+      == (_plain18.candidates, _plain18.relaxed, _plain18.relaxation_fa),
+      f"served with {[i.id for i in _named18.items]}, without "
+      f"{[i.id for i in _plain18.items]}")
+
+_ranked18, _read18 = [], []
+for _run18 in sorted(p.stem for p in _CORP13.glob("*.json")):
+    with _published(_run18):
+        _got18 = api.search(q="پراید در تهران", k=_K13)
+    _read18.append(_run18)
+    if _got18.status.gated or _got18.status.served or _got18.items:
+        _ranked18.append(_run18)
+check(f"no published corpus is ranked ({', '.join(_read18)}), so none of "
+      f"their answers goes through `retrieve`",
+      bool(_read18) and not _ranked18,
+      f"{_ranked18} would be ranked: its shortlist comes from `retrieve`, "
+      "which reads no province, while the panel lists «استان» as understood. "
+      "Decide that first — docs/ROADMAP.md, «The ranked path's province»")
+
 print()
 if FAILS:
     print(f"FAILED ({len(FAILS)}): " + ", ".join(FAILS))
