@@ -5353,3 +5353,243 @@ does, a listing with no province must be held apart, not dropped from the
 answer without a word (D65), and run16 holds a province on every row, so
 that case stands on a temporary artifact until a corpus brings one. A new
 car's mileage stays unread.
+
+## D82 — The search reads the province a buyer names
+
+D81 left the search not reading the province, as the owner had chosen: the
+lists first, the search after. Before any change, on `ef0c3d5` with run16
+served, thirty-one phrasings of a place after «پراید» — «در تهران»,
+«توی اصفهان», «غیر از تهران», «قفل مرکزی» among them, all made here, since
+no log of what buyers write exists — each returned the same 53 matches: a
+place narrowed nothing. Twenty-seven left nothing under «نفهمیدیم», so the
+page read as understood whole, «خودرو: پراید» and the risk profile and not a
+word about the place; the four that name a province with « و » in it left a
+fragment of the name there, «بلوچستان», «بختیاری» or «بویراحمد». The owner
+decided on 2026-10-17, of the ways offered for each of four questions: the
+reader takes a province by its full name, with a rule for negation and
+nearness; several named are any-of; a province known from the city's name
+counts as met, and the table says which (D81) — on run16, of the 18 Prides
+in Tehran 15 are known from the city's name and 3 are stated, so counting
+the stated alone «پراید در تهران» would have matched 3, held 25 apart and
+left out 25, where counting both it matches 18 and leaves out 35; and the
+ranked path is left as it is, with a pinned test and the documentation, as
+its red lines are (D66).
+
+**What was built.** Four commits, on the owner's machine. `2857ad7` gives
+the intent a `provinces`, any one of which meets it, empty unless stated.
+`judge` reads it from the listing's own province — `city` on the object the
+reader returns — after the odometer and before the red lines: a listing in
+one of them meets it, in another breaks it, and with none is held apart,
+naming «province», in the words «استان ثبت‌نشده». A province known from the
+city's name meets it as a stated one does. The payload, the client's types
+and the intent panel carry it, and nothing set it yet. `2f7ff98` is the
+reader, and it makes `province` a facet in `eligibility.py` and in
+FIELD_PROVENANCE, whose paragraph that held it back until this search
+existed now says so. `973a51b` runs the reader on whole corpora and draws
+what it gives. `914aea6` pins that the ranked path reads no province, and
+brings the roadmap to it.
+
+**The reader.** `read_provinces` takes a province by its full name, as
+`PROVINCES` and its one spelling hold it, folded as the parser folds a
+query, and as a whole word only. It reads it where it is a place the buyer
+wants the car to be in. After a locative — «در», «توی», «تو», «ساکن» or
+«استان», with «شهر» or «استان» between — it is read. With nothing before it,
+«پراید تهران», it is read too, and the panel says «تهران» را استان تهران
+گرفتیم, to be corrected. Several joined by « و », « یا » or «،» are one
+group and any-of: «در تهران یا اصفهان». Not read, and listed under
+«نفهمیدیم» by hand, since a clause that names a model is otherwise taken as
+understood whole: a negation before the name («غیر از», «به جز», «نه»,
+«خارج از», «بدون») or after it («نباشه», «نیست», «نمی‌خوام»); a nearness
+(«نزدیک», «اطراف», «حوالی», «حومه»); a plate, «پلاک تهران», which says where
+a car was registered, not where it is, and no corpus field holds a plate;
+«مرکزی» and «گلستان» with no locative, which are ordinary words
+(«قفل مرکزی»); and «خراسان» and «آذربایجان» alone, each of which begins the
+names of several provinces. No city is read (D74). Five of these rules are
+the reader's own, beyond the owner's four decisions, and each only declines,
+says that it declined, or inherits: the plate; the negation after the name;
+the group, which takes its first name's reading, so that «سیستان و بلوچستان»
+is no longer cut at its « و » and «غیر از تهران و اصفهان» declines both; the
+two names that begin several; and the locatives «توی», «تو» and «ساکن»,
+which change only whether the assumption is drawn.
+
+**Measured.** Every suite, mutation and build here ran in a network
+namespace with no interface. Each commit is green on its own, and the web
+build is green with its nine routes, the type check clean and lint with no
+error and its one warning. Counted for this entry on the base and on each
+pushed commit, the totals and the three suites that moved:
+
+                                 base  2857ad7  2f7ff98  973a51b  914aea6
+    15 suites                    2140     2153     2224     2305     2311
+    12 without the extras        1692     1692     1763     1763     1767
+    test_api_contract             251      260      260      316      318
+    test_screens                  146      150      150      175      175
+    test_ranking                  125      125      196      196      200
+
+The reader was tried first on phrasings made for it: seventeen that name a
+province, seven that do not, five negated or near, two ordinary words, then
+the plate, the negation after the name and the group. It read 17 of 17, none
+of 7, none of 5 and none of 2, and read «پراید در مرکزی», «پراید در گلستان»
+and «پراید استان مرکزی»; it declined 5 of 5 negations after the name and 3
+of 3 plates, listing each, and listed the two names that begin several. The
+51 distinct queries the suites hand the parser parse as before, 51 of 51,
+and their 204 answers on the four published runs differ from the answers
+before the first commit in one key only, `intent.provinces`, empty: 204 of
+204, searched for this entry on `ef0c3d5` and `2857ad7`, and on `ef0c3d5`
+twice, to see that an answer is the same twice.
+
+**On whole corpora.** `test_api_contract` asks every published run «در X»
+for each of the 31 names and the one spelling, with no model and with each
+of پراید, تیبا and کوییک — 512 answers — and counts what each should hold by
+plain Python over the artifact, the province present and equal, or absent:
+512 of 512 agree. The runs hold the province none, some and all of the way,
+and the rule's three answers all occur. D81 left the case of a listing with
+no province standing on a temporary artifact, run16 holding a province on
+every row; the other published runs bring it, and the tests now run on them.
+«پراید در تهران» comes out:
+
+            Prides  matched  apart  left out  province held
+    run16       53       18      0        35       73 of 73
+    run14       56       14      1        41       75 of 76
+    run13       54        3     31        20       34 of 74
+    run11       56        0     56         0        0 of 75
+
+Three province queries on each run go through the checks the search box's
+examples get: no car shown breaks a constraint stated, each car held apart
+names what it lacks, and a car with neither a price nor a province is held
+apart naming both, the price first, on run13 and run14. On run11 nothing
+matches and every Pride is apart; on run16 nothing is.
+
+**Mutations.** Forty-nine, one change to the code each, run on the tip of
+its commit. The predictions file named the kinds for the first two commits,
+and each of the last twenty with the checks it should turn red, before it
+ran. All but one turned something red. The first twenty-nine are eleven
+against the judge, the payload and the types — among them a missing province
+counted as met, the field read under a name the reader does not use, and the
+key missing from the Python literal or from the TypeScript union — and
+eighteen against the reader, one rule or one input taken out at a time, with
+the facet flag moved in the code and not in the document, and the reverse.
+Each was red in the suite that guards it, and three in `tsc` as well. The
+last twenty were run on the tree before their commit too, to see what the
+new tests add:
+
+    commit 3, against the tree before it                  red   before
+    the answer ignores the province named                  39        0
+    the reader gives no province known from a city         21        2
+    the parser's spelling table goes unused                 4        0
+    the panel hides what was not understood                 2        0
+    the panel hides the assumptions                         1        0
+    a held-apart row omits the province it lacks            2        0
+    a missing province counts as met                       28        4
+    another province counts as unknown                     34        4
+    only the first of several provinces counts              4        1
+    the province is judged before the price                 4        1
+    a plate is read as a place                              1        0
+    a bare name leaves no assumption                        1        0
+    a negation cue is no cue                                1        0
+    the intent drops its provinces                          2        0
+    commit 4, against the tree before it
+    a Row gains a province field                            1        0
+    `_passes` drops a row that has none                     4        0
+    `_passes` drops a row that has another                  0        0
+    the relaxation ladder drops the provinces               1        0
+    a published corpus is built gated                       6        6
+    the ranked path empties its list on a province          1        0
+
+Nine of the fourteen on the third commit are green before it, two of them a
+gap older than this round, closed by the way: no test drew the panel's
+assumptions or its «نفهمیدیم» from a real answer. The reader giving no
+province known from a city's name was red before as well, in two of D81's
+checks that say none was drawn; the oracle now names the cars that differ.
+The one that stays green, `_passes` dropping only a row that has a province
+not among those named, is an equivalent mutant today: no Row has one, so
+nothing can see it, and the pin turns red the day a Row gains the field,
+which is when it would begin to matter.
+
+**In a browser.** The tip, built and served here with loopback alone, drawn
+1280 and 390 pixels wide, on run16 and on run13. On run16 «پراید در تهران»
+draws «استان: تهران» in the panel and 8 of its 18 matches, none held apart,
+each row's province cell what the API's row says, 8 of 8 at both widths;
+«پراید تهران» adds the assumption; «پراید غیر از تهران» and
+«پراید پلاک تهران» draw their phrase under «نفهمیدیم», with no «استان» line
+and the 53 matches of «پراید» alone. On run13 «پراید در تهران» draws its 3
+matches and 8 of the 31 held apart, each saying «استان ثبت‌نشده» inside its
+table's own box, 8 of 8; «در تهران» draws 5 and 8 of 40. No page scrolls
+sideways at either width, and at 390 each table scrolls in its own box. Each
+page logged one error, the stylesheet from Google Fonts, which a namespace
+with no network cannot reach.
+
+**Predictions.** The file written before the first change made 24: the first
+commit's four, the reader's ten, the corpora's four and their mutations, the
+pin's one and its mutations, and the three of the whole round. Twenty held.
+Four held in part. A TypeScript `Intent` without the field was to turn red
+in the contract suite alone, and turned `tsc` red too, since the panel reads
+the field. The reader giving no province known from a city's name was to be
+green on the tests before the third commit, and two of D81's checks were red
+on it. A strict `_passes` was to turn two checks red and turned three, since
+with no row left at any step the ladder walks to its end and the spec that
+comes back differs; and the check that no published corpus is ranked was to
+be among the six that a gated one turns red, and is not, since an older
+check in section 6 stops the suite first. The reduced count at the end,
+1767, was one under the 1768 to 1842 stated. The point values missed, in
+both directions: +27 expected of the first commit and +13 measured, +104
+expected of `test_ranking` in the second and +71 measured, +68 expected of
+the third and +81 measured, and 2167, 2271, 2339 and 2345 expected at the
+four commits against 2153, 2224, 2305 and 2311, every total inside its
+stated range but for that one.
+
+**Found, and not fixed.** Section 6 of the contract suite reads
+`r.fault.code` for the detail of a check, and a published corpus that is
+gated has no fault, so the suite stops there with an `AttributeError`: under
+that one mutation section 18 never runs in the full suite. Alone it is green
+on the clean tree and red under the mutation, with the message that says
+what to decide first. It is an older suite's fault, and whether it gets a
+commit of its own is the owner's to say. The reader's own limits are in the
+roadmap, and were tried on the tip: «پراید خلیج فارس» reads «فارس» as the
+province, since the name is read wherever it stands; «پراید در مشهد» reads
+no province and says nothing, a city in a clause that names a model being
+dropped without a word, which is the clause rule's fault and not this
+reader's; and «پراید در تهرانپارس» reads no province and adds the model
+`pars`, the alias being a substring.
+
+**The site.** The round was applied to fresh clones before it was sent, at
+11:16Z on 2026-10-17: each commit's tree the verified one, each commit green
+on its own, the script refusing on a modified tree, on a `git am` in
+progress and on a tree outside the chain, and resuming after each of the
+first three commits. On the owner's machine it ran as `2857ad7` to `914aea6`
+at 11:20Z, all 2311 assertions, the build's nine routes with no error, four
+commits ahead of `origin/main`. He pushed it to both repositories, and both
+`main`s were `914aea6` when read here between 11:22Z and 11:28Z, tree
+`d53b4f1`, four commits ahead of `ef0c3d5`, each authored and committed by
+him alone. The `ci` workflow's run on `914aea6`, number 8, was created at
+11:21:56Z and finished green in 1 m 13 s; the push of four commits made one
+run, on the last, and all eight runs the workflow has had are green. The
+site was built from the push within six minutes, a fourth time: a browser on
+the owner's machine read /about at no later than 11:28Z — 81 decisions, 2311
+assertions, 15 suites — and then search. «پراید در تهران» read 73 checked,
+63 appraisable and 18 matching, «استان: تهران» in the panel, and in the
+first eight rows «تهران» on two and «تهران — از روی نام شهر» on six, label
+for label and in order as drawn here. «پراید تهران» read the same 18 with
+«تهران» را استان تهران گرفتیم. «پراید غیر از تهران» read 53 matches, no
+«استان» line, and «غیر از تهران» under
+«بخش‌هایی که نفهمیدیم — نادیده گرفته شدند، حذف نشدند», the table holding
+Tehran and also Isfahan, Hormozgan and Alborz.
+
+**Not measured.** How buyers write a place: the phrasings are made here, and
+what they show is that the rules do what they say, not that they meet what
+buyers write. The layout on the live site at 390 pixels: the browser that
+read it there reported a viewport of no width, as in D81, and one screenshot
+of its table at about 800 pixels shows the province column whole,
+«اصفهان — از روی نام شهر» on one line. The CI run's log, whose assertion
+count was not read, only its status. And, from D81, the Railway that
+`ci.yml` names as building the API, where D64 recorded one Vercel project of
+two services, and why one page answered and parsed to nothing, in run15 and
+in run16 alike.
+
+**What this does not settle.** The ranked path reads no province, and only
+the synthetic corpus is ranked today. There «۲۰۶ زیر ۸۰۰ میلیون در تهران»
+lists «استان: تهران» in the panel and returns the same six cars as without
+it, which is pinned; the pin turns red the day a `Row` carries a province,
+`_passes` reads one, or a published corpus is gated, and its message says to
+decide first (the roadmap, item 2). A city is not read: «پراید در مشهد»
+narrows nothing, and the roadmap's third item says what else the reader
+leaves.
