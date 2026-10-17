@@ -64,20 +64,29 @@ intent → explain the best choice**.
      «گیلان خودرو». «خلیجفارس» with no space is not matched at all, and
      «خلیجِ فارس» typed with a kasra is read as the province, since a
      diacritic is not stripped.
-   - A city (مشهد, شیراز, کرج) is not read (D74), and in a clause that names
-     a model it is dropped without a word, because such a clause is taken
-     as understood whole. That is the clause rule's fault, not the
-     reader's. Measured (D83): of 350 phrasings of 35 cities, 10 are listed
-     under «نفهمیدیم» and 340 are dropped without a word. Of two rules
-     tried on what the parser leaves, the owner chose the cue rule: a cue
-     the reader already knows («در», «توی», «ساکن», «نزدیک», «غیر از») is
-     listed with the word after it. It shows the city in 220 of the 350,
-     and not when it stands bare or after a budget. Not built; it comes in
-     a round of its own, with its predictions written first.
+   - A city (مشهد, شیراز, کرج) is not read (D74). In a clause that names a
+     model it was dropped without a word, because such a clause is taken
+     as understood whole: of 350 phrasings of 35 cities, 10 were listed
+     under «نفهمیدیم» and 340 dropped (D83). A cue the reader already
+     knows («در», «توی», «ساکن», «اطراف», «نزدیک به», «غیر از», «پلاک» …) is
+     now listed with the one or two words after it, past «شهر» and
+     «استان»: «در مشهد», «ساکن در شهر بندر عباس», and «پلاک ملی در مشهد» as
+     two, «پلاک ملی» and «در مشهد». Nothing is read from it; the page says
+     the city was seen and not used, and the province panel and the
+     ranked path are as they were. On the prototype it shows the city in
+     220 of the 350 phrasings. Known, and left, each pinned by a test so
+     that it changes on purpose: a city no cue stands before
+     («پراید مشهد»); one after a budget («تا ۳۰۰ میلیون در مشهد», item 4);
+     a second one after « و » or «یا», where «یا» is itself taken as the
+     second word of «در مشهد یا»; and «نه» and «بدون», which the reader
+     knows and this does not, so «پراید نه مشهد» is still dropped. And any
+     word after a cue that is no place is listed all the same, unless it is
+     one of the three the stoplist holds: «حد», «حال», «بودجه».
    - «تهرانپارس» adds the model `pars`, because the alias is matched as a
      substring; «پارس‌آباد» does the same, «شاهین‌شهر» adds `shahin` and
-     «شهریار» sets a commute use. Neither rule shows these cities. It was
-     so before D82; item 4 has the rest.
+     «شهریار» sets a commute use. None of them shows the city, and after a
+     cue «تهرانپارس» lists «در تهران», the part before the alias, which
+     reads as a province. It was so before D82; item 4 has the rest.
 
 4. **What the parser drops without a word** (D83). Three ways, found while
    the cities were measured and tried on the real parser, nothing more. A

@@ -196,8 +196,9 @@ _LOW_MILEAGE_CUE = re.compile(
 # A province named in the query is a constraint (D82). The names are the ones
 # the corpus carries -- `PROVINCES`, and the one spelling `PROVINCE_SPELLINGS`
 # holds -- read as whole words, and nothing else. No city is read: the
-# vocabulary is not a geography (D74), so «مشهد» stays what it was, a word the
-# parser did not map.
+# vocabulary is not a geography (D74), so «مشهد» is still a word the parser did
+# not map. It is no longer dropped without a word, though: after a cue the
+# reader knows it is listed under «نفهمیدیم» (`read_unknown_places`, below).
 #
 # This reading is hazardous as no other cue here is, because a wrong one
 # inverts and says nothing: «غیر از تهران» taken for Tehran would answer with
@@ -330,6 +331,133 @@ def read_provinces(text: str) -> PlaceReading:
         provinces=tuple(provinces), understood=tuple(understood),
         declined=tuple(dict.fromkeys(declined)),
         assumptions=tuple(assumptions))
+
+
+# ---------------------------------------------------------------------------
+# A place the reader does not know
+# ---------------------------------------------------------------------------
+#
+# «پراید در مشهد» names a model, so the clause rule counted it understood whole
+# and «مشهد» was dropped without a word: a buyer who named a city was answered
+# as if they had not. The reader cannot say so -- it knows the names the corpus
+# carries, and a city is not one (D74). What it does know is the words a place
+# comes after. This lists such a word and the one or two after it under
+# «بخش‌هایی که نفهمیدیم» -- «در مشهد» -- so the page says the city was seen and
+# not used. It reads no city, and changes nothing in the spec but that list.
+#
+#   cue       a word of `_CUE_WORDS`, or a pair of `_CUE_PAIRS` side by side:
+#             the reader's own, less «نه» and «بدون», which stand before a
+#             province there and before any word here -- «بدون ایراد فنی» is
+#             no place.
+#   skipped   what follows the cue directly and is «استان», «شهر» or another
+#             cue: «ساکن در شهر مشهد» is one phrase, «پلاک ملی در مشهد» two,
+#             «پلاک ملی» and «در مشهد».
+#   taken     then up to two words that follow directly, are no cue, are not
+#             one of `_NEVER_A_PLACE` and have two letters or more. Two,
+#             because a city is often two words -- «بندر عباس». If none is
+#             taken nothing is listed: a cue at the end of a phrase says
+#             nothing.
+#   blanked   before the words are cut, what the parser acted on, the model
+#             names, the province names and the digits are blanked, and a
+#             blanked stretch is no word and ends a run: «غیر از تیبا» and
+#             «برای مسافرکشی در اسنپ» list nothing, «در تهران» is the
+#             reader's, and «پلاک ملی تهران» lists the plate and no more.
+#   listed    last in `unparsed`, unless a phrase already there holds it:
+#             «ماشین سفید در مشهد» is listed whole by the clause rule, and
+#             «در مشهد» adds nothing.
+#
+# What this does not find stays dropped, and the tests pin it so that it
+# changes on purpose: a city no cue stands before («پراید مشهد»); one after a
+# budget («تا ۳۰۰ میلیون در مشهد», which the budget clause takes whole); one
+# after « و » or «یا» («در تهران و مشهد»; «یا» is itself taken as the second
+# word of «در مشهد یا شیراز»); and one inside a word that holds a model's name
+# («تهرانپارس» lists «در تهران», the part before «پارس»). And `_NEVER_A_PLACE`
+# is three words because three put a phrase on the page that is no place --
+# «در حد نو», «در حال حاضر», «توی بودجه ام» -- in the sentences measured; it is
+# a list that grows with what buyers write, not a rule.
+_CUE_WORDS = frozenset({"در", "توی", "تو", "ساکن", "اطراف", "حوالی", "حومه",
+                        "بجز", "پلاک", "نزدیک", "نزدیکی", "غیر"})
+_CUE_PAIRS = frozenset({("نزدیک", "به"), ("نزدیکی", "به"), ("غیر", "از"),
+                        ("به", "جز"), ("خارج", "از")})
+_CUE_LINKS = frozenset({"استان", "شهر"})
+_NEVER_A_PLACE = frozenset({"حد", "حال", "بودجه"})
+_WORD = re.compile(r"[^\s،,.;:؛()\[\]{}\-–—!؟?«»\"'/\\|]+")
+_FIGURE = re.compile(r"\d+(?:[.,]\d+)?")
+
+
+def _joined(rest, words, k):
+    """`words[k]` follows `words[k - 1]` with only whitespace between."""
+    return not rest[words[k - 1][2]:words[k][1]].strip()
+
+
+def _cue_length(rest, words, k):
+    """How many words the cue that starts at `words[k]` has: 2, 1 or 0."""
+    if (k + 1 < len(words) and _joined(rest, words, k + 1)
+            and (words[k][0], words[k + 1][0]) in _CUE_PAIRS):
+        return 2
+    return 1 if words[k][0] in _CUE_WORDS else 0
+
+
+def read_unknown_places(rest: str, clauses: list[tuple[int, int]],
+                        spans: list[tuple[int, int]]) -> tuple[str, ...]:
+    """The cues in the clauses of `rest`, each with the words it takes.
+
+    `spans` is where the parser acted on `rest`. A word is the part of a
+    token that nothing blanks: a blanked stretch inside one splits it.
+    """
+    blank = [False] * len(rest)
+
+    def cover(a, b):
+        blank[a:b] = [True] * (b - a)
+
+    for a, b in spans:
+        cover(a, b)
+    for aliases in MODEL_ALIASES.values():
+        for alias in aliases:
+            for m in re.finditer(re.escape(alias), rest):
+                cover(m.start(), m.end())
+    for m in (*_PLACE.finditer(rest), *_FIGURE.finditer(rest)):
+        cover(m.start(), m.end())
+
+    items: list[str] = []
+    for a, b in clauses:
+        words = []
+        for token in _WORD.finditer(rest, a, b):
+            i = token.start()
+            while i < token.end():
+                if blank[i]:
+                    i += 1
+                    continue
+                j = i
+                while j < token.end() and not blank[j]:
+                    j += 1
+                words.append((rest[i:j], i, j))
+                i = j
+        i = 0
+        while i < len(words):
+            n = _cue_length(rest, words, i)
+            if not n:
+                i += 1
+                continue
+            j = i + n
+            while j < len(words) and _joined(rest, words, j):
+                if words[j][0] in _CUE_LINKS:
+                    j += 1
+                elif _cue_length(rest, words, j):
+                    j += _cue_length(rest, words, j)
+                else:
+                    break
+            end = j
+            while (end < len(words) and end - j < 2
+                   and _joined(rest, words, end)
+                   and not _cue_length(rest, words, end)
+                   and words[end][0] not in _NEVER_A_PLACE
+                   and len(words[end][0]) > 1):
+                end += 1
+            if end > j:
+                items.append(" ".join(w[0] for w in words[i:end]))
+            i = end
+    return tuple(items)
 
 
 # ---------------------------------------------------------------------------
@@ -571,6 +699,11 @@ class RuleIntentParser:
             if not any(d in u for u in unparsed):
                 unparsed = tuple(u for u in unparsed
                                  if u.strip() not in d) + (d,)
+        # A cue the reader knows before a word it does not -- a city -- is
+        # listed last, unless a phrase already listed holds it.
+        for item in read_unknown_places(rest, clauses, spans):
+            if not any(item in u for u in unparsed):
+                unparsed += (item,)
 
         return IntentSpec(
             raw_query=query, budget_max_toman=budget_max,

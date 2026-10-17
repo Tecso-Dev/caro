@@ -18,7 +18,7 @@ from caro.ranking import (
     diversify, normalize_fa, parse_amount, retrieve, winrate_vs_price_sort,
     LEDGER_INPUTS, CONDITION_RISK, IMPUTED_MARK, decision_ledger,
     features_from_listing, risk_from_condition, _passes,
-    USE_CASE_CUES, USE_CASE_FA, read_provinces,
+    USE_CASE_CUES, USE_CASE_FA, read_provinces, _CUE_WORDS, _CUE_PAIRS,
 )
 from caro.ingest.persian import PROVINCES
 from caro.synthetic import build, true_utility
@@ -259,7 +259,6 @@ for q, want in [     # a locative before the name: read, nothing left, nothing a
     (f"{_Q} در تهران و البرز", ("تهران", "البرز")),
     (f"{_Q} در تهران، اصفهان", ("تهران", "اصفهان")),
     (f"{_Q} در تهران باشه", ("تهران",)),
-    (f"{_Q} پلاک ملی در تهران", ("تهران",)),
     ("در تهران", ("تهران",)),
 ]:
     got_p, left, said = _where(q)
@@ -381,6 +380,131 @@ _chips = re.findall(r"'([^']+)'", re.search(
 check(f"none of the {len(_chips)} examples under the search box names a "
       "province", bool(_chips) and all(P.parse(c).provinces == ()
                                        for c in _chips), str(_chips))
+
+
+# ---------------------------------------------------------------------------
+print("\na city is listed under «نفهمیدیم», not dropped (D83)")
+# «پراید در مشهد» names a model, so its clause was understood whole and the
+# city was dropped without a word. A cue the province reader knows is now
+# listed with the one or two words after it. Nothing is read from them: the
+# city narrows nothing, and the page says so. Every phrasing is made here; no
+# log of what buyers write exists, so these test the rule, not the buyers.
+def _listed(q):
+    sp = P.parse(q)
+    return [t.strip() for t in sp.unparsed], sp.provinces
+
+
+for q, want in [   # each cue alone, before a word nothing knows
+    (f"{_Q} در مشهد", ["در مشهد"]),
+    (f"{_Q} توی مشهد", ["توی مشهد"]),
+    (f"{_Q} تو مشهد", ["تو مشهد"]),
+    (f"{_Q} ساکن مشهد", ["ساکن مشهد"]),
+    (f"{_Q} اطراف مشهد", ["اطراف مشهد"]),
+    (f"{_Q} حوالی مشهد", ["حوالی مشهد"]),
+    (f"{_Q} حومه مشهد", ["حومه مشهد"]),
+    (f"{_Q} بجز مشهد", ["بجز مشهد"]),
+    (f"{_Q} پلاک مشهد", ["پلاک مشهد"]),
+    (f"{_Q} نزدیک مشهد", ["نزدیک مشهد"]),
+    (f"{_Q} نزدیکی مشهد", ["نزدیکی مشهد"]),
+    (f"{_Q} غیر مشهد", ["غیر مشهد"]),
+    # a cue of two words, before a name of two: the pair is one cue
+    (f"{_Q} نزدیک به بندر عباس", ["نزدیک به بندر عباس"]),
+    (f"{_Q} نزدیکی به بندر عباس", ["نزدیکی به بندر عباس"]),
+    (f"{_Q} غیر از بندر عباس", ["غیر از بندر عباس"]),
+    (f"{_Q} به جز بندر عباس", ["به جز بندر عباس"]),
+    (f"{_Q} خارج از بندر عباس", ["خارج از بندر عباس"]),
+    (f"{_Q} نزدیک{_ZWNJ}به بندر عباس", ["نزدیک به بندر عباس"]),
+    # two words are taken, not one and not three
+    (f"{_Q} ساکن در بندر عباس", ["ساکن در بندر عباس"]),
+    (f"{_Q} در بندر ماهشهر میخوام", ["در بندر ماهشهر"]),
+    # «شهر» and «استان» are skipped, and so is a cue after a cue
+    (f"{_Q} ساکن در شهر مشهد", ["ساکن در شهر مشهد"]),
+    (f"{_Q} در شهر بندر عباس", ["در شهر بندر عباس"]),
+    (f"{_Q} پلاک ملی در مشهد", ["پلاک ملی", "در مشهد"]),
+    # listed once: the clause rule already lists this one whole
+    ("ماشین سفید در مشهد", ["ماشین سفید در مشهد"]),
+    # after what is already there, and not counted in its cap of four
+    (f"{_Q} غیر از تهران در مشهد", ["غیر از تهران", "در مشهد"]),
+    ("ماشین قرمز، دوست دارم، حتما سالم، خیلی تمیز، پراید در مشهد",
+     ["ماشین قرمز", "دوست دارم", "حتما سالم", "خیلی تمیز", "در مشهد"]),
+]:
+    left, got_p = _listed(q)
+    check(f"«{q}» → listed: {want}", left == want and got_p == (),
+          f"{left} {got_p}")
+
+for q, why in [   # a cue with nothing to take: nothing is listed
+    (f"{_Q} در", "a cue at the end"),
+    (f"{_Q} نزدیک به", "a pair at the end"),
+    (f"{_Q} در استان", "«استان» is a link, not a name"),
+    (f"{_Q} در شهر", "«شهر» is a link, not a name"),
+    (f"{_Q} خارج از استان", "a pair, then a link, then nothing"),
+    (f"{_Q} ساکن، مشهد", "a comma ends the phrase"),
+    (f"{_Q} در حد نو", "«حد» is no name"),
+    (f"{_Q} در حال حاضر", "«حال» is no name"),
+    (f"{_Q} توی بودجه ام باشه", "«بودجه» is no name"),
+    (f"{_Q} غیر از تیبا", "a model's name is blanked, so it is no word"),
+    (f"{_Q} غیر از تیبایی", "what a blanked name leaves is no word of its own"),
+    (f"{_Q} در تیبا مشهد", "a blanked name between ends the run"),
+    (f"{_Q} پلاک ب", "one letter is no word"),
+    (f"{_Q} نزدیک؛ به مشهد", "a mark between the two words of a pair ends it"),
+    ("ماشین برای مسافرکشی در اسنپ", "what the parser acted on is blanked"),
+    (f"{_Q} پلاک 12 ایران", "a number is blanked"),
+]:
+    left, got_p = _listed(q)
+    check(f"«{q}» → nothing listed: {why}", left == [] and got_p == (),
+          f"{left} {got_p}")
+
+# A province's name is the reader's, not this rule's: it is blanked, so the
+# rule neither lists it nor takes it as the word after a cue. One the reader
+# declines is listed by the reader, once: «نزدیک تهران باشه» is not listed
+# again with the word after it.
+for q, want, prov in [
+    (f"{_Q} در تهران", [], ("تهران",)),
+    (f"{_Q} پلاک ملی در تهران", ["پلاک ملی"], ("تهران",)),
+    (f"{_Q} پلاک ملی تهران", ["پلاک ملی"], ("تهران",)),
+    (f"{_Q} در تهران در مشهد", ["در مشهد"], ("تهران",)),
+    (f"{_Q} نزدیک تهران باشه", ["نزدیک تهران"], ()),
+    (f"{_Q} غیر از تهران باشه", ["غیر از تهران"], ()),
+]:
+    left, got_p = _listed(q)
+    check(f"«{q}» → province {list(prov)}, listed: {want}",
+          left == want and got_p == prov, f"{left} {got_p}")
+
+# What it leaves dropped, pinned so that it changes on purpose.
+for q, want, prov, why in [
+    (f"{_Q} مشهد", [], (), "no cue stands before it"),
+    (f"{_Q} تا ۳۰۰ میلیون در مشهد", [], (), "the budget clause takes it whole"),
+    (f"{_Q} در تهران و مشهد", [], ("تهران",),
+     "a second name after « و » has no cue"),
+    (f"{_Q} غیر از شیراز و مشهد", ["غیر از شیراز"], (), "the same, after a cue"),
+    (f"{_Q} در مشهد یا شیراز", ["در مشهد یا"], (), "«یا» is taken as a word"),
+    (f"{_Q} نه مشهد", [], (), "«نه» is the reader's cue and not this one's"),
+    (f"{_Q} بدون کیلومتر", [], (),
+     "«بدون» is the reader's cue and not this one's"),
+]:
+    left, got_p = _listed(q)
+    check(f"«{q}» → {want or 'nothing'} ({why})",
+          left == want and got_p == prov, f"{left} {got_p}")
+
+# The list is all it changes: the same spec as without the phrase.
+check("a listed phrase changes nothing in the spec but the list",
+      all(dataclasses.replace(P.parse(a), raw_query="", unparsed=())
+          == dataclasses.replace(P.parse(b), raw_query="", unparsed=())
+          for a, b in [
+              (f"{_Q} در مشهد", _Q),
+              (f"{_Q} پلاک ملی در مشهد", _Q),
+              (f"{_Q} ساکن در شهر بندر عباس", _Q),
+              (f"{_Q} زیر ۳۰۰ میلیون، نزدیک مشهد", f"{_Q} زیر ۳۰۰ میلیون"),
+              (f"{_Q} اسنپ، توی بندر عباس", f"{_Q} اسنپ"),
+              (f"{_Q} غیر از تهران در مشهد", f"{_Q} غیر از تهران"),
+          ]))
+check("every cue of the rule is one the reader knows: a province after it "
+      "is read, or declined, but never assumed",
+      all(not read_provinces(f"{_Q} {c} تهران").assumptions
+          for c in [*_CUE_WORDS, *(" ".join(p) for p in _CUE_PAIRS)])
+      and read_provinces(f"{_Q} سفید تهران").assumptions,
+      str([c for c in [*_CUE_WORDS, *(" ".join(p) for p in _CUE_PAIRS)]
+           if read_provinces(f"{_Q} {c} تهران").assumptions]))
 
 
 # ---------------------------------------------------------------------------
