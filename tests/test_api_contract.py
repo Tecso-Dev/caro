@@ -1243,6 +1243,8 @@ def _value_missing(rec: dict, i) -> list[str]:
             rec.get("mileage_km") is None
             or rec.get("mileage_status") != "plausible"):
         out.append("mileage")
+    if i.provinces and not rec.get("province"):
+        out.append("province")
     for line in i.deal_breakers:
         _, breaks, meets = _RED13[line]
         if _red13(rec, line) not in breaks | meets:
@@ -1261,6 +1263,8 @@ def _value_breaks(rec: dict, i) -> bool:
             or (i.max_mileage_km is not None and m is not None
                 and rec.get("mileage_status") == "plausible"
                 and m > i.max_mileage_km)
+            or (bool(i.provinces) and bool(rec.get("province"))
+                and rec["province"] not in i.provinces)
             or any(_red13(rec, line) in _RED13[line][1]
                    for line in i.deal_breakers))
 
@@ -1289,26 +1293,26 @@ finally:
         os.environ[corpus_mod.RUN_ENV] = _was_run
     corpus_mod.active.cache_clear()
 
-for _q, _r in _res13:
+def _judge13(_q, _r, _rec, _where=""):
     _i = _r.intent
-    _bad = [x.id for x in _r.evidence if _value_missing(_rec13[x.id], _i)]
-    check(f"  «{_q[:30]}» — {len(_r.evidence)} match(es), each checked "
+    _bad = [x.id for x in _r.evidence if _value_missing(_rec[x.id], _i)]
+    check(f"  «{_q[:30]}»{_where} — {len(_r.evidence)} match(es), each checked "
           f"against every constraint stated", not _bad,
           f"a match with a value missing: {_bad}")
     _wrong = [(x.id, x.unchecked) for x in _r.evidence_unchecked
               if not x.unchecked
-              or x.unchecked != _value_missing(_rec13[x.id], _i)]
+              or x.unchecked != _value_missing(_rec[x.id], _i)]
     check(f"    {len(_r.evidence_unchecked)} shown apart, each naming what "
           f"its listing lacks", not _wrong, f"named wrongly: {_wrong}")
     _broke = [x.id for x in list(_r.evidence) + list(_r.evidence_unchecked)
-              if _value_breaks(_rec13[x.id], _i)]
+              if _value_breaks(_rec[x.id], _i)]
     check("    nothing shown breaks a constraint stated", not _broke,
           f"shown, and breaking one: {_broke}")
     # The totals, counted in the artifact: every vehicle of the model asked
     # for that breaks nothing, split by whether a value is missing. Checked
     # against the payload's own lists alone, a total that reported only the
     # rows shown would agree with itself.
-    _cand = [rec for rec in _rec13.values()
+    _cand = [rec for rec in _rec.values()
              if rec.get("product_class") == "vehicle"
              and (not _i.models
                   or (rec.get("model") or "").lower() in _i.models)
@@ -1324,11 +1328,120 @@ for _q, _r in _res13:
           and len(_r.evidence_unchecked) == min(_want_a, _K13),
           f"the artifact holds {_want_m} matched and {_want_a} apart")
 
+
+for _q, _r in _res13:
+    _judge13(_q, _r, _rec13)
+
 _apart13 = sum(len(r.evidence_unchecked) for _, r in _res13)
 check(f"  the examples reach the case: {_apart13} listing(s) shown apart",
       _apart13 > 0,
       "nothing was shown apart, so the checks above cannot see the rule "
       "— said, not passed")
+
+# The province. None of the chips states one, so nothing above reaches what
+# `judge` does with it (D82): met when the listing is in a province the buyer
+# named, unknown when it holds none, broken when it is in another. The
+# published corpora hold the field in different amounts — none of the cars, a
+# third of them, all but one, every one — which is the reason to read all of
+# them: a rule run only on the default corpus would go on passing the day it
+# counted a missing province as a match, because the default has no car
+# without one. Each car's province is read from the ARTIFACT by id, and the
+# totals are counted there, as they are for the chips.
+from caro.ingest.persian import PROVINCES, PROVINCE_SPELLINGS       # noqa: E402
+
+_CORP13 = ROOT / "data" / "corpora"
+
+
+@contextlib.contextmanager
+def _published(run):
+    """The API serving one published corpus, whatever the default is."""
+    was, was_run = corpus_reader.CORPORA, os.environ.get(corpus_mod.RUN_ENV)
+    corpus_reader.CORPORA = _CORP13
+    os.environ[corpus_mod.RUN_ENV] = run
+    corpus_mod.active.cache_clear()
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            yield
+    finally:
+        corpus_reader.CORPORA = was
+        if was_run is None:
+            os.environ.pop(corpus_mod.RUN_ENV, None)
+        else:
+            os.environ[corpus_mod.RUN_ENV] = was_run
+        corpus_mod.active.cache_clear()
+
+
+# What a buyer can type after «در»: the thirty-one names, and each spelling
+# that is not one of them with the province it means. Asked with no model and
+# with each of the three the corpora hold most of.
+_NAMES13 = [(p, p) for p in PROVINCES] + list(PROVINCE_SPELLINGS.items())
+_MODELS13 = (("", None), ("پراید ", "pride"), ("تیبا ", "tiba"),
+             ("کوییک ", "quik"))
+_PROVQ13 = ("پراید در تهران", "در تهران یا اصفهان",
+            "پراید زیر ۶۰۰ میلیون در تهران")
+_shape13: dict[str, str] = {}
+_cells13 = {"met": 0, "unknown": 0, "broken": 0}
+_both13: list[str] = []         # a match AND a car apart, on «پراید در تهران»
+_two13: list[str] = []          # a car apart on the price AND the province
+
+for _run13 in sorted(p.stem for p in _CORP13.glob("*.json")):
+    _recs13 = {x["listing_id"]: x for x in json.loads(
+        (_CORP13 / f"{_run13}.json").read_text(encoding="utf-8"))["listings"]}
+    _veh13 = [x for x in _recs13.values() if x.get("product_class") == "vehicle"]
+    _held13 = sum(1 for x in _veh13 if x.get("province"))
+    _shape13[_run13] = ("none" if not _held13 else
+                        "all" if _held13 == len(_veh13) else "some")
+    _off13, _n13 = [], 0
+    with _published(_run13):
+        for _typed13, _canon13 in _NAMES13:
+            for _pre13, _model13 in _MODELS13:
+                _q13 = f"{_pre13}در {_typed13}"
+                _got13 = api.search(q=_q13, k=_K13)
+                _pool13 = [x for x in _veh13 if _model13 is None
+                           or (x.get("model") or "").lower() == _model13]
+                _met13 = sum(1 for x in _pool13
+                             if x.get("province") == _canon13)
+                _unk13 = sum(1 for x in _pool13 if not x.get("province"))
+                _cells13["met"] += _met13
+                _cells13["unknown"] += _unk13
+                _cells13["broken"] += len(_pool13) - _met13 - _unk13
+                _n13 += 1
+                if (_got13.evidence_total, _got13.evidence_unchecked_total) \
+                        != (_met13, _unk13):
+                    _off13.append((_q13, (_got13.evidence_total,
+                                          _got13.evidence_unchecked_total),
+                                   (_met13, _unk13)))
+        _ans13 = {q: api.search(q=q, k=_K13) for q in _PROVQ13}
+    check(f"  {_run13} ({_held13} of {len(_veh13)} cars carry a province): "
+          f"«در X» for {len(_NAMES13)} names × {len(_MODELS13)} models, "
+          f"{_n13} answers, each (matched, apart) the count the artifact gives",
+          not _off13, f"differs on {_off13[:3]}")
+    for _q13, _r13 in _ans13.items():
+        _judge13(_q13, _r13, _recs13, f" · {_run13}")
+    _first13, _last13 = _ans13[_PROVQ13[0]], _ans13[_PROVQ13[-1]]
+    if _first13.evidence_total and _first13.evidence_unchecked_total:
+        _both13.append(_run13)
+    if any(tuple(x.unchecked) == ("budget", "province")
+           for x in _last13.evidence_unchecked):
+        _two13.append(_run13)
+
+check("  the corpora hold the field none, some and all of the way, and each "
+      "is read: " + ", ".join(f"{k} {v}" for k, v in _shape13.items()),
+      set(_shape13.values()) == {"none", "some", "all"},
+      "a way is missing, so a rule's branch is never run on a whole corpus — "
+      "said, not passed")
+check(f"  and the rule's three answers are all reached ({_cells13['met']} met, "
+      f"{_cells13['unknown']} unknown, {_cells13['broken']} broken — a car "
+      f"counted once in each answer it is part of)",
+      all(_cells13.values()), str(_cells13))
+check(f"  «{_PROVQ13[0]}» draws a match and a car shown apart together, on "
+      f"{', '.join(_both13) or 'no corpus'}", bool(_both13),
+      "no corpus gives both, so the table that tells them apart is never "
+      "drawn from a real answer — said, not passed")
+check("  a car with neither a price nor a province is shown apart naming "
+      f"both, the price first, on {', '.join(_two13) or 'no corpus'}",
+      bool(_two13), "the order the constraints are judged in is not reached "
+      "on a real car — said, not passed")
 
 
 # ---------------------------------------------------------------------------

@@ -494,22 +494,40 @@ print("\n5 — search: a match is drawn as one only where it was checked")
 # on the budget, and the case went unreached (2026-10-06). «پژو ۲۰۶» names a
 # model no published corpus holds, so it reaches the case whatever lacks a
 # price.
+#
+# A province is the first constraint a whole corpus can lack for most of its
+# cars (D82). The served corpus holds one for every car, so none of its answers
+# has a car apart on it: «پراید در تهران» there is 18 matches and nothing else,
+# and draws the province's control — a match never says it went unchecked. The
+# first published corpus whose answer to it has both a match and a car apart is
+# drawn beside them (run13: 3 matches, 31 apart, each saying «استان ثبت‌نشده»).
 _BOX5 = (WEB / "components" / "SearchBox.tsx").read_text(encoding="utf-8")
 _m5 = re.search(r"const EXAMPLES = \[(.*?)\];", _BOX5, re.S)
 _Q5 = (re.findall(r"'([^']+)'", _m5.group(1)) if _m5 else []) \
     + ["پراید زیر ۱۰ میلیون", "تیبا زیر ۱۰ میلیون", "پراید سند آزاد",
-       "پژو ۲۰۶"]
+       "پژو ۲۰۶", "پراید در تهران"]
 with serving(ART.parent):
     _found5 = [(q, api.search(q=q, k=8)) for q in _Q5]
+_held5, _run5 = [], None
+for _p5 in sorted(ART.parent.glob("*.json")):
+    with serving(ART.parent, _p5.stem):
+        _try5 = api.search(q="پراید در تهران", k=8)
+        if _try5.evidence_total and _try5.evidence_unchecked_total:
+            _run5 = _p5.stem
+            _held5 = [(f"{q} · {_run5}", api.search(q=q, k=8))
+                      for q in ("پراید در تهران", "در تهران")]
+            break
 
 _eout, why = node({"component": "components/SearchEvidence.tsx",
                    "export": "SearchEvidence",
-                   "props": [{"data": as_json(r)} for _, r in _found5],
+                   "props": [{"data": as_json(r)} for _, r in _found5 + _held5],
                    "consts": {"module": "components/SearchEvidence.tsx",
                               "names": ["MATCHED_FA", "APART_FA", "NONE_FA"]}})
 _fout, why2 = node({"consts": {"module": "lib/format.ts",
                                "names": ["UNCHECKED_FA", "ODOMETER_FA"]}})
-check(f"SearchEvidence could be drawn for {len(_found5)} answers",
+_from5 = _run5 or "no corpus that holds a car apart on the province"
+check(f"SearchEvidence could be drawn for {len(_found5 + _held5)} answers "
+      f"({len(_held5)} from {_from5})",
       _eout is not None and _fout is not None, why or why2)
 
 
@@ -530,7 +548,8 @@ def _text(html: str) -> str:
 
 
 _reach5 = {"matched beyond k": False, "apart": False,
-           "apart beyond k": False, "none+apart": False, "none": False}
+           "apart beyond k": False, "none+apart": False, "none": False,
+           "apart on the province": False}
 if _eout is not None and _fout is not None:
     MATCHED, APART, NONE = (_eout["consts"][n]
                             for n in ("MATCHED_FA", "APART_FA", "NONE_FA"))
@@ -549,6 +568,8 @@ if _eout is not None and _fout is not None:
             keys.append("year")
         if intent.max_mileage_km is not None:
             keys.append("mileage")
+        if intent.provinces:
+            keys.append("province")
         return keys + [k for k in intent.deal_breakers if k in PHRASE]
 
     def _why5(item, key: str) -> str:
@@ -561,7 +582,7 @@ if _eout is not None and _fout is not None:
             return ODO[item.mileage_status]
         return PHRASE[key]
 
-    for (q, r), html in zip(_found5, _eout["markup"]):
+    for (q, r), html in zip(_found5 + _held5, _eout["markup"]):
         sec = _sections(html)
         got_m = _rows(sec.get("matched", ""))
         got_a = _rows(sec.get("apart", ""))
@@ -613,6 +634,8 @@ if _eout is not None and _fout is not None:
                 _reach5[f"{kind} beyond k"] = True
         if want_a:
             _reach5["apart"] = True
+        if any("province" in keys for keys in want_a.values()):
+            _reach5["apart on the province"] = True
         if r.evidence_total == 0:
             _reach5["none+apart" if want_a else "none"] = True
 
@@ -1046,6 +1069,12 @@ def _intent11(**kw) -> schemas.Intent:
             mileage=0.10, recency=0.05), **kw)
 
 
+def _facts11(html: str) -> dict[str, str]:
+    """The panel's «what we understood» list: label → value."""
+    return {_text(k).strip(): _text(v).strip() for k, v in re.findall(
+        r"<dt[^>]*>(.*?)</dt>\s*<dd[^>]*>(.*?)</dd>", html, re.S)}
+
+
 _p11, why = node({"component": "components/IntentPanel.tsx",
                   "export": "default",
                   "props": [{"intent": as_json(_intent11(
@@ -1056,10 +1085,6 @@ _p11, why = node({"component": "components/IntentPanel.tsx",
 check("IntentPanel could be drawn for an intent with provinces and for one "
       "without", _p11 is not None, why)
 if _p11 is not None:
-    def _facts11(html: str) -> dict[str, str]:
-        return {_text(k).strip(): _text(v).strip() for k, v in re.findall(
-            r"<dt[^>]*>(.*?)</dt>\s*<dd[^>]*>(.*?)</dd>", html, re.S)}
-
     _two11, _none11 = (_facts11(h) for h in _p11["markup"])
     check("  a province named is listed under «استان», any-of, in the order "
           "named", _two11.get("استان") == "تهران، اصفهان", str(_two11))
@@ -1070,6 +1095,56 @@ if _p11 is not None:
           "استان" in _phrase11.get("province", "")
           and list(_phrase11.values()).count(_phrase11.get("province")) == 1,
           str(_phrase11.get("province")))
+
+# And the panel as the parser's own reading draws it: the intent of a real
+# answer, not one built above. The four readings a buyer can get — read as
+# written, read from a bare name with the assumption said, declined and left
+# in view, and not mentioned — each have to be told apart on the page.
+_Q11 = (("پراید در تهران", "read as written"),
+        ("پراید تهران", "a bare name, read and said so"),
+        ("پراید غیر از تهران", "«غیر از», declined"),
+        ("پراید پلاک تهران", "a plate, declined"),
+        ("پراید", "no province named"))
+with serving(ART.parent):
+    _real11 = [(q, api.search(q=q, k=8)) for q, _ in _Q11]
+_pr11, why = node({"component": "components/IntentPanel.tsx",
+                   "export": "default",
+                   "props": [{"intent": as_json(r.intent)}
+                             for _, r in _real11]})
+check(f"IntentPanel could be drawn for the intents of {len(_real11)} real "
+      f"answers", _pr11 is not None, why)
+if _pr11 is not None:
+    def _assumed11(html: str) -> list[str]:
+        return [_text(x).strip()
+                for x in re.findall(r"<li[^>]*>(.*?)</li>", html, re.S)]
+
+    def _unseen11(html: str) -> list[str]:
+        """What sits under «نفهمیدیم»: the chips of the parts left out."""
+        m = re.search(r"نفهمیدیم.*?</p>\s*<div[^>]*>(.*?)</div>", html, re.S)
+        return ([_text(x).strip() for x in re.findall(
+            r"<span[^>]*>(.*?)</span>", m.group(1), re.S)] if m else [])
+
+    _got11 = {q: (_facts11(h), _assumed11(h), _unseen11(h))
+              for (q, _), h in zip(_Q11, _pr11["markup"])}
+    _f, _a, _u = _got11["پراید در تهران"]
+    check("  «پراید در تهران»: «استان: تهران», no assumption, nothing left "
+          "under «نفهمیدیم»",
+          _f.get("استان") == "تهران" and not _a and not _u,
+          str((_f, _a, _u)))
+    _f, _a, _u = _got11["پراید تهران"]
+    check("  «پراید تهران»: the same line, and the reading said as an "
+          "assumption",
+          _f.get("استان") == "تهران" and _a == ["«تهران» را استان تهران گرفتیم"]
+          and not _u, str((_f, _a, _u)))
+    for _q, _said in (("پراید غیر از تهران", "غیر از تهران"),
+                      ("پراید پلاک تهران", "پلاک تهران")):
+        _f, _a, _u = _got11[_q]
+        check(f"  «{_q}»: no «استان» line, and «{_said}» left in view under "
+              f"«نفهمیدیم»", "استان" not in _f and _u == [_said] and not _a,
+              str((_f, _a, _u)))
+    _f, _a, _u = _got11["پراید"]
+    check("  «پراید»: no «استان» line, no assumption, nothing left out",
+          "استان" not in _f and not _a and not _u, str((_f, _a, _u)))
 
 print()
 if FAILS:
