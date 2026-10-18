@@ -123,10 +123,28 @@ intent → explain the best choice**.
      between the cue and the amount («قیمت در مشهد ۳۰۰ میلیون») is still
      taken with the clause and dropped; and a second budget in the same
      clause lends its «تا» to the place before it, as «یا» does.
+   - A model's number inside an amount or a year added a model nobody wrote:
+     «دنا تا ۱۳۱۰ میلیون» added `pride`, «تیبا مدل ۱۴۰۵» added `405`. A number
+     is read now only where it stands alone: in the query less its amounts
+     of money, and not beside another digit. Of 2901 budgets «تیبا تا N
+     میلیون» 54 added a model, and of 26 years «تیبا مدل Y» 1; none does.
+     The 45 uses of a number as a model written for the measurement are all
+     read, the 18 amounts and years that hold one give the models written,
+     and none of the suites' 51 queries, nor of 120 ordinary sentences,
+     changes. Known, and left, each pinned by a test so that it changes on
+     purpose: a number after «و» that follows a scale word is the amount's
+     («تا ۳۰۰ میلیون و ۲۰۶»), as it was for the budget; and a name is matched
+     as ever, so «پژو۲۰۶۹» and «پژو 206 میلیون» still read 206.
    - A cue or a model alias is matched inside a longer word: «محدوده» sets a
-     flexible budget, «بارفروش» a cargo use, «پارس‌آباد» the model `pars`;
-     and a model number inside an amount or a year adds a model nobody
-     wrote: «دنا تا ۱۳۱۰ میلیون» adds `pride`. Measured, not yet changed.
+     flexible budget, «بارفروش» a cargo use, «پارس‌آباد» the model `pars`.
+     Measured, not changed, and left to the owner, since which letters may
+     stand beside a word is a choice about Persian and not a measurement.
+     On 69 words that hold a cue or an alias and are no use of it, and 33
+     true forms that carry a suffix: no letter before it clears 30 of the
+     69 and loses none of the 33, but stops reading a name with a prefix
+     typed on, «وتیبا»; no letter on either side clears 63 and loses 16 of
+     the 33; the same with a list of suffixes, written by hand for it,
+     clears 58 and loses 2.
 
 ## Next — the product gaps
 

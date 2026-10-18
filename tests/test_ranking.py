@@ -364,6 +364,55 @@ check("  and an explicit budget clause is not labelled a guess",
 
 
 # ---------------------------------------------------------------------------
+print("\na model's number is a model only where it stands alone (D83)")
+# A model's number was matched as a substring of the query: «دنا تا ۱۳۱۰ میلیون»
+# holds 131, which is Pride's, and «تیبا مدل ۱۴۰۵» holds 405, so each added a
+# model nobody wrote. A number is read now in the query less its amounts of
+# money, and not beside another digit. A name is matched as ever. Every
+# phrasing is made here; no log of what buyers write exists.
+_NUMBERS = [("206", "206"), ("207", "207"), ("405", "405"),
+            ("131", "pride"), ("111", "pride")]
+for _n, _key in _NUMBERS:
+    for _t, _extra, _why in [
+        ("{N}", (), "alone"),
+        ("ماشین {N} سفید", (), "between words"),
+        ("تیبا یا {N}", ("tiba",), "beside another model"),
+        ("تا ۳۰۰ میلیون {N}", (), "after a budget, in its clause"),
+        ("زیر ۴۰۰ میلیون {N} سفید", (), "after a budget, with a word after it"),
+    ]:
+        _q = _t.format(N=_n)
+        _got = set(P.parse(_q).model_hints)
+        check(f"«{_q}» → {sorted({_key, *_extra})} ({_why})",
+              _got == {_key, *_extra}, str(sorted(_got)))
+
+for q, want, why in [
+    ("دنا تا ۱۳۱۰ میلیون", {"dena"}, "131 inside an amount"),
+    ("دنا تا ۱۱۱۰ میلیون", {"dena"}, "111 inside an amount"),
+    ("تیبا تا ۲۰۷۵ میلیون", {"tiba"}, "207 inside an amount"),
+    ("سورن تا ۱۲۰۶ میلیون", set(), "206 inside an amount, and no model at all"),
+    ("تیبا بودجه ۱۴۰۵ میلیون", {"tiba"}, "405 inside an amount"),
+    ("تیبا مدل ۱۴۰۵", {"tiba"}, "405 inside a year"),
+    ("تیبا مدل ۱۴۰۶", {"tiba"}, "a year with no number in it"),
+    ("پراید تا ۲۰۶ میلیون", {"pride"}, "the number is the amount"),
+    ("تیبا تا ۴۰۵ میلیون", {"tiba"}, "  the same"),
+    ("تیبا ۱۱۱ میلیون", {"tiba"}, "  with no cue before it"),
+    ("پژو ۲۰۶ تا ۲۰۷ میلیون", {"206"}, "a model, then an amount that is another's number"),
+    ("۲۰۶ زیر ۱۱۱۰ میلیون", {"206"}, "  and the other way round"),
+    ("تیبا تا یک میلیارد و ۲۰۶ میلیون", {"tiba"}, "inside a written amount"),
+    ("پراید ۱۱۱ مدل ۱۳۹۰", {"pride"}, "the model is read and the year is not"),
+    ("تیبا ۱۲۰۶ سفید", {"tiba"}, "206 inside a longer number: a digit before it"),
+    ("تیبا ۲۰۶۱ سفید", {"tiba"}, "  a digit after it"),
+    ("تیبا ۱۲۰۶ یا ۲۰۶", {"tiba", "206"}, "alone once is read, whatever else holds it"),
+    ("تا ۳۰۰ میلیون و ۲۰۶", set(), "after «و» the amount takes the number, as it did the budget"),
+    ("پژو۲۰۶۹", {"206"}, "a name is matched as ever, even beside a digit"),
+    ("پژو 206 میلیون", {"206"}, "  and even before «میلیون»"),
+]:
+    got_h = set(P.parse(q).model_hints)
+    check(f"«{q}» → {sorted(want) or 'no model'} ({why})", got_h == want,
+          str(sorted(got_h)))
+
+
+# ---------------------------------------------------------------------------
 print("\na province is read where it is a place the car should be in (D82)")
 # A province named in a query is a constraint. The reading is the hazardous
 # one: a wrong read inverts and says nothing, so a name is read only where it

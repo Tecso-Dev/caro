@@ -150,6 +150,27 @@ MODEL_ALIASES: dict[str, tuple[str, ...]] = {
     "saina": ("ساینا", "saina"),
 }
 
+# A model's number is a model only where it stands alone. «دنا تا ۱۳۱۰ میلیون»
+# holds 131, which is Pride's, inside an amount of money, and «تیبا مدل ۱۴۰۵»
+# holds 405 inside a year; each added a model nobody wrote (D83). So a number
+# is looked for in the query less its amounts of money, and is not taken beside
+# another digit. A name is matched as ever, anywhere in the query.
+_NUMERIC_ALIASES = frozenset(a for als in MODEL_ALIASES.values() for a in als
+                             if a.isdigit())
+
+
+def _names_model(q: str, alias: str, bare: str) -> bool:
+    """Does `q` name a model by `alias`? `bare` is `q` less its amounts of
+    money, which is where a number is read."""
+    if alias not in _NUMERIC_ALIASES:
+        return alias in q
+    for m in re.finditer(re.escape(alias), bare):
+        if not ((m.start() and bare[m.start() - 1].isdigit())
+                or (m.end() < len(bare) and bare[m.end()].isdigit())):
+            return True
+    return False
+
+
 USE_CASE_CUES: dict[str, tuple[str, ...]] = {
     "ride_hailing": ("اسنپ", "تپسی", "مسافرکشی", "تاکسی", "کار "),
     "family_first_car": ("خانواده", "خانوادگی", "ماشین اول", "بچه"),
@@ -628,8 +649,9 @@ class RuleIntentParser:
             acted.append(m.group(0))
             assumptions.append("بودجه را انعطاف‌پذیر در نظر گرفتیم")
 
+        bare = _MONEY.sub(" ", q)
         models = tuple(k for k, al in MODEL_ALIASES.items()
-                       if any(a in q for a in al))
+                       if any(_names_model(q, a, bare) for a in al))
 
         year_min = None
         # «به بالا» after the year is the same statement — a floor — so it
