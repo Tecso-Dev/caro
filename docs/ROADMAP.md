@@ -146,6 +146,43 @@ intent → explain the best choice**.
      the 33; the same with a list of suffixes, written by hand for it,
      clears 58 and loses 2.
 
+5. **The budget floor — read from a year, and set as a ceiling too.**
+   Found while the third change of item 4 was tested, and older than all
+   three: the parser as pushed before them reads the same. Measured, not
+   changed, and left to the owner: which words make a floor, and whether
+   a bare figure («از ۳۰۰ به بالا») is one, are choices about Persian.
+   For the ceiling the second is settled: a budget is taken only from a
+   number that is money (`_MONEY`). No test reads a floor from a query,
+   and the panel prints what is read under «کف بودجه». Three faults:
+   - The text between «از» or «بالای» and «به بالا» goes to `parse_amount`,
+     which takes a bare number for millions. «از» is matched at the end of
+     a word («شیراز», «اهواز», «نیاز») and as the word of «غیر از», and «به
+     بالا» is also the tail of a year clause, so «پراید از مدل ۹۸ به بالا»
+     sets a floor of 98,000,000 and «پراید ساکن شیراز مدل ۱۴۰۱ به بالا»
+     one of 1,401,000,000. Of 35 such phrases, five years after seven
+     lead-ins, 35 set a floor; none of 6 with no «از», or with a comma
+     between it and «به بالا», does. On run16, «پراید از مدل ۱۴۰۱ به بالا»
+     finds none of the 53 Pride listings, and «پراید مدل ۱۴۰۱ به بالا»
+     finds 1.
+   - A floor is read as a ceiling too. With no cue clause the first amount
+     of money is taken for the ceiling, with the assumption «عدد قیمت را
+     سقف بودجه فرض کردیم» printed, and a floor's amount is that amount:
+     «پراید از ۴۰۰ میلیون به بالا» has both at 400,000,000, so on run16 it
+     finds none of the 53 and holds 3 apart, though 47 of the 50 Pride
+     listings that carry a price are at or above it. 5 of 5 floors written
+     with no ceiling clause do so.
+   - «بالای ۴۰۰ میلیون», without «به بالا», sets no floor, and its amount
+     is taken for the ceiling: the meaning reversed, with the assumption
+     printed.
+
+   One change was measured in memory and is not built: read the floor by
+   `money_amount`, as the ceiling is read. It reads a floor on 0 of the 35
+   and 0 of the 6, keeps all 6 floors that are meant, and of 16378 queries
+   written for the checks of the last three changes it differs on 162,
+   each holding «به بالا» and each in the floor alone. It leaves the
+   second and third faults as they are, and it stops reading «از ۳۰۰ به
+   بالا» as 300 million, which is the owner's to decide.
+
 ## Next — the product gaps
 
 1. **Data.**
