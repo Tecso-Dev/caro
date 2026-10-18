@@ -146,42 +146,97 @@ intent → explain the best choice**.
      the 33; the same with a list of suffixes, written by hand for it,
      clears 58 and loses 2.
 
-5. **The budget floor — read from a year, and set as a ceiling too.**
-   Found while the third change of item 4 was tested, and older than all
-   three: the parser as pushed before them reads the same. Measured, not
-   changed, and left to the owner: which words make a floor, and whether
-   a bare figure («از ۳۰۰ به بالا») is one, are choices about Persian.
-   For the ceiling the second is settled: a budget is taken only from a
-   number that is money (`_MONEY`). No test reads a floor from a query,
-   and the panel prints what is read under «کف بودجه». Three faults:
-   - The text between «از» or «بالای» and «به بالا» goes to `parse_amount`,
-     which takes a bare number for millions. «از» is matched at the end of
-     a word («شیراز», «اهواز», «نیاز») and as the word of «غیر از», and «به
-     بالا» is also the tail of a year clause, so «پراید از مدل ۹۸ به بالا»
-     sets a floor of 98,000,000 and «پراید ساکن شیراز مدل ۱۴۰۱ به بالا»
-     one of 1,401,000,000. Of 35 such phrases, five years after seven
-     lead-ins, 35 set a floor; none of 6 with no «از», or with a comma
-     between it and «به بالا», does. On run16, «پراید از مدل ۱۴۰۱ به بالا»
-     finds none of the 53 Pride listings, and «پراید مدل ۱۴۰۱ به بالا»
-     finds 1.
-   - A floor is read as a ceiling too. With no cue clause the first amount
+5. **The budget floor — what is read, and what is left.** A floor is a
+   cue («از» or «بالای», and not the end of a word), an amount of money, and
+   «به بالا», with nothing between them. A soft word may stand before the
+   amount («حدود», «تقریبا»), and after it the unit that «۱ میلیارد و ۲۰۰
+   میلیون» leaves and a currency word. A floor and a year are also written
+   together («از ۲۰۰ میلیون مدل ۹۸ به بالا»), and then the only «به بالا» is
+   the year clause's: the floor is read there too, and the year clause as it
+   was. A figure with no scale word is not money, so «از ۳۰۰ به بالا» sets
+   no floor and is listed under «نفهمیدیم». A floor's amount is not also the
+   ceiling: the budget cues and the lone amount read the query with the
+   floor's phrase blanked out, so a floor alone has no ceiling and assumes
+   nothing. Two changes, each measured before it was made, in two commits;
+   88 rows of `tests/test_ranking.py` pin what is read and what is left, and
+   the panel prints what is read under «کف بودجه». They answer two faults
+   found while the third change of item 4 was tested, and older than all
+   three:
+   - The text between «از» or «بالای» and the first «به بالا» went to
+     `parse_amount`, which takes a bare number for millions. «از» was matched
+     at the end of a word («شیراز», «اهواز», «نیاز») and as the word of «غیر
+     از», and «به بالا» is also the tail of a year clause, so «پراید از مدل
+     ۹۸ به بالا» set a floor of 98,000,000 and «پراید ساکن شیراز مدل ۱۴۰۱ به
+     بالا» one of 1,401,000,000. Of 35 such phrases, five years after seven
+     lead-ins, 35 set a floor; none does now. With words between a «از» and
+     an amount, the amount that was the budget became the floor: of 128
+     phrases written to show it, 128 set a floor, 96 the budget's amount and
+     32 an odometer's «۱۰۰ هزار»; none does now. On run16, «پراید از مدل
+     ۱۴۰۱ به بالا» matched none of the 53 Pride listings and matches 1, as
+     «پراید مدل ۱۴۰۱ به بالا» does.
+   - A floor was read as a ceiling too. With no cue clause the first amount
      of money is taken for the ceiling, with the assumption «عدد قیمت را
-     سقف بودجه فرض کردیم» printed, and a floor's amount is that amount:
-     «پراید از ۴۰۰ میلیون به بالا» has both at 400,000,000, so on run16 it
-     finds none of the 53 and holds 3 apart, though 47 of the 50 Pride
-     listings that carry a price are at or above it. 5 of 5 floors written
-     with no ceiling clause do so.
-   - «بالای ۴۰۰ میلیون», without «به بالا», sets no floor, and its amount
-     is taken for the ceiling: the meaning reversed, with the assumption
-     printed.
+     سقف بودجه فرض کردیم» printed, and a floor's amount was that amount: of
+     144 phrasings of a floor, six forms and six amounts, with no model and
+     with three, 144 had it for both and 96 printed the assumption; none
+     does now. On run16, «پراید از ۴۰۰ میلیون به بالا» matched none of the
+     53 and matches 47 (3 have no price, 3 are below it).
 
-   One change was measured in memory and is not built: read the floor by
-   `money_amount`, as the ceiling is read. It reads a floor on 0 of the 35
-   and 0 of the 6, keeps all 6 floors that are meant, and of 16378 queries
-   written for the checks of the last three changes it differs on 162,
-   each holding «به بالا» and each in the floor alone. It leaves the
-   second and third faults as they are, and it stops reading «از ۳۰۰ به
-   بالا» as 300 million, which is the owner's to decide.
+   Of the 16378 queries written for the checks of the last three changes,
+   162 differ from the parser before these two, each holding «به بالا» and
+   each in the floor alone; none of the 171 queries the suites and the
+   measurement hold changes. On 16378, 1553, 572 and 169 queries of the
+   measurements and 28923 generated ones, a separate copy of the rule, kept
+   outside the repository, returns what the code returns.
+
+   Known, and left, each pinned by a test so that it changes on purpose.
+   The old rule took whatever stood between the cue and «به بالا», and read
+   some floors right by accident; the tied rule does not. Of 572 phrases
+   written for the last measurement the floor changes on 272: on 128 it was
+   the budget or an odometer's figure and is none now, and on 144 it was
+   right and is no longer read: a word between the cue and the amount
+   («از قیمت ۲۰۰ میلیون به بالا», and «بودجه», «مبلغ», «حدودا»; 96); the
+   «از» that ends a word («شیراز ۲۰۰ میلیون به بالا»; 24); and the lower end
+   of a range with a year clause («از ۲۰۰ تا ۴۰۰ میلیون مدل ۹۸ به بالا»;
+   24). In the first two the amount that was the floor is the ceiling now,
+   with the assumption printed where no cue clause names it: the meaning
+   reversed. In the range the upper end is the ceiling, as it was. The old
+   rule had paired 120 of the 144 with a wrong ceiling as well.
+
+   Measured, not changed, and left. «بالای ۴۰۰ میلیون», without «به بالا»,
+   sets no floor, and its amount is taken for the ceiling, with the
+   assumption printed: the meaning reversed when a floor is meant. Of 456
+   phrasings written for the measurement, 144 mean a floor («بالای X»,
+   «بالای X باشه», «بالای X، سفید», and three with another requirement
+   after it) and 312 a ceiling (thirteen forms of a negation: «بالای X
+   نباشه», «نشه», «نره», «نیست», «نمی‌خوام» and the rest). Read as a ceiling
+   it is right on 312. Read as a floor wherever it stands, it is right on
+   144; a floor except where a negation the province reader already knows
+   stands beside it, on 264; a floor only before a list of positive words,
+   on 360. No rule reads both kinds right, and the owner chose to leave it
+   as it is.
+
+   Not built, each measured on made phrasings and each a round of its own,
+   with the predictions written first:
+   - Other words for a floor — «حداقل», «بیشتر از», «بیش از», «بالاتر
+     از», «X و بالاتر», «X و بیشتر», «X یا بیشتر», «حداقل بودجه X» — set
+     no floor; on 192 of 192 the amount is taken for the ceiling.
+   - A bare «X به بالا» («پراید ۴۰۰ میلیون به بالا») is read as a ceiling,
+     on 24 of 24. A rule that makes the cue optional reads it as a floor,
+     and on 72 of 72 with a ceiling clause beside it («زیر ۸۰۰ میلیون،
+     ۴۰۰ میلیون به بالا»). But it also reads «تا ۴۰۰ میلیون به بالا نره»
+     (up to 400 million, not higher) as a floor, where the parser reads the
+     ceiling it is: five of five phrases tried, and four of five when a
+     negation after «به بالا» is skipped, since «نره», «نشه», «نرسه»,
+     «نگذره» and «نزنه» are in no list of negations the parser holds. How
+     many buyers write it that way is not known.
+   - A range sets no floor, on 96 of 96: «از X تا Y», «بین X تا Y» and
+     «X تا Y» give the upper end as the ceiling; «از X الی Y» gives the
+     lower end, with the assumption printed.
+   - A negated floor, «پراید از ۴۰۰ میلیون به بالا نباشه», is read as a
+     floor of 400 million with no ceiling (before: a floor and a ceiling of
+     400 million): the meaning reversed, on 24 of 24. A rule that skips a
+     negation after «به بالا» reads it as the ceiling, on 24 of 24.
 
 ## Next — the product gaps
 
