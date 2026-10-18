@@ -635,6 +635,15 @@ class RuleIntentParser:
 
         budget_max = budget_min = None
         hard = True
+        # The floor is read first, and the budget is read from the query with the
+        # floor's phrase blanked out: «از ۴۰۰ میلیون به بالا» is a floor and
+        # nothing else, and its amount was also taken for the ceiling.
+        qc = q
+        m = _FLOOR_S.search(q) or _FLOOR_Y.search(q)
+        if m:
+            budget_min = parse_amount(m.group(1))
+            acted.append(m.group(0))
+            qc = q[:m.start()] + " " * (m.end() - m.start()) + q[m.end():]
         # Every budget-ish clause, not just the first one in the string. The
         # first clause is frequently about something else — «کارکرد زیر ۹۰
         # هزار، تا ۸۰۰ میلیون» opens with an odometer — so a clause is taken
@@ -644,12 +653,14 @@ class RuleIntentParser:
         # `read_unknown_places` below.
         budget_tail = ""
         for m in re.finditer(r"(?:زیر|تا|حداکثر|کمتر از|بودجه|قیمت)\s*([^،]*)",
-                             q):
+                             qc):
             got = money_amount(m.group(1))
             if got is not None:
                 budget_max = got
-                consumed.append(m.group(0))
-                budget_tail = after_amount(m.group(1))
+                # Found in `qc`, taken from `q` by the same span: a floor's
+                # phrase inside the clause goes with it.
+                consumed.append(q[m.start():m.end()])
+                budget_tail = after_amount(q[m.start(1):m.end(1)])
                 break
         if budget_max is None:
             # No clause said it, but the query may still name a price. This
@@ -657,15 +668,11 @@ class RuleIntentParser:
             # is read a model number or a year as a budget, which is why it
             # goes through `_MONEY` — `money_amount`, with the span kept —
             # rather than `parse_amount`.
-            mm = _MONEY.search(q)
+            mm = _MONEY.search(qc)
             budget_max = parse_amount(mm.group(0)) if mm else None
             if budget_max is not None:
                 acted.append(mm.group(0))
                 assumptions.append("عدد قیمت را سقف بودجه فرض کردیم")
-        m = _FLOOR_S.search(q) or _FLOOR_Y.search(q)
-        if m:
-            budget_min = parse_amount(m.group(1))
-            acted.append(m.group(0))
         m = re.search(r"(انعطاف|تقریبا|حدود|کمی بیشتر)", q)
         if m:
             hard = False

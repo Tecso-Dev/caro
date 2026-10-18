@@ -501,6 +501,95 @@ for text, why in [   # measured and left: no floor is read, and nothing is claim
 
 
 # ---------------------------------------------------------------------------
+print("\na floor is not also the ceiling")
+# With no clause naming a ceiling, the first amount of money in the query is
+# taken for it, with the assumption «عدد قیمت را سقف بودجه فرض کردیم» printed,
+# and a floor's amount is that amount: «پراید از ۴۰۰ میلیون به بالا» had both at
+# 400,000,000, and found none of the 53 Pride listings on run16, though 47 of
+# the 50 that carry a price are at or above it. Of 144 phrasings of a floor
+# (six forms, six amounts, with no model and with three), all 144 had the
+# floor's amount for the ceiling too. The floor is read first now, and the
+# ceiling is read from the query with the floor's phrase blanked out. Every
+# phrasing is made here; no log of what buyers write exists.
+_FL_NOTE = "عدد قیمت را سقف بودجه فرض کردیم"
+
+
+def _fl_amt(v):
+    return "—" if v is None else f"{v:,}"
+
+
+for text, want_f, want_c, why in [
+    # a floor alone has no ceiling
+    ("پراید از ۲۰۰ میلیون به بالا", 200_000_000, None, "the plain form"),
+    ("پراید از ۲۰۰ میلیون تومان به بالا", 200_000_000, None, "a currency word"),
+    ("پراید از حدود ۲۰۰ میلیون به بالا", 200_000_000, None, "a soft word"),
+    ("پراید بالای ۴۰۰ میلیون به بالا", 400_000_000, None, "«بالای»"),
+    ("پراید قیمت از ۴۰۰ میلیون به بالا", 400_000_000, None,
+     "a budget cue before it: it is not read as a ceiling clause"),
+    ("پراید بودجه از ۴۰۰ میلیون به بالا", 400_000_000, None, "  the same"),
+    ("پراید از ۱ میلیارد و ۲۰۰ میلیون به بالا", 1_200_000_000, None,
+     "the unit «و» leaves is not an amount"),
+    ("پژو ۲۰۶ از ۱ میلیارد و ۲۰۰ میلیون به بالا", 1_200_000_000, None,
+     "  nor beside a model's number"),
+    ("پراید از ۲۰۰ میلیون مدل ۹۸ به بالا", 200_000_000, None, "with a year clause"),
+    ("پراید از ۱ میلیارد و ۲۰۰ میلیون مدل ۱۴۰۱ به بالا", 1_200_000_000, None,
+     "  and «و» and a second unit"),
+    ("از ۳۰۰ میلیون به بالا", 300_000_000, None, "no model"),
+    ("پراید از ۴۰۰م به بالا", 400_000_000, None, "«م»"),
+    # a floor and a ceiling, each read once, whichever comes first
+    ("پراید از ۲۰۰ میلیون به بالا، تا ۸۰۰ میلیون", 200_000_000, 800_000_000,
+     "a ceiling clause after a comma"),
+    ("پراید از ۲۰۰ میلیون به بالا و تا ۸۰۰ میلیون", 200_000_000, 800_000_000,
+     "  after «و»"),
+    ("پراید تا ۸۰۰ میلیون، از ۲۰۰ میلیون به بالا", 200_000_000, 800_000_000,
+     "  before it"),
+    ("پراید از ۲۰۰ میلیون به بالا ۸۰۰ میلیون", 200_000_000, 800_000_000,
+     "a second amount with no cue, after the phrase"),
+    ("پراید ۸۰۰ میلیون از ۲۰۰ میلیون به بالا", 200_000_000, 800_000_000,
+     "  before it"),
+    ("پراید از ۲۰۰ میلیون به بالا، ۸۰۰ میلیون", 200_000_000, 800_000_000,
+     "  past a comma"),
+    ("پراید از ۱ میلیارد و ۲۰۰ میلیون به بالا، تا ۲ میلیارد", 1_200_000_000,
+     2_000_000_000, "both with «و» and a second unit"),
+    ("پراید تا ۸۰۰ میلیون از ۲۰۰ میلیون به بالا", 200_000_000, 800_000_000,
+     "the floor's phrase inside the ceiling's clause"),
+    # the ceiling is still inferred where nothing else names one
+    ("پراید ۸۰۰ میلیون", None, 800_000_000, "a lone amount, as before"),
+    ("پراید تا ۸۰۰ میلیون", None, 800_000_000, "a ceiling clause, as before"),
+]:
+    sp_c = P.parse(text)
+    check(f"«{text}» → floor {_fl_amt(want_f)}, ceiling {_fl_amt(want_c)}  ({why})",
+          (sp_c.budget_min_toman, sp_c.budget_max_toman) == (want_f, want_c),
+          f"{sp_c.budget_min_toman} {sp_c.budget_max_toman}")
+
+for text, printed, why in [   # the inference is disclosed when it is made, and only then
+    ("پراید از ۲۰۰ میلیون به بالا", False, "a floor alone: nothing is assumed"),
+    ("پژو ۲۰۶ از ۱ میلیارد و ۲۰۰ میلیون به بالا", False,
+     "  nor beside a model's number"),
+    ("پراید از ۲۰۰ میلیون به بالا ۸۰۰ میلیون", True,
+     "a second amount is taken for the ceiling, and said so"),
+    ("پراید ۸۰۰ میلیون", True, "a lone amount, as before"),
+    ("پراید تا ۸۰۰ میلیون", False, "a ceiling clause is no assumption, as before"),
+]:
+    got_n = any(_FL_NOTE in a for a in P.parse(text).assumptions)
+    check(f"«{text}» → the ceiling is "
+          f"{'assumed and said so' if printed else 'not assumed'}  ({why})",
+          got_n == printed, str(P.parse(text).assumptions))
+
+for text, want, why in [   # what the floor's phrase and a ceiling clause leave behind
+    ("پراید از ۲۰۰ میلیون به بالا، تا ۸۰۰ میلیون", (), "nothing is left over"),
+    ("از ۲۰۰ میلیون به بالا", (), "  and without a model"),
+    ("تا ۸۰۰ میلیون و از ۲۰۰ میلیون به بالا", (),
+     "a floor's phrase inside the ceiling's clause goes with it"),
+    ("پراید از ۲۰۰ میلیون به بالا، تا ۳۰۰ میلیون در مشهد", ("در مشهد",),
+     "a place after the ceiling's amount is listed, as it is without a floor"),
+]:
+    got_u = tuple(t.strip() for t in P.parse(text).unparsed)
+    check(f"«{text}» → listed: {list(want) or '—'}  ({why})", got_u == want,
+          str(got_u))
+
+
+# ---------------------------------------------------------------------------
 print("\na model's number is a model only where it stands alone (D83)")
 # A model's number was matched as a substring of the query: «دنا تا ۱۳۱۰ میلیون»
 # holds 131, which is Pride's, and «تیبا مدل ۱۴۰۵» holds 405, so each added a
