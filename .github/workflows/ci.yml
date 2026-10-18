@@ -9,6 +9,11 @@
 #
 # Nothing here deploys. Deploys are the host's job: Vercel builds the site and
 # Railway builds the API image, each from the push to main.
+#
+# Both jobs are pinned to Ubuntu 24.04, the image `ubuntu-latest` has been.
+# GitHub moves that label to Ubuntu 26.04 from 2026-10-19, to be done by
+# 2026-11-19, and warns that workflows tied to 24.04 may be affected. Moving
+# to 26.04 is a change to make on purpose, in a commit and a run of its own.
 
 name: ci
 
@@ -26,7 +31,7 @@ concurrency:
 
 jobs:
   suites:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -61,7 +66,7 @@ jobs:
           fi
 
   web:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
       run:
