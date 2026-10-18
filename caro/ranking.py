@@ -135,6 +135,30 @@ def after_amount(text: str) -> str:
     return text[m.end():] if m else ""
 
 
+# A budget FLOOR: a cue, an amount of money and «به بالا», with nothing between
+# them -- «از ۲۰۰ میلیون به بالا». It was whatever stood between a «از» and the
+# first «به بالا», handed to `parse_amount`, which takes a bare number for
+# millions. «از» also ends many words («شیراز», «نیاز») and is the word of
+# «غیر از», and «به بالا» also ends a year clause. So «پراید از مدل ۹۸ به بالا»
+# set a floor of 98,000,000, and in «پراید غیر از مشهد ۸۰۰ میلیون مدل ۹۸ به
+# بالا» the budget was the floor.
+#
+# `_SOFT` and `_UNIT_TAIL` are what may stand inside the phrase: a soft word
+# before the amount, and after it the unit that «۱ میلیارد و ۲۰۰ میلیون» leaves
+# (`_MONEY` takes «۱ میلیارد و ۲۰۰» only) and a currency word. A floor and a
+# year are also written together -- «از ۲۰۰ میلیون مدل ۹۸ به بالا» -- and the
+# only «به بالا» is the year clause's, which says the same of both: `_FLOOR_Y`
+# reads the floor there and leaves the year clause as it is.
+_UNIT_TAIL = (r"(?:\s*(?:میلیون|ملیون)(?!\w))?"
+              r"(?:\s*(?:تومان|تومن)(?!\w))?")
+_SOFT = r"(?:(?:حدود|تقریبا)\s*)?"
+_CUE = r"(?<!\w)(?:بالای|از)\s*"
+_FLOOR_S = re.compile(_CUE + _SOFT + "(" + _MONEY.pattern + ")" + _UNIT_TAIL
+                      + r"\s*به بالا")
+_FLOOR_Y = re.compile(_CUE + _SOFT + "(" + _MONEY.pattern + ")" + _UNIT_TAIL
+                      + r"(?=\s*مدل\s*\d{2,4}\s*به\s*بالا)")
+
+
 # Model aliases. Sellers and buyers type the same car a dozen ways; the
 # taxonomy is data, not code, so a new model is one line.
 MODEL_ALIASES: dict[str, tuple[str, ...]] = {
@@ -638,11 +662,10 @@ class RuleIntentParser:
             if budget_max is not None:
                 acted.append(mm.group(0))
                 assumptions.append("عدد قیمت را سقف بودجه فرض کردیم")
-        m = re.search(r"(?:بالای|از)\s*([^،]*?)\s*(?:به بالا)", q)
+        m = _FLOOR_S.search(q) or _FLOOR_Y.search(q)
         if m:
             budget_min = parse_amount(m.group(1))
-            if budget_min is not None:
-                acted.append(m.group(0))
+            acted.append(m.group(0))
         m = re.search(r"(انعطاف|تقریبا|حدود|کمی بیشتر)", q)
         if m:
             hard = False

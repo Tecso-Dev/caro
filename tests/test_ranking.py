@@ -364,6 +364,143 @@ check("  and an explicit budget clause is not labelled a guess",
 
 
 # ---------------------------------------------------------------------------
+print("\na floor is an amount of money right before «به بالا»")
+# The floor was read from the text between «از» (or «بالای») and the first
+# «به بالا», whatever it was, and `parse_amount` takes a bare number for
+# millions. «از» also ends many words («شیراز», «نیاز») and is the word of
+# «غیر از», and «به بالا» also ends a year clause, so «پراید از مدل ۹۸ به بالا»
+# set a floor of 98,000,000 and «پراید ساکن شیراز مدل ۱۴۰۱ به بالا» one of
+# 1,401,000,000: 35 of 35 phrasings, five years after seven lead-ins. And with
+# words between a «از» and an amount, the amount that was the budget became
+# the floor: «پراید غیر از مشهد ۸۰۰ میلیون مدل ۹۸ به بالا» set 800,000,000. Of
+# 128 phrasings written to show it, 128 set a floor: 96 the amount that was the
+# budget, and 32 an odometer's «۱۰۰ هزار».
+#
+# A floor is now a cue -- «از» or «بالای», and not the end of a word -- then an
+# amount of money, then «به بالا», with nothing between them; or the same
+# without «به بالا» where a year clause with its own «به بالا» follows, which
+# is how a floor and a year are written together. What it does not read is
+# the last block: each of those was measured and is left to a round of its
+# own (docs/ROADMAP.md). Every phrasing is made here; no log of what buyers
+# write exists, so these test the rule, not the buyers.
+for text, want, why in [
+    ("از ۳۰۰ میلیون به بالا", 300_000_000, "a cue, an amount of money, «به بالا»"),
+    ("پراید از ۲۰۰ میلیون به بالا", 200_000_000, "with a model"),
+    ("تیبا از ۱.۵ میلیارد به بالا", 1_500_000_000, "a decimal and a scale word"),
+    ("پژو ۲۰۶ از ۴۰۰ میلیون به بالا", 400_000_000, "a model with a number"),
+    ("از ۱ میلیارد به بالا", 1_000_000_000, "a billion"),
+    ("پراید از ۴۰۰م به بالا", 400_000_000, "«م» for «میلیون»"),
+    ("پراید از ۴۰۰ ملیون به بالا", 400_000_000, "«ملیون»"),
+    ("پراید از ۱ میلیارد و ۲۰۰ میلیون به بالا", 1_200_000_000,
+     "«و» and a second unit"),
+    ("پراید از ۲۰۰ میلیون تومان به بالا", 200_000_000,
+     "a currency word after the amount"),
+    ("پراید از حدود ۲۰۰ میلیون به بالا", 200_000_000, "a soft word before the amount"),
+    ("پراید از تقریبا ۴۰۰ میلیون به بالا", 400_000_000, "  the other soft word"),
+    ("پراید از حدود ۲۰۰ میلیون تومان به بالا", 200_000_000,
+     "  and a currency word after"),
+    ("پراید بالای ۴۰۰ میلیون به بالا", 400_000_000, "«بالای» is a cue as well"),
+    ("پراید از ۲۰۰ میلیون به بالا، سفید", 200_000_000,
+     "another requirement after a comma"),
+    ("پراید در مشهد از ۲۰۰ میلیون به بالا", 200_000_000, "a place before it"),
+    ("پراید از ۲۰۰ میلیون به بالا در مشهد", 200_000_000, "  and after it"),
+    ("پراید از ۲۰۰ میلیون به بالا، تا ۸۰۰ میلیون", 200_000_000,
+     "with a ceiling clause"),
+]:
+    got_f = P.parse(text).budget_min_toman
+    check(f"«{text}» → floor {'—' if want is None else f'{want:,}'}  ({why})",
+          got_f == want, "None" if got_f is None else f"{got_f:,}")
+
+for text, want, year, why in [   # a floor and a year clause, its «به بالا» the only one
+    ("پراید از ۲۰۰ میلیون مدل ۹۸ به بالا", 200_000_000, 1398,
+     "a floor, then a year clause with its own «به بالا»"),
+    ("پراید از ۲۰۰ میلیون تومان مدل ۱۴۰۱ به بالا", 200_000_000, 1401,
+     "  and a currency word"),
+    ("پراید بالای ۴۰۰ میلیون مدل ۹۸ به بالا", 400_000_000, 1398, "  after «بالای»"),
+    ("پراید از ۱ میلیارد و ۲۰۰ میلیون مدل ۹۸ به بالا", 1_200_000_000, 1398,
+     "  «و» and a second unit"),
+    ("پراید از ۴۰۰م مدل ۹۸ به بالا", 400_000_000, 1398, "  «م»"),
+    ("پراید از ۲۰۰ میلیون به بالا، مدل ۹۸ به بالا", 200_000_000, 1398,
+     "two «به بالا», a comma between"),
+    ("پراید مدل ۱۴۰۱ به بالا، از ۲۰۰ میلیون به بالا", 200_000_000, 1401,
+     "the year clause first"),
+    ("پراید از ۲۰۰ میلیون به بالا مدل ۹۸ به بالا", 200_000_000, 1398,
+     "no comma between"),
+    ("پراید از مدل ۹۸ به بالا، از ۲۰۰ میلیون به بالا", 200_000_000, 1398,
+     "the first «از» is a year clause's"),
+    ("پراید از سال ۹۸ به بالا و از ۲۰۰ میلیون به بالا", 200_000_000, None,
+     "  and «سال» is no year clause"),
+]:
+    sp_f = P.parse(text)
+    check(f"«{text}» → floor {want:,}, year {year or '—'}  ({why})",
+          (sp_f.budget_min_toman, sp_f.year_min) == (want, year),
+          f"{sp_f.budget_min_toman} {sp_f.year_min}")
+
+for text, why in [   # an amount between other words is the budget, not a floor
+    ("پراید غیر از مشهد ۸۰۰ میلیون مدل ۹۸ به بالا", "after the word of «غیر از»"),
+    ("پراید ساکن شیراز ۸۰۰ میلیون مدل ۱۴۰۱ به بالا", "after a word that ends in «از»"),
+    ("پراید از تهران ۸۰۰ میلیون مدل ۹۸ به بالا", "a word between the cue and the amount"),
+    ("پراید غیر از مشهد تا ۸۰۰ میلیون مدل ۹۸ به بالا", "a budget cue between"),
+    ("پراید بالای ۱۰۰ هزار کیلومتر تا ۸۰۰ میلیون مدل ۹۵ به بالا",
+     "a distance, then a budget cue"),
+    ("پراید بالای ۱۰۰ هزار کیلومتر ۸۰۰ میلیون مدل ۹۵ به بالا",
+     "a distance, then the amount"),
+    ("پراید نیاز دارم ۸۰۰ میلیون مدل ۹۸ به بالا", "no cue but a word that ends in «از»"),
+    ("پراید از ۸۰۰ میلیون بیشتر نباشه مدل ۹۸ به بالا",
+     "words between the amount and the year clause"),
+]:
+    got_f = P.parse(text).budget_min_toman
+    check(f"«{text}» → no floor  ({why})", got_f is None, str(got_f))
+
+for _lead, _what in [   # a year clause, and what stands before it: no floor is meant
+    ("از مدل", "«از» is the word that starts the year clause"),
+    ("از سال", "«از» before «سال»"),
+    ("ساکن شیراز مدل", "a word that ends in «از»"),
+    ("اهواز مدل", "  the same"),
+    ("نیاز دارم مدل", "  the same"),
+    ("غیر از مشهد مدل", "«از» is the word of «غیر از»"),
+    ("غیر از تهران مدل", "  the same"),
+]:
+    got_y = [P.parse(f"پراید {_lead} {_year} به بالا").budget_min_toman
+             for _year in ["۹۵", "۹۸", "۱۳۹۸", "۱۴۰۰", "۱۴۰۱"]]
+    check(f"«پراید {_lead} ۹۵ به بالا» and four more years → no floor  ({_what})",
+          got_y == [None] * 5, str(got_y))
+
+for text, why in [   # a number that is not an amount of money is not a floor
+    ("از ۳۰۰ به بالا", "a figure with no scale word is not money"),
+    ("پراید کارکرد از ۱۰۰ هزار به بالا", "a distance"),
+    ("پراید از ۵۰ هزار کیلومتر به بالا", "  with its unit"),
+    ("پراید از ۲۰۰ هزار به بالا", "«هزار» is no money word"),
+]:
+    got_f = P.parse(text).budget_min_toman
+    check(f"«{text}» → no floor  ({why})", got_f is None, str(got_f))
+
+for text, want, why in [   # what is read is understood; what is not is listed
+    ("از ۲۰۰ میلیون به بالا", (), "the phrase is understood, not listed"),
+    ("از ۲۰۰ میلیون مدل ۹۸ به بالا", (), "  and with a year clause"),
+    ("از ۲۰۰ میلیون به بالا، تا ۸۰۰ میلیون", (),
+     "  and beside a ceiling clause, where no inference reads the amount"),
+    ("از ۳۰۰ به بالا", ("از 300 به بالا",), "a figure with no scale word is listed"),
+]:
+    got_u = P.parse(text).unparsed
+    check(f"«{text}» → listed: {list(want) or '—'}  ({why})", got_u == want,
+          str(got_u))
+
+for text, why in [   # measured and left: no floor is read, and nothing is claimed beyond that
+    ("پراید از ۲۰۰ تا ۴۰۰ میلیون مدل ۹۸ به بالا",
+     "a range with a year clause: its lower end"),
+    ("پراید از ۲۰۰ میلیون تا ۴۰۰ میلیون مدل ۹۸ به بالا", "  a unit on both"),
+    ("پراید از قیمت ۲۰۰ میلیون به بالا", "a word between the cue and the amount"),
+    ("پراید از مبلغ ۲۰۰ میلیون به بالا", "  the same"),
+    ("پراید شیراز ۲۰۰ میلیون به بالا", "no cue: the «از» that ends a word is not one"),
+    ("پراید اهواز ۲۰۰ میلیون به بالا", "  the same"),
+    ("پراید ۲۰۰ میلیون به بالا", "no cue at all"),
+]:
+    got_f = P.parse(text).budget_min_toman
+    check(f"«{text}» → no floor, left  ({why})", got_f is None, str(got_f))
+
+
+# ---------------------------------------------------------------------------
 print("\na model's number is a model only where it stands alone (D83)")
 # A model's number was matched as a substring of the query: «دنا تا ۱۳۱۰ میلیون»
 # holds 131, which is Pride's, and «تیبا مدل ۱۴۰۵» holds 405, so each added a
