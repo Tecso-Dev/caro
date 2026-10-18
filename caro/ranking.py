@@ -128,6 +128,13 @@ def money_amount(text: str) -> int | None:
     return parse_amount(m.group(0)) if m else None
 
 
+def after_amount(text: str) -> str:
+    """What `text` says after its first amount of money; empty if it names
+    none."""
+    m = _MONEY.search(text)
+    return text[m.end():] if m else ""
+
+
 # Model aliases. Sellers and buyers type the same car a dozen ways; the
 # taxonomy is data, not code, so a new model is one line.
 MODEL_ALIASES: dict[str, tuple[str, ...]] = {
@@ -388,12 +395,18 @@ def read_provinces(text: str) -> PlaceReading:
 #   listed    last in `unparsed`, unless a phrase already there holds it:
 #             «ماشین سفید در مشهد» is listed whole by the clause rule, and
 #             «در مشهد» adds nothing.
+#   after a   the budget clause is taken whole, up to the next «،», and what
+#   budget    it holds after the amount is read as one more clause, for a cue
+#             and no more: «تا ۳۰۰ میلیون در مشهد» lists «در مشهد», and so does
+#             «تا ۳۰۰ میلیون تومان در مشهد». Nothing else in it is listed, as
+#             it never was: «تا ۳۰۰ میلیون سفید» says nothing of «سفید». What
+#             stands between the cue and the amount is not read:
+#             «قیمت در مشهد ۳۰۰ میلیون».
 #
 # What this does not find stays dropped, and the tests pin it so that it
-# changes on purpose: a city no cue stands before («پراید مشهد»); one after a
-# budget («تا ۳۰۰ میلیون در مشهد», which the budget clause takes whole); one
-# after « و » or «یا» («در تهران و مشهد»; «یا» is itself taken as the second
-# word of «در مشهد یا شیراز»); and one inside a word that holds a model's name
+# changes on purpose: a city no cue stands before («پراید مشهد»); one after
+# « و » or «یا» («در تهران و مشهد»; «یا» is itself taken as the second word of
+# «در مشهد یا شیراز»); and one inside a word that holds a model's name
 # («تهرانپارس» lists «در تهران», the part before «پارس»). And `_NEVER_A_PLACE`
 # is three words because three put a phrase on the page that is no place --
 # «در حد نو», «در حال حاضر», «توی بودجه ام» -- in the sentences measured; it is
@@ -580,13 +593,18 @@ class RuleIntentParser:
         # Every budget-ish clause, not just the first one in the string. The
         # first clause is frequently about something else — «کارکرد زیر ۹۰
         # هزار، تا ۸۰۰ میلیون» opens with an odometer — so a clause is taken
-        # only once it is shown to name an amount of money.
+        # only once it is shown to name an amount of money. The clause is
+        # taken whole, up to the next «،», so a word after the amount goes
+        # with it; `budget_tail` is what follows the amount, and is handed to
+        # `read_unknown_places` below.
+        budget_tail = ""
         for m in re.finditer(r"(?:زیر|تا|حداکثر|کمتر از|بودجه|قیمت)\s*([^،]*)",
                              q):
             got = money_amount(m.group(1))
             if got is not None:
                 budget_max = got
                 consumed.append(m.group(0))
+                budget_tail = after_amount(m.group(1))
                 break
         if budget_max is None:
             # No clause said it, but the query may still name a price. This
@@ -739,6 +757,20 @@ class RuleIntentParser:
         for item in read_unknown_places(rest, clauses, spans):
             if not any(item in u for u in unparsed):
                 unparsed += (item,)
+        # And the same for what the budget clause took with its amount, read
+        # as one more clause: «تا ۳۰۰ میلیون در مشهد» lists «در مشهد». It is
+        # cut the way `rest` is -- what the parser consumed is taken out of
+        # it and what it acted on is blanked where it stands -- so that «در
+        # مشهد مدل ۹۵» lists the same with a budget before it as without.
+        if budget_tail:
+            for c in consumed:
+                budget_tail = budget_tail.replace(c, " ")
+            tail_spans = [(x.start(), x.end()) for a in acted
+                          for x in re.finditer(re.escape(a), budget_tail)]
+            for item in read_unknown_places(
+                    budget_tail, [(0, len(budget_tail))], tail_spans):
+                if not any(item in u for u in unparsed):
+                    unparsed += (item,)
 
         return IntentSpec(
             raw_query=query, budget_max_toman=budget_max,

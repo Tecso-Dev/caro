@@ -71,17 +71,18 @@ intent → explain the best choice**.
      knows («در», «توی», «ساکن», «اطراف», «نزدیک به», «غیر از», «پلاک» …) is
      now listed with the one or two words after it, past «شهر» and
      «استان»: «در مشهد», «ساکن در شهر بندر عباس», and «پلاک ملی در مشهد» as
-     two, «پلاک ملی» and «در مشهد». Nothing is read from it; the page says
-     the city was seen and not used, and the province panel and the
-     ranked path are as they were. On the prototype it shows the city in
-     220 of the 350 phrasings. Known, and left, each pinned by a test so
-     that it changes on purpose: a city no cue stands before
-     («پراید مشهد»); one after a budget («تا ۳۰۰ میلیون در مشهد», item 4);
-     a second one after « و » or «یا», where «یا» is itself taken as the
-     second word of «در مشهد یا»; and «نه» and «بدون», which the reader
-     knows and this does not, so «پراید نه مشهد» is still dropped. And any
-     word after a cue that is no place is listed all the same, unless it is
-     one of the three the stoplist holds: «حد», «حال», «بودجه».
+     two, «پلاک ملی» and «در مشهد». So is one after a budget's amount, which
+     the budget clause used to take whole (item 4). Nothing is read from it;
+     the page says the city was seen and not used, and the province panel
+     and the ranked path are as they were. On the prototype it shows the
+     city in 220 of the 350 phrasings. Known, and left, each pinned by a
+     test so that it changes on purpose: a city no cue stands before
+     («پراید مشهد»); a second one after « و » or «یا», where «یا» is itself
+     taken as the second word of «در مشهد یا»; and «نه» and «بدون», which
+     the reader knows and this does not, so «پراید نه مشهد» is still
+     dropped. And any word after a cue that is no place is listed all the
+     same, unless it is one of the three the stoplist holds: «حد», «حال»,
+     «بودجه».
    - «تهرانپارس» adds the model `pars`, because the alias is matched as a
      substring; «پارس‌آباد» does the same, «شاهین‌شهر» adds `shahin` and
      «شهریار» sets a commute use. None of them shows the city, and after a
@@ -109,9 +110,19 @@ intent → explain the best choice**.
      before it, so «تا ۵۰۰۰ کیلومتر کارکرد» too; «بیشتر از ۵۰ هزار کیلومتر
      نباشه»; and «کیلومتری» («زیر ۱۰۰ هزار کیلومتری»).
    - The budget clause takes everything after its amount up to the next
-     «،», so a word after the amount goes with it, and
-     «پراید تا ۳۰۰ میلیون در مشهد» loses the city. Measured, not yet
-     changed.
+     «،», so a word after the amount went with it, and
+     «پراید تا ۳۰۰ میلیون در مشهد» lost the city. The clause is still taken
+     whole, and the budget and the rest of the spec are as they were; what
+     stands after the amount is now read as one more clause by the rule of
+     item 3, for a cue and no more, cut the way the rest of the query is
+     (a year clause taken out, what was acted on blanked). Of 35 cities
+     written after a budget, 35 are listed; none of the 171 queries the
+     suites and the measurement hold changes; a colour, a filler, a trim
+     or a unit word after the amount lists nothing, as before. Known, and
+     left, each pinned by a test so that it changes on purpose: what stands
+     between the cue and the amount («قیمت در مشهد ۳۰۰ میلیون») is still
+     taken with the clause and dropped; and a second budget in the same
+     clause lends its «تا» to the place before it, as «یا» does.
    - A cue or a model alias is matched inside a longer word: «محدوده» sets a
      flexible budget, «بارفروش» a cargo use, «پارس‌آباد» the model `pars`;
      and a model number inside an amount or a year adds a model nobody
