@@ -5,7 +5,7 @@ was recorded, and what comes first. An open item goes into code only after it
 has been measured; the measurement comes first and the decision is made on
 it, in its own commit.
 
-Last revised 2026-10-17.
+Last revised 2026-10-18.
 
 ## Where it stands against the brief
 
@@ -89,18 +89,33 @@ intent → explain the best choice**.
      reads as a province. It was so before D82; item 4 has the rest.
 
 4. **What the parser drops without a word** (D83). Three ways, found while
-   the cities were measured and tried on the real parser, nothing more. A
-   distance with no «کارکرد» before it is not read and not listed, a cap
-   («۲۰۶ زیر ۱۰۰ هزار کیلومتر») or a bare figure («پراید ۵۰ هزار کیلومتر»).
-   The budget clause takes everything after its amount up to the next «،»,
-   so a word after the amount goes with it, and
-   «پراید تا ۳۰۰ میلیون در مشهد» loses the city. A cue or a model alias is
-   matched inside a longer word: «محدوده» sets a flexible budget, «بارفروش»
-   a cargo use, «پارس‌آباد» the model `pars`. The owner asked for all three
-   to be measured next, and what comes first is that: how many inputs each
-   touches, and what mending it does to the 51 queries the suites hand the
-   parser, with the predictions written beforehand. None is changed before
-   then.
+   the cities were measured and tried on the real parser. The owner asked
+   for all three to be measured before any was touched, with the predictions
+   written beforehand, and each is changed only where the measurement showed
+   the change clean:
+   - A distance cap with no «کارکرد» before it («۲۰۶ زیر ۱۰۰ هزار کیلومتر»)
+     was neither read nor listed. It is read now, in four shapes: a cap word,
+     a figure and a distance word («زیر ۱۰۰ هزار کیلومتر»); the figure first
+     («۱۰۰ هزار کیلومتر یا کمتر»); the distance word first («کیلومتر زیر ۱۰۰
+     هزار»); and «زیر ۱۰۰k». «حداکثر» joins the «کارکرد» form. Of 20 caps
+     written for it 19 are read, none wrong, and none of the 12 phrases that
+     hold a distance and are no odometer, nor of the 8 that give a figure and
+     no cap. With neither «هزار» nor «کارکرد» before the figure, it is a cap
+     only from 10000 on: «تا ۱۰۰۰ کیلومتر دورتر» is a distance to travel and
+     «وانت تا ۱۵۰۰ کیلو» a weight. Known, and left, each pinned by a test so
+     that it changes on purpose, each read by nothing and, in a clause that
+     names a model, listed by nothing either: a bare figure («پراید ۵۰ هزار
+     کیلومتر»); a cap from 1000 to 9999 with no «هزار» and no «کارکرد»
+     before it, so «تا ۵۰۰۰ کیلومتر کارکرد» too; «بیشتر از ۵۰ هزار کیلومتر
+     نباشه»; and «کیلومتری» («زیر ۱۰۰ هزار کیلومتری»).
+   - The budget clause takes everything after its amount up to the next
+     «،», so a word after the amount goes with it, and
+     «پراید تا ۳۰۰ میلیون در مشهد» loses the city. Measured, not yet
+     changed.
+   - A cue or a model alias is matched inside a longer word: «محدوده» sets a
+     flexible budget, «بارفروش» a cargo use, «پارس‌آباد» the model `pars`;
+     and a model number inside an amount or a year adds a model nobody
+     wrote: «دنا تا ۱۳۱۰ میلیون» adds `pride`. Measured, not yet changed.
 
 ## Next — the product gaps
 

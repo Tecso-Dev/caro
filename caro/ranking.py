@@ -188,6 +188,29 @@ DEAL_BREAKER_CUES: dict[str, tuple[str, ...]] = {
 _LOW_MILEAGE_CUE = re.compile(
     r"(?:کم\s*کارکرد(?:ه|ی)?|کم\s*کار|کارکرد\s*کم(?:ی)?)\b")
 
+# A distance cap with no «کارکرد» before it. The «کارکرد» form reads
+# «کارکرد زیر ۱۰۰ هزار», and «۲۰۶ زیر ۱۰۰ هزار کیلومتر» was neither read nor
+# listed (D83). These are tried only when that form finds nothing, in this
+# order: a cap word, a figure and a distance word; the figure first and
+# «یا کمتر» after it; «کیلومتر» or «کارکرد» and then the cap; and «k».
+# A letter after the distance word ends the match: «تا ۵۰ کیلومتری تهران» is
+# a place that is near, not an odometer.
+_NO_LETTER = r"(?![^\W\d_])"
+_CAP_WORD = r"(?:زیر|تا|کمتر از|حداکثر)"
+_MILEAGE_CAPS = (
+    re.compile(_CAP_WORD + r"\s*(\d+)\s*(هزار)?\s*(?:کیلومتر|کیلو|km)"
+               + _NO_LETTER),
+    re.compile(r"(\d+)\s*(هزار)?\s*(?:کیلومتر|کیلو|km)\s*"
+               r"(?:یا کمتر|و کمتر|به پایین)"),
+    re.compile(r"(?:کیلومتر|کارکرد)\s*" + _CAP_WORD + r"\s*(\d+)\s*(هزار)?"),
+    re.compile(_CAP_WORD + r"\s*(\d+)\s*(k)" + _NO_LETTER),
+)
+# With neither «هزار» nor «k» and no «کارکرد» before the figure, nothing says
+# it is an odometer: «تا ۱۰۰۰ کیلومتر دورتر» is a distance to travel, «وانت
+# تا ۱۵۰۰ کیلو» a weight. No road in Iran is 10000 km long, so from there on
+# a figure can only be a mileage. «تا ۵۰۰۰ کیلومتر کارکرد» is left unread.
+_MILEAGE_FLOOR = 10_000
+
 
 # ---------------------------------------------------------------------------
 # Where the car should be
@@ -612,7 +635,8 @@ class RuleIntentParser:
         # invites changes nothing.
         max_km = None
         m = re.search(
-            r"کارکرد\s*(?:زیر|تا|کمتر از)\s*(\d+)\s*(هزار|k|کیلومتر|کیلو)?", q)
+            r"(?:کارکرد\s*(?:زیر|تا|کمتر از|حداکثر)|حداکثر\s*کارکرد)"
+            r"\s*(\d+)\s*(هزار|k|کیلومتر|کیلو)?", q)
         if m:
             n, unit = int(m.group(1)), m.group(2)
             v = n * 1000 if unit in ("هزار", "k") else n
@@ -621,6 +645,17 @@ class RuleIntentParser:
             if unit or v >= 1000:
                 max_km = v
                 acted.append(m.group(0))
+        if max_km is None:
+            for rx in _MILEAGE_CAPS:
+                m = rx.search(q)
+                if not m:
+                    continue
+                n, unit = int(m.group(1)), m.group(2)
+                v = n * 1000 if unit in ("هزار", "k") else n
+                if unit or v >= _MILEAGE_FLOOR:
+                    max_km = v
+                    acted.append(m.group(0))
+                    break
         cue = _LOW_MILEAGE_CUE.search(q)
         if max_km is None and cue:
             max_km = 120_000

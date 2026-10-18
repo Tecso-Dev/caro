@@ -180,6 +180,152 @@ check("weights always normalise to 1",
 
 
 # ---------------------------------------------------------------------------
+print("\na distance cap with no «کارکرد» before it is read (D83)")
+# «۲۰۶ زیر ۱۰۰ هزار کیلومتر» was neither read nor listed: the odometer wanted
+# «کارکرد» in front of the cap. The cap in four more shapes is read now, and
+# «حداکثر» joins the «کارکرد» form. A figure with neither «هزار» nor «کارکرد»
+# before it is a cap only from 10000 on: «تا ۱۰۰۰ کیلومتر دورتر» is a
+# distance to travel and «وانت تا ۱۵۰۰ کیلو» a weight. Every phrase is made
+# here; no log of what buyers write exists, so these test the rule, not the
+# buyers.
+for q, cap in [
+    # a cap word, a figure, a distance word
+    ("۲۰۶ زیر ۱۰۰ هزار کیلومتر", 100_000),
+    ("پراید کمتر از ۵۰ هزار کیلومتر", 50_000),
+    ("تیبا تا ۸۰ هزار کیلومتر", 80_000),
+    ("پراید حداکثر ۱۰۰ هزار کیلومتر", 100_000),
+    ("پراید زیر ۱۰۰ هزار کیلومتر کارکرد", 100_000),
+    ("پراید تا ۱۲۰ هزار کیلومتر کارکرده باشه", 120_000),
+    ("پراید تا ۹۰ هزار کیلومتر، سفید", 90_000),
+    ("پراید سفید، زیر ۷۰ هزار کیلومتر، تا ۳۰۰ میلیون", 70_000),
+    ("پراید حداکثر ۲ هزار کیلومتر رفته باشه", 2_000),
+    ("پراید زیر ۱۰۰ هزار کیلومتر رفته", 100_000),
+    # no «هزار», from 10000 on
+    ("پراید تا ۱۵۰۰۰۰ کیلومتر", 150_000),
+    ("پراید زیر ۱۰۰۰۰۰ کیلومتر", 100_000),
+    ("پراید تا ۱۰۰۰۰ کیلومتر", 10_000),
+    ("پراید زیر ۲ هزار کیلومتر", 2_000),
+    # «k»
+    ("پراید زیر ۱۰۰k", 100_000),
+    # the figure first
+    ("پراید ۱۰۰ هزار کیلومتر یا کمتر", 100_000),
+    ("پراید ۱۰۰ هزار کیلومتر و کمتر", 100_000),
+    ("پراید ۱۰۰ هزار کیلومتر به پایین", 100_000),
+    # the distance word first
+    ("پراید کیلومتر زیر ۱۰۰ هزار", 100_000),
+    ("پراید با کیلومتر زیر ۸۰ هزار", 80_000),
+    ("پراید کیلومتر کمتر از ۶۰ هزار", 60_000),
+    # «حداکثر» joins the «کارکرد» form, before the word and after it
+    ("پراید کارکرد حداکثر ۱۰۰ هزار", 100_000),
+    ("پراید حداکثر کارکرد ۱۰۰ هزار کیلومتر", 100_000),
+    # the «کارکرد» form keeps its floor of 1000: the word says what it is
+    ("پراید کارکرد زیر ۵۰۰۰ کیلومتر", 5_000),
+    ("پراید کارکرد حداکثر ۵۰۰۰ کیلومتر", 5_000),
+    ("پراید کارکرد زیر ۵۰۰۰", 5_000),
+]:
+    got_km = P.parse(q).max_mileage_km
+    check(f"«{q}» → cap {cap:,}", got_km == cap, f"got {got_km}")
+
+for q, why in [   # a figure, but not a cap: nothing is read
+    ("پراید بیشتر از ۵۰ هزار کیلومتر نباشه", "a negated «more than» is not read"),
+    ("پراید ۵۰ هزار کیلومتر", "a figure with no cap word"),
+    ("پراید ۵۰ هزار کیلومتر کارکرد", "the same, with «کارکرد» after it"),
+    ("پراید با ۵۰ هزار کیلومتر", "«با» is no cap word"),
+    ("پراید زیر ۱۰۰ هزار", "no distance word and no «کارکرد»"),
+    ("پراید کارکرد ۱۰۰ هزار", "«کارکرد» and a figure, no cap word"),
+    ("پراید ۱۰۰ هزار کیلومتر کار کرده", "a figure and «کار کرده»"),
+    ("پراید حدود ۵۰ هزار کیلومتر", "«حدود» is no cap word"),
+    ("پراید تقریبا ۵۰ هزار کیلومتر", "«تقریبا» is no cap word"),
+    ("پراید کم کیلومتر", "vague"),
+    ("پراید کیلومتر پایین", "vague"),
+    ("پراید کیلومتر کم", "vague"),
+    ("پراید صفر کیلومتر", "a new car"),
+    ("پراید ۰ کیلومتر", "a new car"),
+    ("پراید بدون کیلومتر", "no distance at all"),
+    ("پراید تا ۳۰۰ میلیون، ۵۰ هزار کیلومتر", "after a budget, no cap word"),
+    ("پراید زیر ۲۰۰ میلیون، کیلومتر ۸۰ هزار", "after a budget, no cap word"),
+]:
+    got_km = P.parse(q).max_mileage_km
+    check(f"«{q}» → no cap: {why}", got_km is None, f"got {got_km}")
+
+for q, why in [   # a cap word and a distance word that are not an odometer
+    ("پراید تا ۵۰ کیلومتری تهران", "a place that is near"),
+    ("پراید زیر ۵۰ کیلومتر در ساعت", "a speed"),
+    ("پراید تا ۳۰ کیلومتر فاصله از کرج", "a distance to travel"),
+    ("پراید تا ۵۰ کیلومتر دورتر", "a distance to travel"),
+    ("پراید سفید تا ۷ لیتر در ۱۰۰ کیلومتر", "fuel"),
+    ("پراید مصرف زیر ۸ لیتر در ۱۰۰ کیلومتر", "fuel"),
+    ("پراید تا ۲۰ کیلومتر", "twenty is no mileage"),
+    ("پراید حاضرم تا ۸۰۰ کیلومتر برم", "under 1000"),
+    ("پراید تا ۱۰۰۰ کیلومتر دورتر از تهران", "a distance to travel, from 1000 up"),
+    ("پراید زیر ۱۵۰۰ کیلومتر فاصله", "a distance to travel"),
+    ("ماشین تا ۲۰۰۰ کیلومتر راه", "a distance to travel"),
+    ("پراید حداکثر ۱۲۰۰ کیلومتر دورتر", "a distance to travel"),
+    ("تا ۳۰۰۰ کیلومتر از مشهد پراید", "a distance to travel"),
+    ("وانت تا ۱۵۰۰ کیلو بار", "a weight"),
+    ("وانت زیر ۳۰۰۰ کیلو", "a weight"),
+]:
+    got_km = P.parse(q).max_mileage_km
+    check(f"«{q}» → no cap: {why}", got_km is None, f"got {got_km}")
+
+for q, why in [   # known, and left: pinned so that it changes on purpose
+    ("پراید زیر ۵۰۰۰ کیلومتر", "1000 to 9999 with neither «هزار» nor «کارکرد» before"),
+    ("پراید تا ۹۰۰۰ کیلومتر", "the same"),
+    ("پراید تا ۵۰۰۰ کیلومتر کارکرد", "«کارکرد» after the figure does not count"),
+    ("پراید زیر ۱۰۰ هزار کیلومتری", "«کیلومتری» is not a distance word, even with «هزار»"),
+]:
+    got_km = P.parse(q).max_mileage_km
+    check(f"«{q}» → no cap: {why}", got_km is None, f"got {got_km}")
+
+# A cap that is read is understood, so it is not listed as text the parser did
+# not use; the one that is not read is still listed.
+check("a read cap is not listed under «نفهمیدیم»",
+      P.parse("زیر ۱۰۰ هزار کیلومتر").unparsed == ())
+check("  and the clause beside it is",
+      _left("پراید، زیر ۱۰۰ هزار کیلومتر، رنگ سفید مروارید")
+      == ["رنگ سفید مروارید"], str(_left("پراید، زیر ۱۰۰ هزار کیلومتر، رنگ سفید مروارید")))
+check("  while a figure nothing read is listed as before",
+      _left("زیر ۵۰۰۰ کیلومتر") == ["زیر 5000 کیلومتر"],
+      str(_left("زیر ۵۰۰۰ کیلومتر")))
+
+# The stated cap is read FIRST and the vague cue only fills the gap it leaves
+# (the order of the odometer, above): the default is not adopted and its note is
+# not shown.
+for q, cap in [
+    ("پراید زیر ۱۰۰ هزار کیلومتر، کم‌کارکرد", 100_000),
+    ("پراید کم‌کارکرد حداکثر ۱۲۰ هزار کیلومتر", 120_000),
+]:
+    sm = P.parse(q)
+    check(f"«{q}» → cap {cap:,}, and no note about a default",
+          sm.max_mileage_km == cap and not _mileage_note(sm),
+          f"{sm.max_mileage_km} {sm.assumptions}")
+
+# The «کارکرد» form is tried first, and the shapes in the order above.
+for q, cap, why in [
+    ("پراید کارکرد زیر ۸۰ هزار، زیر ۱۰۰ هزار کیلومتر", 80_000, "the «کارکرد» form first"),
+    ("پراید زیر ۸۰ هزار کیلومتر، ۱۰۰ هزار کیلومتر یا کمتر", 80_000, "the first shape first"),
+]:
+    got_km = P.parse(q).max_mileage_km
+    check(f"«{q}» → cap {cap:,} ({why})", got_km == cap, f"got {got_km}")
+
+# The cap is all it changes: the same spec as without the phrase, but for the
+# cap, and for the list when the phrase stood in a clause of its own.
+check("a read cap changes nothing in the spec but the cap and the list",
+      all(dataclasses.replace(P.parse(a), raw_query="", max_mileage_km=None, unparsed=())
+          == dataclasses.replace(P.parse(b), raw_query="", unparsed=())
+          for a, b in [
+              ("پراید زیر ۱۰۰ هزار کیلومتر", "پراید"),
+              ("پراید تا ۱۲۰ هزار کیلومتر، تا ۳۰۰ میلیون", "پراید، تا ۳۰۰ میلیون"),
+              ("تیبا ۱۰۰ هزار کیلومتر یا کمتر مدل ۹۵", "تیبا مدل ۹۵"),
+              ("پراید حداکثر کارکرد ۸۰ هزار، اتومات", "پراید، اتومات"),
+          ]))
+sk = P.parse("۲۰۶ زیر ۱۰۰ هزار کیلومتر، بودجه ۹۰۰ میلیون")
+check("the first clause of the suites' own query is a cap, the second a budget",
+      sk.max_mileage_km == 100_000 and sk.budget_max_toman == 900_000_000,
+      f"{sk.max_mileage_km} {sk.budget_max_toman}")
+
+
+# ---------------------------------------------------------------------------
 # A number is not a budget just because it is a number.
 #
 # All four of these were measured wrong, and the reason they survived is that
